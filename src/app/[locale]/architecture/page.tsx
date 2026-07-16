@@ -1,8 +1,20 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { HeroSchematic } from '@/components/diagrams/HeroSchematic';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { alternatesFor } from '@/lib/seo';
 
 type Props = { params: Promise<{ locale: string }> };
+
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'nav' });
+  const m = await getTranslations({ locale, namespace: 'meta' });
+  return {
+    title: t('architecture'),
+    description: m('architecture'),
+    alternates: alternatesFor(locale, '/architecture'),
+  };
+}
 
 export default async function ArchitecturePage({ params }: Props) {
   const { locale } = await params;

@@ -4,6 +4,8 @@ import { ArrowUpRight } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { CaseStudyJsonLd } from '@/lib/jsonld';
+import { alternatesFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../../content/projects';
 import type { Localized } from '../../../../../content/projects';
 
@@ -11,6 +13,18 @@ type Props = { params: Promise<{ locale: string; slug: string }> };
 
 export function generateStaticParams() {
   return PROJECTS.map((p) => ({ slug: p.slug }));
+}
+
+export async function generateMetadata({ params }: Props) {
+  const { locale, slug } = await params;
+  const project = PROJECTS.find((p) => p.slug === slug);
+  if (!project) return {};
+  const loc = locale === 'zh-TW' ? 'zh' : 'en';
+  return {
+    title: project.title[loc],
+    description: project.oneLiner[loc],
+    alternates: alternatesFor(locale, `/work/${slug}`),
+  };
 }
 
 function Paragraphs({ items, loc }: { items: Localized[]; loc: 'zh' | 'en' }) {
@@ -40,6 +54,7 @@ export default async function CaseStudyPage({ params }: Props) {
 
   return (
     <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
+      <CaseStudyJsonLd project={project} locale={locale} />
       <SectionHeading no={String(index + 1).padStart(2, '0')} label="WORK / CASE STUDY" />
       <h1 className="mt-6 max-w-[20ch] text-4xl leading-[1.2] font-semibold tracking-tight md:text-6xl">
         {project.title[loc]}

@@ -37,6 +37,12 @@
     "description": "Every project is broken down the same way: problem, constraints, architecture, trade-offs, results.",
     "metricPending": "metrics pending"
   },
+  "meta": {
+    "work": "Deep teardowns of five real systems: multi-tenant SaaS, an AI commerce platform, a mobile app and campus operations systems.",
+    "architecture": "Interactive views of microservice boundaries, API request lifecycles and deployment flow.",
+    "ai": "How AI agents assist architecture review, code review, security and performance checks, and documentation.",
+    "about": "A student independently shipping production systems — experience, timeline and stack."
+  },
   "case": {
     "internal": "Internal project (private)"
   },

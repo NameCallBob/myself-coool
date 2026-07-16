@@ -1,9 +1,21 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { alternatesFor } from '@/lib/seo';
 import { EXPERIENCE } from '../../../../content/experience';
 
 type Props = { params: Promise<{ locale: string }> };
+
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'about' });
+  const m = await getTranslations({ locale, namespace: 'meta' });
+  return {
+    title: t('title'),
+    description: m('about'),
+    alternates: alternatesFor(locale, '/about'),
+  };
+}
 
 export default async function AboutPage({ params }: Props) {
   const { locale } = await params;

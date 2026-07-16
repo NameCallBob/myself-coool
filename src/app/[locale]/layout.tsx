@@ -9,6 +9,9 @@ import { Nav } from '@/components/layout/Nav';
 import { Footer } from '@/components/layout/Footer';
 import { GridGuides } from '@/components/layout/GridGuides';
 import { LenisProvider } from '@/components/motion/LenisProvider';
+import { SiteJsonLd } from '@/lib/jsonld';
+import { alternatesFor, ogLocale } from '@/lib/seo';
+import { SITE_URL } from '../../../content/site';
 import '../globals.css';
 
 const archivo = Archivo({
@@ -42,17 +45,24 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'home' });
+  const title =
+    locale === 'zh-TW'
+      ? 'binbin — 全端工程師 · 系統設計 · AI 整合'
+      : 'binbin — Full-Stack Developer · System Design · AI Integration';
 
   return {
-    metadataBase: new URL('https://binbinbob.work'),
-    title: {
-      default:
-        locale === 'zh-TW'
-          ? 'binbin — 軟體架構師 · 後端工程師 · AI 系統'
-          : 'binbin — Software Architect · Backend Engineer · AI Systems',
-      template: '%s — binbin',
-    },
+    metadataBase: new URL(SITE_URL),
+    title: { default: title, template: '%s — binbin' },
     description: t('subtitle'),
+    alternates: alternatesFor(locale, ''),
+    openGraph: {
+      type: 'website',
+      siteName: 'binbin',
+      locale: ogLocale(locale),
+      title,
+      description: t('subtitle'),
+    },
+    twitter: { card: 'summary_large_image' },
   };
 }
 
@@ -83,6 +93,7 @@ export default async function LocaleLayout({
       className={`${archivo.variable} ${notoSansTC.variable} ${jetbrainsMono.variable}`}
     >
       <body>
+        <SiteJsonLd locale={locale} />
         {/* Marks JS availability so reveal styles never hide content from crawlers/no-JS */}
         <script
           dangerouslySetInnerHTML={{

@@ -1,7 +1,19 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { alternatesFor } from '@/lib/seo';
 
 type Props = { params: Promise<{ locale: string }> };
+
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'nav' });
+  const m = await getTranslations({ locale, namespace: 'meta' });
+  return {
+    title: t('ai'),
+    description: m('ai'),
+    alternates: alternatesFor(locale, '/ai'),
+  };
+}
 
 export default async function AiPage({ params }: Props) {
   const { locale } = await params;

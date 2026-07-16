@@ -3,9 +3,21 @@ import { ArrowUpRight } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { alternatesFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../content/projects';
 
 type Props = { params: Promise<{ locale: string }> };
+
+export async function generateMetadata({ params }: Props) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'work' });
+  const m = await getTranslations({ locale, namespace: 'meta' });
+  return {
+    title: t('title'),
+    description: m('work'),
+    alternates: alternatesFor(locale, '/work'),
+  };
+}
 
 export default async function WorkPage({ params }: Props) {
   const { locale } = await params;
