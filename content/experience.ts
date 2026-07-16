@@ -25,12 +25,15 @@ export const EXPERIENCE: Experience[] = [
     },
   },
   {
-    org: { zh: '在學中', en: 'Student' }, // ⚠ 待補:學校/科系/預計畢業年
-    role: { zh: '資訊相關科系', en: 'Computer Science (TBC)' },
+    org: {
+      zh: '國立高雄科技大學',
+      en: 'National Kaohsiung University of Science and Technology',
+    }, // ⚠ 待確認:科系(智慧商務系?)與預計畢業年
+    role: { zh: '在學學生', en: 'Undergraduate student' },
     period: '— PRESENT',
     summary: {
-      zh: '一邊完成學業,一邊在業界建造真實的生產系統。',
-      en: 'Finishing my degree while building real production systems in industry.',
+      zh: '一邊完成學業,一邊建造真實上線的系統——系友會平台與設備借用系統都在校內正式營運中。',
+      en: 'Finishing my degree while shipping real systems — the alumni platform and the equipment borrowing system both run in production on campus.',
     },
   },
 ];

@@ -37,6 +37,9 @@
     "description": "每個專案都以同一套格式拆解:問題、限制、架構、取捨、成果。",
     "metricPending": "數據整理中"
   },
+  "case": {
+    "internal": "公司內部專案(不公開)"
+  },
   "common": {
     "underConstruction": "此頁內容建置中,完整內容即將上線。",
     "backHome": "回到首頁"

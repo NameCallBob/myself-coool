@@ -37,6 +37,9 @@
     "description": "Every project is broken down the same way: problem, constraints, architecture, trade-offs, results.",
     "metricPending": "metrics pending"
   },
+  "case": {
+    "internal": "Internal project (private)"
+  },
   "common": {
     "underConstruction": "This page is under construction — full content coming soon.",
     "backHome": "Back to home"

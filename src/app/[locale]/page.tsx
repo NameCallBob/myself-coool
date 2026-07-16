@@ -68,7 +68,7 @@ export default async function HomePage({ params }: Props) {
           {tw('title')}
         </h2>
         <div className="mt-10">
-          {PROJECTS.map((p, i) => (
+          {PROJECTS.filter((p) => p.featured).map((p, i) => (
             <Reveal key={p.slug} delay={i * 40}>
               <Link
                 href={`/work/${p.slug}`}
