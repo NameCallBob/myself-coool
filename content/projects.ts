@@ -78,8 +78,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '後端開發:資料模型、API、多租戶與權限機制、背景任務。(範圍待補充)',
-          en: 'Backend development: data models, APIs, multi-tenancy and permissions, background jobs. (scope to be detailed)',
+          zh: '前後端獨立開發:資料模型與多租戶機制、權限體系、各領域模組(出勤、排班、薪資、簽核⋯)、Celery 背景任務,以及 React 前端。',
+          en: 'Independent full-stack development: data models and multi-tenancy, the permission system, domain modules (attendance, scheduling, payroll, approvals…), Celery background jobs, and the React frontend.',
         },
       ],
       challenges: [
@@ -188,8 +188,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '全端開發與維運:資料模型、API、權限與資安整改、前端、部署與監控。(⚠ 團隊分工待確認)',
-          en: 'Full-stack development and operations: data models, APIs, security hardening, frontend, deployment and monitoring. (team split to be confirmed)',
+          zh: '前後端獨立開發與維運:資料模型、API、權限與資安整改、React 前端、部署(nginx)與監控告警。',
+          en: 'Independent full-stack development and operations: data models, APIs, security hardening, the React frontend, deployment (nginx) and monitoring.',
         },
       ],
       challenges: [
@@ -282,8 +282,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '全端獨立開發:資料模型、API、權限、前端、測試策略與部署(nginx + gunicorn + Cloudflare)。(⚠ 待確認)',
-          en: 'Independent full-stack development: data models, APIs, permissions, frontend, test strategy and deployment (nginx + gunicorn + Cloudflare). (to be confirmed)',
+          zh: '前後端獨立開發:資料模型、API、權限、React 前端、測試策略(單元 + E2E)與部署(nginx + gunicorn + Cloudflare)。',
+          en: 'Independent full-stack development: data models, APIs, permissions, the React frontend, test strategy (unit + E2E) and deployment (nginx + gunicorn + Cloudflare).',
         },
       ],
       challenges: [
