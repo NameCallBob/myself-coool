@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { useLocale, useTranslations } from 'next-intl';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { Link, usePathname } from '@/i18n/navigation';
+import { CONTACT_EMAIL } from '../../../content/site';
 
 const LINKS = [
   { href: '/work', key: 'work' },
@@ -99,7 +100,7 @@ export function Nav() {
           </Link>
           <ThemeToggle label={a11y('toggleTheme')} />
           <a
-            href="#contact"
+            href={`mailto:${CONTACT_EMAIL}`}
             className="hidden h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-accent-ink transition-transform duration-200 hover:shadow-[0_0_24px_var(--accent-dim)] active:scale-[0.97] md:flex"
           >
             {t('contact')}
@@ -131,7 +132,7 @@ export function Nav() {
               </Link>
             ))}
             <a
-              href="#contact"
+              href={`mailto:${CONTACT_EMAIL}`}
               onClick={() => setOpen(false)}
               className="mt-6 flex h-12 items-center justify-center rounded-full bg-accent text-base font-medium text-accent-ink"
             >

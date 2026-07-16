@@ -8,6 +8,7 @@ import { routing } from '@/i18n/routing';
 import { Nav } from '@/components/layout/Nav';
 import { Footer } from '@/components/layout/Footer';
 import { GridGuides } from '@/components/layout/GridGuides';
+import { LenisProvider } from '@/components/motion/LenisProvider';
 import '../globals.css';
 
 const archivo = Archivo({
@@ -77,7 +78,14 @@ export default async function LocaleLayout({
       className={`${archivo.variable} ${notoSansTC.variable} ${jetbrainsMono.variable}`}
     >
       <body>
+        {/* Marks JS availability so reveal styles never hide content from crawlers/no-JS */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
         <ThemeProvider attribute="data-theme" defaultTheme="dark">
+          <LenisProvider />
           <NextIntlClientProvider>
             <a
               href="#main"

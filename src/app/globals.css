@@ -155,6 +155,19 @@ body::after {
   line-height: 1;
 }
 
+/* ── Scroll reveal (Phase 5 standard) ─────── */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 450ms var(--ease-out-expo),
+    transform 450ms var(--ease-out-expo);
+}
+.js .reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
 /* ── Reduced motion baseline (Phase 5 §4) ─── */
 @media (prefers-reduced-motion: reduce) {
   *,

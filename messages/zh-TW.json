@@ -11,21 +11,40 @@
   },
   "footer": {
     "statement": "設計能扛規模的系統,從資料庫到 AI Workflow。",
-    "rights": "版權所有",
     "github": "GitHub 個人頁"
   },
   "a11y": {
     "skipToContent": "跳至主要內容",
     "toggleTheme": "切換深淺主題",
     "switchLocale": "Switch to English",
-    "schematicLabel": "微服務系統拓撲示意圖:請求由客戶端經 Nginx 進入各微服務,存取 MySQL 與 Redis"
+    "schematicLabel": "微服務系統拓撲示意圖:請求由 Web 與 App 客戶端經 Nginx 進入 Auth、Member、Product、Order、Inventory 等微服務,存取 MySQL 與 Redis"
   },
   "home": {
-    "eyebrow": "00 / SYSTEM OVERVIEW",
-    "title": "我設計大型系統。",
-    "subtitle": "從資料庫結構到 AI Workflow,後端為核心的全端架構。",
-    "roles": "SOFTWARE ARCHITECT · BACKEND ENGINEER · AI SYSTEM BUILDER",
+    "title": "我建大型系統。",
+    "subtitle": "從資料庫結構到 AI Workflow,以後端為核心的完整系統開發。",
+    "roles": "BACKEND ENGINEER · SYSTEM DESIGN · AI INTEGRATION",
     "ctaWork": "檢視作品",
-    "ctaContact": "聯絡我"
+    "ctaContact": "聯絡我",
+    "workAll": "全部作品",
+    "archTitle": "系統不是畫出來的,是取捨出來的。",
+    "archBlurb": "數十個微服務如何切分邊界、共享資料、彼此協作——完整架構可以互動探索。",
+    "archCta": "探索完整架構",
+    "contactTitle": "需要能扛規模的系統?",
+    "contactBlurb": "我目前任職於日秀美學,同時開放討論系統設計與後端開發的合作機會。"
+  },
+  "work": {
+    "title": "作品",
+    "description": "每個專案都以同一套格式拆解:問題、限制、架構、取捨、成果。",
+    "metricPending": "數據整理中"
+  },
+  "common": {
+    "underConstruction": "此頁內容建置中,完整內容即將上線。",
+    "backHome": "回到首頁"
+  },
+  "about": {
+    "title": "關於",
+    "p1": "我是 binbin。目前還在學,2025 年 6 月起於日秀美學股份有限公司擔任後端開發——負責 AI 美甲平台,以及支撐它的數十個 Django 微服務。",
+    "p2": "比起頭銜,我更在意系統的邊界、資料的流向,以及每一個技術決定背後的取捨。這個網站用工程規格書的方式,記錄我實際建過的東西。",
+    "experienceLabel": "EXPERIENCE"
   }
 }

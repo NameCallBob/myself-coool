@@ -1,12 +1,24 @@
 /**
  * Site-wide identity constants — the single source of truth.
- * ⚠ PLACEHOLDER VALUES below are pending confirmation from binbin.
  */
 export const SITE_URL = 'https://binbinbob.work';
 export const SITE_NAME = 'binbin';
 
-/** ⚠ placeholder — confirm public contact address */
-export const CONTACT_EMAIL = 'manience@manience.com';
+export const CONTACT_EMAIL = 'robin92062574@gmail.com';
+export const GITHUB_URL = 'https://github.com/NameCallBob';
 
-/** ⚠ placeholder — confirm GitHub profile URL */
-export const GITHUB_URL = 'https://github.com';
+/** 開發哲學(首頁 03)— 草稿文案,待 binbin 確認 */
+export const PHILOSOPHY: { zh: string; en: string }[] = [
+  {
+    zh: '先量測,再優化。',
+    en: 'Measure first. Optimize second.',
+  },
+  {
+    zh: '邊界比元件重要。',
+    en: 'Boundaries matter more than components.',
+  },
+  {
+    zh: 'AI 放大工程,不取代工程。',
+    en: 'AI amplifies engineering — it does not replace it.',
+  },
+];

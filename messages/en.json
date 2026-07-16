@@ -11,21 +11,40 @@
   },
   "footer": {
     "statement": "Designing systems that scale — from database schemas to AI workflows.",
-    "rights": "All rights reserved",
     "github": "GitHub profile"
   },
   "a11y": {
     "skipToContent": "Skip to main content",
     "toggleTheme": "Toggle color theme",
     "switchLocale": "切換為中文",
-    "schematicLabel": "Microservices topology diagram: requests flow from clients through Nginx into services, backed by MySQL and Redis"
+    "schematicLabel": "Microservices topology diagram: requests flow from web and app clients through Nginx into services such as Auth, Member, Product, Order and Inventory, backed by MySQL and Redis"
   },
   "home": {
-    "eyebrow": "00 / SYSTEM OVERVIEW",
-    "title": "I design large-scale systems.",
-    "subtitle": "Backend-driven full-stack architecture, from database schemas to AI workflows.",
-    "roles": "SOFTWARE ARCHITECT · BACKEND ENGINEER · AI SYSTEM BUILDER",
+    "title": "I build large-scale systems.",
+    "subtitle": "Backend-driven system development, from database schemas to AI workflows.",
+    "roles": "BACKEND ENGINEER · SYSTEM DESIGN · AI INTEGRATION",
     "ctaWork": "View work",
-    "ctaContact": "Get in touch"
+    "ctaContact": "Get in touch",
+    "workAll": "All work",
+    "archTitle": "Systems aren't drawn. They're traded off.",
+    "archBlurb": "How dozens of microservices divide boundaries, share data and cooperate — explore the full architecture interactively.",
+    "archCta": "Explore the architecture",
+    "contactTitle": "Need a system that can take the load?",
+    "contactBlurb": "I currently work at Rissiu Aesthetics, and I'm open to conversations about system design and backend work."
+  },
+  "work": {
+    "title": "Work",
+    "description": "Every project is broken down the same way: problem, constraints, architecture, trade-offs, results.",
+    "metricPending": "metrics pending"
+  },
+  "common": {
+    "underConstruction": "This page is under construction — full content coming soon.",
+    "backHome": "Back to home"
+  },
+  "about": {
+    "title": "About",
+    "p1": "I'm binbin — still a student, and since June 2025 a backend developer at Rissiu Aesthetics Co., Ltd., where I build the AI nail platform and the dozens of Django microservices behind it.",
+    "p2": "I care less about titles than about system boundaries, data flow, and the trade-offs behind every technical decision. This site documents what I've actually built, in the format of an engineering specification.",
+    "experienceLabel": "EXPERIENCE"
   }
 }
