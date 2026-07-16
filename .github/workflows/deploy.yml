@@ -26,10 +26,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-        env:
-          # ⚠ 暫時:讓 namecallbob.github.io/myself-coool 預覽可用。
-          # binbinbob.work 綁定完成後,刪除下面這行再推一次即可。
-          PAGES_BASE_PATH: /myself-coool
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out
