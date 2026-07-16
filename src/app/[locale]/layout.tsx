@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Archivo, JetBrains_Mono, Noto_Sans_TC } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { ThemeProvider } from 'next-themes';
 import { routing } from '@/i18n/routing';
 import { Nav } from '@/components/layout/Nav';
@@ -71,6 +71,11 @@ export default async function LocaleLayout({
 
   const t = await getTranslations({ locale, namespace: 'a11y' });
 
+  // Client components only need nav/a11y strings — sending the full
+  // message bundle would embed every page's copy in every payload.
+  const messages = await getMessages();
+  const clientMessages = { nav: messages.nav, a11y: messages.a11y };
+
   return (
     <html
       lang={locale === 'zh-TW' ? 'zh-Hant-TW' : 'en'}
@@ -86,7 +91,7 @@ export default async function LocaleLayout({
         />
         <ThemeProvider attribute="data-theme" defaultTheme="dark">
           <LenisProvider />
-          <NextIntlClientProvider>
+          <NextIntlClientProvider messages={clientMessages}>
             <a
               href="#main"
               className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-[6px] focus:bg-accent focus:px-4 focus:py-2 focus:text-accent-ink"
