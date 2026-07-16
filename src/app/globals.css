@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+
+/* ─────────────────────────────────────────────
+   Design tokens — Phase 4 spec
+   Dark (Warm Graphite) is the default theme.
+   ───────────────────────────────────────────── */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-deep: #0c0b09;
+  --bg-base: #12110e;
+  --bg-raised: #1a1815;
+
+  --border-1: rgba(235, 225, 210, 0.07);
+  --border-2: rgba(235, 225, 210, 0.13);
+  --border-3: rgba(235, 225, 210, 0.22);
+
+  --fg: #ede8df;
+  --fg-muted: #a8a296;
+  --fg-faint: #6b665c;
+
+  --accent: #e8a33d;
+  --accent-ink: #0c0b09;
+  --accent-dim: rgba(232, 163, 61, 0.14);
+
+  --data-teal: #5fb3b5;
+  --data-slate: #8a93a6;
+
+  --noise-opacity: 0.025;
+  --glass: rgba(12, 11, 9, 0.75);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg-deep: #f7f5f0;
+  --bg-base: #f0ede6;
+  --bg-raised: #ffffff;
+
+  --border-1: rgba(23, 21, 18, 0.08);
+  --border-2: rgba(23, 21, 18, 0.14);
+  --border-3: rgba(23, 21, 18, 0.24);
+
+  --fg: #171512;
+  --fg-muted: #5c574e;
+  --fg-faint: #8f887c;
+
+  --accent: #9a6410;
+  --accent-ink: #f7f5f0;
+  --accent-dim: rgba(184, 121, 20, 0.14);
+
+  --data-teal: #2a7d7f;
+  --data-slate: #5a6478;
+
+  --noise-opacity: 0.035;
+  --glass: rgba(247, 245, 240, 0.78);
+}
+
+@theme inline {
+  --color-deep: var(--bg-deep);
+  --color-base: var(--bg-base);
+  --color-raised: var(--bg-raised);
+  --color-line-1: var(--border-1);
+  --color-line-2: var(--border-2);
+  --color-line-3: var(--border-3);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-faint: var(--fg-faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-dim: var(--accent-dim);
+  --color-data-teal: var(--data-teal);
+  --color-data-slate: var(--data-slate);
+
+  --font-sans: var(--font-archivo), var(--font-noto-tc), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --radius-s: 6px;
+}
+
+/* ── Base ─────────────────────────────────── */
+html {
+  scroll-behavior: auto; /* Lenis owns smooth scrolling */
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:lang(zh-Hant) body,
+body:lang(zh-Hant) {
+  line-height: 1.8;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--fg);
+}
+
+/* Focus — never removed, always amber (Phase 4 §5) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Numbers never jitter */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Noise overlay (Phase 4 §2) ───────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: var(--noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* ── Blueprint guide lines ────────────────── */
+.guide-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-1);
+}
+
+/* Crosshair tick at section seams */
+.tick {
+  position: relative;
+}
+.tick::before {
+  content: '+';
+  position: absolute;
+  top: -0.6em;
+  left: -0.35em;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ── Reduced motion baseline (Phase 5 §4) ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

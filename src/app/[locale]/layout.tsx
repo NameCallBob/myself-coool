@@ -1,0 +1,99 @@
+import type { Metadata } from 'next';
+import { Archivo, JetBrains_Mono, Noto_Sans_TC } from 'next/font/google';
+import { notFound } from 'next/navigation';
+import { hasLocale, NextIntlClientProvider } from 'next-intl';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { ThemeProvider } from 'next-themes';
+import { routing } from '@/i18n/routing';
+import { Nav } from '@/components/layout/Nav';
+import { Footer } from '@/components/layout/Footer';
+import { GridGuides } from '@/components/layout/GridGuides';
+import '../globals.css';
+
+const archivo = Archivo({
+  subsets: ['latin'],
+  variable: '--font-archivo',
+  display: 'swap',
+});
+
+const notoSansTC = Noto_Sans_TC({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-noto-tc',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+});
+
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'home' });
+
+  return {
+    metadataBase: new URL('https://binbinbob.work'),
+    title: {
+      default:
+        locale === 'zh-TW'
+          ? 'binbin — 軟體架構師 · 後端工程師 · AI 系統'
+          : 'binbin — Software Architect · Backend Engineer · AI Systems',
+      template: '%s — binbin',
+    },
+    description: t('subtitle'),
+  };
+}
+
+export default async function LocaleLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: 'a11y' });
+
+  return (
+    <html
+      lang={locale === 'zh-TW' ? 'zh-Hant-TW' : 'en'}
+      suppressHydrationWarning
+      className={`${archivo.variable} ${notoSansTC.variable} ${jetbrainsMono.variable}`}
+    >
+      <body>
+        <ThemeProvider attribute="data-theme" defaultTheme="dark">
+          <NextIntlClientProvider>
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-[6px] focus:bg-accent focus:px-4 focus:py-2 focus:text-accent-ink"
+            >
+              {t('skipToContent')}
+            </a>
+            <GridGuides />
+            <Nav />
+            <main id="main" className="relative">
+              {children}
+            </main>
+            <Footer />
+          </NextIntlClientProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}

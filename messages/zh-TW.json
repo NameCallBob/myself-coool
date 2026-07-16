@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "work": "作品",
+    "architecture": "系統架構",
+    "ai": "AI Workflow",
+    "about": "關於",
+    "contact": "聯絡我",
+    "menuOpen": "開啟選單",
+    "menuClose": "關閉選單",
+    "home": "回到首頁"
+  },
+  "footer": {
+    "statement": "設計能扛規模的系統,從資料庫到 AI Workflow。",
+    "rights": "版權所有",
+    "github": "GitHub 個人頁"
+  },
+  "a11y": {
+    "skipToContent": "跳至主要內容",
+    "toggleTheme": "切換深淺主題",
+    "switchLocale": "Switch to English",
+    "schematicLabel": "微服務系統拓撲示意圖:請求由客戶端經 Nginx 進入各微服務,存取 MySQL 與 Redis"
+  },
+  "home": {
+    "eyebrow": "00 / SYSTEM OVERVIEW",
+    "title": "我設計大型系統。",
+    "subtitle": "從資料庫結構到 AI Workflow,後端為核心的全端架構。",
+    "roles": "SOFTWARE ARCHITECT · BACKEND ENGINEER · AI SYSTEM BUILDER",
+    "ctaWork": "檢視作品",
+    "ctaContact": "聯絡我"
+  }
+}

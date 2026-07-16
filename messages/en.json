@@ -1,0 +1,31 @@
+{
+  "nav": {
+    "work": "Work",
+    "architecture": "Architecture",
+    "ai": "AI Workflow",
+    "about": "About",
+    "contact": "Contact",
+    "menuOpen": "Open menu",
+    "menuClose": "Close menu",
+    "home": "Back to home"
+  },
+  "footer": {
+    "statement": "Designing systems that scale — from database schemas to AI workflows.",
+    "rights": "All rights reserved",
+    "github": "GitHub profile"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content",
+    "toggleTheme": "Toggle color theme",
+    "switchLocale": "切換為中文",
+    "schematicLabel": "Microservices topology diagram: requests flow from clients through Nginx into services, backed by MySQL and Redis"
+  },
+  "home": {
+    "eyebrow": "00 / SYSTEM OVERVIEW",
+    "title": "I design large-scale systems.",
+    "subtitle": "Backend-driven full-stack architecture, from database schemas to AI workflows.",
+    "roles": "SOFTWARE ARCHITECT · BACKEND ENGINEER · AI SYSTEM BUILDER",
+    "ctaWork": "View work",
+    "ctaContact": "Get in touch"
+  }
+}
