@@ -17,11 +17,11 @@ export const EXPERIENCE: Experience[] = [
       zh: '日秀美學股份有限公司',
       en: 'Rissiu Aesthetics Co., Ltd.', // ⚠ 待確認公司英文名
     },
-    role: { zh: '後端開發', en: 'Backend Developer' },
+    role: { zh: '全端開發', en: 'Full-Stack Developer' },
     period: '2025.06 — PRESENT',
     summary: {
-      zh: '負責 AI 美甲平台與 Django 微服務平台的後端設計與開發:從資料庫設計、API 到 AI 整合。',
-      en: 'Backend design and development for the AI nail platform and the Django microservices platform — from database schemas and APIs to AI integration.',
+      zh: '負責 AI 美甲平台與 Django 微服務平台的全端設計與開發:從資料庫、API、前端到 AI 整合。',
+      en: 'Full-stack design and development for the AI nail platform and the Django microservices platform — from database schemas and APIs to frontends and AI integration.',
     },
   },
   {

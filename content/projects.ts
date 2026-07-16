@@ -4,8 +4,9 @@
  *
  * 內容原則:全部欄位皆來自 2026-07-16 對實際 repo 的程式碼分析,
  * 無捏造數據;「⚠ 待確認」標示需 binbin 核實的描述(主要是角色範圍)。
- * hris 與 ai-nail-platform 為公司內部專案:不揭露品牌/客戶名稱、網域、
- * 內部環境細節,亦不揭露任何線上系統的現存弱點。
+ * hris、ai-nail-platform、naily-app、microservices-platform 為公司內部專案:
+ * 不揭露網域、內部環境細節,亦不揭露任何線上系統的現存弱點;
+ * 品牌名稱的揭露範圍由 binbin 決定(目前僅 naily-app 揭露)。
  */
 export type Localized = { zh: string; en: string };
 
@@ -145,7 +146,6 @@ export const PROJECTS: Project[] = [
     keyMetric: { value: '50+', label: { zh: '業務模組', en: 'business modules' } },
     featured: true,
     // caseStudy 僅涵蓋可公開的營運後台部分;消費者端(AI/AR)待可公開時補上。
-    // ⚠ responsibilities 的前後端範圍敘述待 binbin 確認。
     caseStudy: {
       problem: [
         {
@@ -179,8 +179,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '營運後台前端的主要開發,以及平台後端(Django)API 的設計與開發。',
-          en: 'Primary development of the ops console frontend, plus backend (Django) API design and development on the platform.',
+          zh: '全端開發:營運後台前端的主要開發,以及平台後端(Django)API 的設計與開發。',
+          en: 'Full-stack development: primary owner of the ops console frontend, plus backend (Django) API design and development on the platform.',
         },
       ],
       challenges: [
@@ -530,12 +530,113 @@ export const PROJECTS: Project[] = [
       en: 'Large-scale Django Microservices Platform',
     },
     oneLiner: {
-      zh: '數十個微服務組成的單一平台:從身分驗證、訂單、庫存到日誌與媒體。',
-      en: 'Dozens of services on one platform — auth, orders, inventory, logging, media and more.',
+      zh: '30+ 個 Django 微服務支撐電商、多租戶 POS、B2B、CRM 與線上課程六大業務域,搭配多個 Web 前端與原生 App。',
+      en: '30+ Django microservices powering e-commerce, multi-tenant POS, B2B, CRM and online courses — with multiple web frontends and native apps.',
     },
-    scope: { zh: '開發中', en: 'In development' },
-    stack: ['DJANGO', 'MYSQL', 'REDIS', 'NGINX'],
-    featured: false,
+    scope: { zh: '開發中 · 全通路商務', en: 'In development · Omnichannel commerce' },
+    stack: ['DJANGO', 'CELERY', 'MYSQL', 'REDIS', 'REACT', 'FLUTTER', 'SWIFT'],
+    keyMetric: { value: '30+', label: { zh: '微服務', en: 'microservices' } },
+    featured: true,
+    caseStudy: {
+      problem: [
+        {
+          zh: '全通路商務不是單一商店:同一批商品與會員,要同時流經 B2C 電商、門市 POS、企業採購(B2B)、業務團隊(CRM + 傭金歸因)與線上課程。平台以 30+ 個 Django 微服務支撐這六大業務域,前端是 4 個 React 應用加 4 個原生行動 App(Flutter、SwiftUI)。',
+          en: 'Omnichannel commerce is never one storefront: the same products and members flow through B2C e-commerce, in-store POS, B2B procurement, a sales force (CRM + commission attribution) and online courses. The platform backs these six domains with 30+ Django microservices, fronted by 4 React apps and 4 native mobile apps (Flutter, SwiftUI).',
+        },
+      ],
+      constraints: [
+        {
+          zh: '公司商業專案,程式碼不公開。',
+          en: 'A commercial, closed-source project.',
+        },
+        {
+          zh: '金流、發票、物流全部接真:信用卡、BNPL、電子發票與多家物流商,每一筆交易都是真錢。',
+          en: 'Payments, invoicing and logistics are all live — cards, BNPL, e-invoicing and multiple carriers. Every transaction is real money.',
+        },
+        {
+          zh: '兩位主力開發者維護 170 萬行後端:橫切機制必須做成共享庫,而不是 30 份複製。',
+          en: 'Two core developers maintain 1.7M lines of backend: cross-cutting concerns must live in a shared library, not thirty copies.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '每服務一庫:33 個 Django 服務各自擁有獨立的 MySQL schema,共 807 個資料模型;跨服務不建外鍵,只存邏輯參照與下單當下的快照。服務間走同步 REST(共享 client,逾時 + 指數退避),以 RS256 service JWT 互相認證;三個 Redis 實例分工快取、Session 與分散式鎖、Celery 佇列,每服務一個 worker,啟動依核心 → 業務 → 輔助三階段編排。',
+          en: 'Database-per-service: 33 Django services each own a MySQL schema — 807 models in total. No cross-service foreign keys; services keep logical references plus point-in-time snapshots. Inter-service calls are synchronous REST (a shared client with timeouts and exponential backoff), mutually authenticated with RS256 service JWTs. Three Redis instances split caching, sessions-and-locks and Celery queues — one worker per service, booted in a three-stage core → business → auxiliary order.',
+        },
+        {
+          zh: 'POS 把多租戶做到實體隔離:每租戶一個獨立資料庫,middleware 做零信任租戶解析,DB router 依 app 動態路由。金流域整合綠界(刷卡、BNPL、電子發票)與多家物流商;通知域涵蓋 134 個郵件模板、四憑證 FCM 推播與 LINE,全部走 Celery 非同步。',
+          en: 'POS pushes multi-tenancy to physical isolation: one database per tenant, zero-trust tenant resolution in middleware, and a DB router dispatching per app. The payment domain integrates ECPay (cards, BNPL, e-invoicing) and multiple logistics carriers; notifications span 134 email templates, four-credential FCM push and LINE — all asynchronous via Celery.',
+        },
+        {
+          zh: '前端不是一套打天下:每個 React 應用針對自己的場景做工程——B2B 採購端用伺服器權威報價、冪等鍵結帳與序號化樂觀更新(舊回應與舊回滾都不會倒灌);門市 POS 把收銀熱路徑做成 eager chunk(初始 JS 從 666kB 降到 310kB gz),班別 session 放 sessionStorage,共用收銀機關掉分頁即登出;外勤業務 PWA 以 tesseract.js 做裝置端名片 OCR(影像不出手機)加 GPS 地理圍欄業績歸因。',
+          en: 'The frontends are not one-size-fits-all: each React app is engineered for its context — the B2B portal runs server-authoritative quoting, idempotency-key checkout and sequence-numbered optimistic updates (stale responses and stale rollbacks can never clobber state); the in-store POS keeps the checkout hot path in an eager chunk (initial JS cut from 666kB to 310kB gzipped) and holds shift sessions in sessionStorage, so closing the tab logs a shared register out; the field-sales PWA does on-device business-card OCR with tesseract.js (images never leave the phone) plus GPS-geofenced commission attribution.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '兩位主力開發者之一,全端開發:微服務後端(資料模型、API、服務間通訊、Celery 任務)、React 前端與行動端整合,以及每週回歸測試系統與部署工具。',
+          en: 'One of two core developers, working full-stack: the microservice backends (models, APIs, inter-service communication, Celery tasks), the React frontends and mobile integration, plus the weekly regression system and deployment tooling.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '多租戶 POS 只要漏一次租戶判斷,就是跨店資料事故。',
+            en: 'In a multi-tenant POS, one missed tenant check is a cross-store data incident.',
+          },
+          s: {
+            zh: '零信任租戶解析:header 裡的租戶 ID 只是「聲明」,middleware 以 RS256 公鑰驗簽後,以 JWT 內的租戶 claim 為唯一權威,不符即 403;租戶資料本身落在實體隔離的獨立資料庫。',
+            en: "Zero-trust tenant resolution: the tenant ID header is merely a claim — middleware verifies the JWT against the RS256 public key and treats the token's tenant claim as the only authority, rejecting mismatches with 403. Tenant data itself lives in physically separate databases.",
+          },
+        },
+        {
+          c: {
+            zh: '金流回調是整個平台正確性的咽喉:一筆漏掉或重複,對帳就崩。',
+            en: "Payment callbacks are the platform's correctness chokepoint: one lost or duplicated callback breaks reconciliation.",
+          },
+          s: {
+            zh: '下單以商品快照落庫,付款回調通過驗簽後依通路(電商 / B2B / POS)分流同步,交易一律記入不可變(append-only)帳本,通知走 Celery 非同步——退款、發票與對帳都能事後回放。',
+            en: 'Orders persist product snapshots at checkout; verified callbacks fan out by channel (e-commerce / B2B / POS); every transaction lands in an append-only ledger, with notifications async on Celery — so refunds, invoices and reconciliation can always be replayed.',
+          },
+        },
+        {
+          c: {
+            zh: '門市與外勤的網路不可靠,但收銀與開戶不能停。',
+            en: "Store and field networks are unreliable — but checkout and onboarding can't stop.",
+          },
+          s: {
+            zh: 'POS 結帳斷線時進本地佇列、連線恢復自動重送(業務錯誤不盲目重試);業務 PWA 以 app-shell Service Worker 加送件佇列支援離線開戶,再用三層機制終結 SPA 換版白屏:舊 chunk 載入失敗自癒重載、資產缺檔回硬 404 而非 HTML、SW 版本化清快取。',
+            en: 'POS checkouts queue locally when offline and auto-resend on reconnect (business errors are never blindly retried); the sales PWA pairs an app-shell service worker with a submission queue for offline onboarding — and kills the classic stale-deploy white screen with three layers: self-healing reloads on stale-chunk failures, hard 404s for missing assets instead of HTML fallbacks, and versioned service-worker cache purges.',
+          },
+        },
+        {
+          c: {
+            zh: '上萬個測試不等於安全網——得先讓測試「可信」。',
+            en: "Sixteen thousand tests are not a safety net until you can trust them.",
+          },
+          s: {
+            zh: '建立四層回歸系統:全服務健康閘 → 218 個唯讀端點基線比對 → 掛 DB 安全守衛的 pytest(偵測到測試打向非隔離資料庫立即中止)→ 跨服務真 E2E;每週排程執行,全綠才滾動更新基線。',
+            en: 'Built a four-layer regression system: an all-service health gate → baseline comparison across 218 read-only endpoints → pytest behind a DB guard (any test touching a non-isolated database halts the run) → true cross-service E2E. It runs on a weekly schedule, and baselines only roll forward on all-green.',
+          },
+        },
+      ],
+      facts: [
+        { value: '30+', label: { zh: '微服務', en: 'microservices' } },
+        { value: '807', label: { zh: '資料模型', en: 'data models' } },
+        { value: '1.7M+', label: { zh: 'Python 行數', en: 'lines of Python' } },
+        { value: '16,433', label: { zh: '測試案例', en: 'test cases' } },
+      ],
+      lessons: [
+        {
+          zh: '微服務的代價在邊界處支付:沒有跨庫交易,一致性就得用快照、邏輯參照與不可變帳本來換——這些不是 workaround,是這個架構誠實的成本。',
+          en: 'Microservices charge their toll at the boundaries: without cross-database transactions, consistency is bought with snapshots, logical references and append-only ledgers — not workarounds, but the honest price of the architecture.',
+        },
+        {
+          zh: '測試先看可信度、再看數量:一個能擋下「打到真實資料庫」的守衛,比一千個綠燈更能保護一次重構。',
+          en: 'Trust before volume in testing: one guard that halts a test the moment it touches a real database protects a refactor better than a thousand green checks.',
+        },
+      ],
+    },
   },
   {
     slug: 'ai-workflow',
