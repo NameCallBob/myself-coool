@@ -2,9 +2,10 @@
  * Project content — single source of truth for /work, home §01,
  * JSON-LD, and sitemap.
  *
- * 內容原則:全部欄位皆來自 2026-07-16 對三個實際 repo 的程式碼分析,
+ * 內容原則:全部欄位皆來自 2026-07-16 對實際 repo 的程式碼分析,
  * 無捏造數據;「⚠ 待確認」標示需 binbin 核實的描述(主要是角色範圍)。
- * hris 為公司內部專案:不揭露客戶名稱、網域與內部細節。
+ * hris 與 ai-nail-platform 為公司內部專案:不揭露品牌/客戶名稱、網域、
+ * 內部環境細節,亦不揭露任何線上系統的現存弱點。
  */
 export type Localized = { zh: string; en: string };
 
@@ -140,9 +141,195 @@ export const PROJECTS: Project[] = [
       en: 'From AI nail recognition and AR try-on to designer marketplace, CRM and POS.',
     },
     scope: { zh: 'AI × AR × 商城 × POS', en: 'AI × AR × Commerce × POS' },
-    stack: ['AI', 'AR', 'DJANGO', 'B2B'],
+    stack: ['AI', 'AR', 'DJANGO', 'REACT', 'B2B'],
+    keyMetric: { value: '50+', label: { zh: '業務模組', en: 'business modules' } },
     featured: true,
-    // 開發中專案,case study 待專案內容可公開時補上
+    // caseStudy 僅涵蓋可公開的營運後台部分;消費者端(AI/AR)待可公開時補上。
+    // ⚠ responsibilities 的前後端範圍敘述待 binbin 確認。
+    caseStudy: {
+      problem: [
+        {
+          zh: '同一個平台有兩張面孔:對消費者是 AI 指甲辨識與 AR 試戴;對商家與內部團隊,則是一套涵蓋商品、訂單、庫存、B2B 報價結算、促銷與財務的營運後台。這份 case study 聚焦目前可公開的部分——約 50 個業務模組的營運後台前端。',
+          en: 'One platform, two faces: consumers get AI nail recognition and AR try-on; merchants and internal teams get an operations console covering products, orders, inventory, B2B quoting and settlement, promotions and finance. This case study covers what can be shared today — the ops console frontend, spanning ~50 business modules.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '公司商業專案,程式碼與業務細節不公開。',
+          en: 'A commercial, closed-source project; business details stay private.',
+        },
+        {
+          zh: '業務範圍極廣且持續擴張:單一 SPA 要同時守住 bundle 體積、一致性與可維護性。',
+          en: 'The scope is huge and still growing: one SPA has to hold the line on bundle size, consistency and maintainability.',
+        },
+        {
+          zh: '前後端不共享型別:API 契約靠慣例與集中式的錯誤標準化來維持。',
+          en: 'Frontend and backend share no types: the API contract survives on conventions and centralized error normalization.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '平台由多個服務組成:主業務 API(Django REST Framework)加上獨立的審批微服務;營運後台是 React 18 + Ant Design SPA,約 60 萬行程式碼,service 層依業務領域拆成 128 個檔案、共 1,951 個 API 呼叫點,元件層依模組切成 50+ 個資料夾。',
+          en: 'The platform is multiple services: a main business API (Django REST Framework) plus a standalone approval microservice. The ops console is a React 18 + Ant Design SPA — ~600k lines, a service layer split into 128 domain files with 1,951 API call sites, and components organized into 50+ module folders.',
+        },
+        {
+          zh: '橫切關注全部收斂在單一 Axios 攔截層:JWT 自動附加、401 刷新佇列、403 全域權限廣播、錯誤 toast 去重、json-bigint 處理大數精度。瀏覽器內以 TensorFlow.js 做影像物件辨識,認證支援 WebAuthn/Passkey,30+ 個 feature flag 控制功能開關,CI 設有 bundle 體積閘門。',
+          en: 'Cross-cutting concerns converge in a single Axios interceptor layer: automatic JWT attachment, a 401 refresh queue, global 403 broadcasting, deduped error toasts, and json-bigint for numeric precision. In-browser object detection runs on TensorFlow.js, auth supports WebAuthn/Passkey, 30+ feature flags gate functionality, and CI enforces a bundle-size budget.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '營運後台前端的主要開發,以及平台後端(Django)API 的設計與開發。',
+          en: 'Primary development of the ops console frontend, plus backend (Django) API design and development on the platform.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: 'JWT 過期的瞬間,數十個進行中的請求會同時觸發 refresh。',
+            en: 'The moment a JWT expires, dozens of in-flight requests all try to refresh at once.',
+          },
+          s: {
+            zh: '401 一律進入刷新佇列:只發一次 refresh,成功後重放所有排隊請求。同一個攔截層順帶標準化後端的逐欄位驗證錯誤,表單層直接顯示、不再各自解析。',
+            en: 'Every 401 joins a refresh queue: one refresh fires, then all queued requests replay. The same interceptor normalizes per-field validation errors from the backend, so forms display them directly instead of parsing on their own.',
+          },
+        },
+        {
+          c: {
+            zh: '50+ 個模組全部打包,首屏會被拖垮。',
+            en: 'Bundling 50+ modules eagerly would sink the first paint.',
+          },
+          s: {
+            zh: '路由層級懶加載搭配 feature flags 控制功能面;CI 以 bundle 體積閘門把關,讓體積成長永遠是「被看見的決定」而不是意外。',
+            en: 'Route-level lazy loading plus feature flags gate the surface area; a CI bundle-size budget makes every size increase a visible decision, never an accident.',
+          },
+        },
+        {
+          c: {
+            zh: '快速堆功能的階段過後,留下跨模組的正確性與一致性債。',
+            en: 'A fast feature-stacking phase left cross-module correctness and consistency debt.',
+          },
+          s: {
+            zh: '建立編號化的稽核修復流程,分「資料正確性」與「業務流程」兩軌逐項清償,並以 conventional commits 追蹤——已完成 21 項系統性修復。',
+            en: 'Set up a numbered audit-and-fix process with two tracks — data correctness and business flow — paying items down one by one under conventional commits; 21 systematic fixes landed.',
+          },
+        },
+      ],
+      facts: [
+        { value: '50+', label: { zh: '業務模組', en: 'business modules' } },
+        { value: '~600k', label: { zh: '前端程式碼行數', en: 'lines of frontend code' } },
+        { value: '1,951', label: { zh: 'API 呼叫點', en: 'API call sites' } },
+        { value: '30+', label: { zh: 'Feature Flags', en: 'feature flags' } },
+      ],
+      lessons: [
+        {
+          zh: '前後端沒有共享型別時,最划算的契約投資是在攔截層統一錯誤格式——比逐表單處理省下數十倍的重複工作。',
+          en: 'Without shared types, the highest-leverage contract investment is normalizing error shapes in the interceptor — it beats per-form handling by an order of magnitude.',
+        },
+        {
+          zh: '技術債要掛編號才會被還:有編號、有優先級的稽核項目會被逐一清償;「有空再修」的那個「有空」永遠不會來。',
+          en: "Tech debt gets paid only when it has a number: audited, prioritized items get fixed one by one — 'when we have time' never arrives on its own.",
+        },
+      ],
+    },
+  },
+  {
+    slug: 'naily-app',
+    title: { zh: 'Naily — AI 美甲電商 App', en: 'Naily — AI Nail Commerce App' },
+    oneLiner: {
+      zh: 'Flutter 電商 App:裝置端 AI 指甲辨識、客製穿戴甲設計、完整金物流。上述平台的消費者端。',
+      en: 'A Flutter commerce app — on-device AI nail sizing, custom press-on design, full payment and logistics. The consumer face of the platform above.',
+    },
+    scope: { zh: '2025.11 起獨立接手維護', en: 'Sole maintainer since 2025.11' },
+    stack: ['FLUTTER', 'ONNX', 'FIREBASE', 'ECPAY'],
+    keyMetric: { value: '82', label: { zh: '畫面', en: 'screens' } },
+    featured: true,
+    caseStudy: {
+      problem: [
+        {
+          zh: '消費者要在手機上完成「量指甲 → 客製設計 → 下單收貨」的完整旅程:以裝置端 AI 辨識指甲尺寸、3 步驟客製穿戴甲設計,加上電商必備的金流(信用卡、超商、定期定額)與物流(宅配、超商取貨)、推播、深連結與會員體系。',
+          en: 'Consumers complete the whole journey on their phone — measure nails, design custom press-ons, order and receive: on-device AI nail sizing, a 3-step designer, plus the commerce essentials of payments (cards, convenience-store codes, subscriptions), logistics (home delivery, CVS pickup), push, deep links and membership.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '多人共同開發的 codebase,2025 年 11 月之後由我一人接手全部開發與維護。',
+          en: 'A codebase built by multiple developers — fully handed over to me in November 2025.',
+        },
+        {
+          zh: 'AI 推論必須在裝置端執行(隱私與體驗),中低階手機也要順。',
+          en: 'AI inference must run on-device (privacy and UX) — and stay smooth on mid-range phones.',
+        },
+        {
+          zh: '已上線營運的商業 App:每個改動都面對真實使用者與真實金流。',
+          en: 'A live commercial app: every change faces real users and real money.',
+        },
+      ],
+      architecture: [
+        {
+          zh: 'Flutter feature-first 分層(config / models / services / screens⋯),go_router 宣告式導航,不用 DI 框架、以 service singleton 收斂依賴——82 個畫面、約 70 個 service、533 個 Dart 檔、約 12.9 萬行。',
+          en: 'Feature-first Flutter layering (config / models / services / screens…), declarative navigation with go_router, no DI framework — dependencies converge on service singletons. 82 screens, ~70 services, 533 Dart files, ~129k lines.',
+        },
+        {
+          zh: '裝置端 AI 自成子套件:ONNX Runtime 執行 YOLO11 指甲偵測/分割與手掌關節點模型,iOS 以 platform channel 銜接 CoreML;AR 試戴與遮罩重上色等 CV 模組獨立封裝。金物流整合 ECPay 與超商取貨,Firebase 負責推播、Crashlytics 與分析,並有憑證釘選與裝置完整性檢查。',
+          en: 'On-device AI lives in self-contained sub-packages: ONNX Runtime drives YOLO11 nail detection/segmentation and hand-landmark models, with an iOS platform channel bridging to CoreML; AR try-on and mask-recolor CV modules are isolated. Commerce integrates ECPay and CVS pickup; Firebase handles push, Crashlytics and analytics, hardened with certificate pinning and device-integrity checks.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '2025/11 前參與共同開發;之後獨立承接全部開發、維護與發版——包含 CI、nightly E2E 與 release pipeline。',
+          en: 'Co-developed until 2025/11; since then the sole owner of all development, maintenance and releases — including CI, nightly E2E and the release pipeline.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '接手多人寫的 12 萬行 codebase,沒有交接期的奢侈。',
+            en: 'Inheriting a 120k-line multi-author codebase, without the luxury of a handover period.',
+          },
+          s: {
+            zh: '先立規矩再動手:把慣例明文化(統一 AppConfig / AppLogger / CacheService、畫面檔 800 行上限、僅 GoRouter 導航),再以編號化稽核(P0–P2)逐項清償正確性與品質債。',
+            en: 'Rules before refactors: codify conventions (single AppConfig / AppLogger / CacheService, an 800-line screen cap, GoRouter-only navigation), then pay down correctness and quality debt through a numbered P0–P2 audit.',
+          },
+        },
+        {
+          c: {
+            zh: '裝置端 AI 要同時做到準、小、快。',
+            en: 'On-device AI has to be accurate, small and fast at once.',
+          },
+          s: {
+            zh: 'YOLO11 nano 級模型搭配自建 16KB page-size 的 ONNX Runtime 建置,iOS 走 CoreML platform channel;模型隨 App 內建,離線也能辨識。',
+            en: 'Nano-class YOLO11 models on a custom 16KB-page-size ONNX Runtime build, with CoreML via a platform channel on iOS; models ship inside the app and work offline.',
+          },
+        },
+        {
+          c: {
+            zh: '上線 App 的錯誤處理不能靠運氣。',
+            en: "A live app's error handling can't run on luck.",
+          },
+          s: {
+            zh: 'runZonedGuarded、FlutterError.onError 與 PlatformDispatcher.onError 三層全部收斂到 Crashlytics;Firebase 初始化失敗時 App 降級續跑,ErrorWidget 也有自訂 fallback。',
+            en: 'Three layers — runZonedGuarded, FlutterError.onError and PlatformDispatcher.onError — all converge on Crashlytics; the app degrades gracefully if Firebase init fails, with a custom ErrorWidget fallback.',
+          },
+        },
+      ],
+      facts: [
+        { value: '82', label: { zh: '畫面', en: 'screens' } },
+        { value: '~129k', label: { zh: 'Dart 行數', en: 'lines of Dart' } },
+        { value: '68', label: { zh: '測試檔', en: 'test files' } },
+        { value: '2025.11', label: { zh: '起唯一維護者', en: 'sole maintainer since' } },
+      ],
+      lessons: [
+        {
+          zh: '接手程式碼的第一步不是重構,是把慣例寫下來——規則明文化之後,每一次修改才會讓系統更一致,而不是更發散。',
+          en: 'The first step in a takeover is not refactoring — it is writing the conventions down. Once rules are explicit, every change makes the system more consistent instead of more divergent.',
+        },
+        {
+          zh: '債要列出來才會被還:幾個超過 800 行上限的大畫面被列在待辦清單上,而不是藏起來。有編號的債,才有被清償的一天。',
+          en: "Debt gets paid only when it's listed: the screens exceeding the 800-line cap sit on the backlog, not under the rug. Numbered debt is payable debt.",
+        },
+      ],
+    },
   },
   {
     slug: 'nkust-alumni',
