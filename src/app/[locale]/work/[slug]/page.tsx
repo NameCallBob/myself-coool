@@ -200,6 +200,38 @@ export default async function CaseStudyPage({ params }: Props) {
         </div>
       )}
 
+      {/* Screens — 一律 mock/合成資料 */}
+      {project.screenshots && project.screenshots.length > 0 && (
+        <section className="tick mt-20 border-t border-line-2 pt-14">
+          <Reveal>
+            <SectionHeading no="08" label="SCREENS" />
+            <p className="mt-4 font-mono text-xs tracking-[0.06em] text-faint">
+              {tc('mockNote')}
+            </p>
+          </Reveal>
+          <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-2">
+            {project.screenshots.map((s, i) => (
+              <Reveal key={s.src} delay={i * 40} className={i === 0 ? 'md:col-span-2' : ''}>
+                <figure>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={s.src}
+                    alt={s.alt[loc]}
+                    loading="lazy"
+                    width={1440}
+                    height={900}
+                    className="h-auto w-full rounded-[6px] border border-line-2"
+                  />
+                  <figcaption className="mt-3 font-mono text-[11px] tracking-[0.06em] text-muted">
+                    {s.caption[loc]}
+                  </figcaption>
+                </figure>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Next case study */}
       <Link
         href={`/work/${next.slug}`}

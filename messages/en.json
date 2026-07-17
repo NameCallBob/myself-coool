@@ -44,7 +44,8 @@
     "about": "A student independently shipping production systems — experience, timeline and stack."
   },
   "case": {
-    "internal": "Internal project (private)"
+    "internal": "Internal project (private)",
+    "mockNote": "All screens below show demo (mock) data — no real user data."
   },
   "common": {
     "underConstruction": "This page is under construction — full content coming soon.",

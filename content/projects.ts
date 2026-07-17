@@ -20,6 +20,8 @@ export type CaseStudy = {
   lessons: Localized[];
 };
 
+export type Screenshot = { src: string; alt: Localized; caption: Localized };
+
 export type Project = {
   slug: string;
   title: Localized;
@@ -30,6 +32,8 @@ export type Project = {
   links?: { live?: string; repo?: string };
   featured: boolean;
   caseStudy?: CaseStudy;
+  /** 系統畫面(一律使用 mock/合成資料截圖,不含真實個資) */
+  screenshots?: Screenshot[];
 };
 
 export const PROJECTS: Project[] = [
@@ -448,6 +452,38 @@ export const PROJECTS: Project[] = [
     keyMetric: { value: '1,112', label: { zh: '後端測試函式', en: 'backend tests' } },
     links: { live: 'https://equipment-borrowing.binbinbob.work' },
     featured: true,
+    screenshots: [
+      {
+        src: '/images/work/nkust-borrow/login.png',
+        alt: {
+          zh: '設備借用管理系統登入頁',
+          en: 'Equipment borrowing system login page',
+        },
+        caption: { zh: '登入(自建 JWT 認證)', en: 'Login (self-built JWT auth)' },
+      },
+      {
+        src: '/images/work/nkust-borrow/borrow-return.png',
+        alt: {
+          zh: '借還作業中心:借用/歸還/快速查詢分頁、今日借還統計與掃描條碼流程',
+          en: 'Borrow/return center: tabs for lending, returns and quick lookup, daily stats and barcode scanning',
+        },
+        caption: {
+          zh: '借還作業中心(掃碼借還)',
+          en: 'Borrow/return center (barcode flow)',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/equipment-management.png',
+        alt: {
+          zh: '設備管理中心:分類樹瀏覽、設備列表、批次匯入與批次列印條碼',
+          en: 'Equipment management: category tree, equipment list, batch import and batch barcode printing',
+        },
+        caption: {
+          zh: '設備管理中心(批次條碼)',
+          en: 'Equipment management (batch barcodes)',
+        },
+      },
+    ],
     caseStudy: {
       problem: [
         {
