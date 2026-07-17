@@ -1,6 +1,6 @@
 {
   "nav": {
-    "work": "Work",
+    "work": "Projects",
     "architecture": "Architecture",
     "ai": "AI Workflow",
     "about": "About",
@@ -32,13 +32,17 @@
     "contactNote": "If you'd like to talk about system design or backend work, email me."
   },
   "work": {
-    "title": "Work",
-    "description": "Every project is broken down the same way: problem, constraints, architecture, trade-offs, results.",
+    "title": "Projects",
+    "description": "Every project is broken down the same way: problem, constraints, architecture, challenges, results — grouped by how much can be shown.",
+    "publicLabel": "Public projects",
+    "publicNote": "Campus and personal projects — live systems whose code and screens can be shown.",
+    "internalLabel": "Internal projects",
+    "internalNote": "Commercial work — closed source, presented as architecture and trade-off case studies.",
     "metricPending": "metrics pending"
   },
   "meta": {
     "home": "Full-stack developer building an AI nail platform and a multi-tenant HRIS at Manience Inc., and independently running two systems in production at NKUST.",
-    "work":"Deep teardowns of five real systems: multi-tenant SaaS, an AI commerce platform, a mobile app and campus operations systems.",
+    "work": "Project experience: public campus systems and internal commercial work, each broken down by problem, architecture and trade-offs.",
     "architecture": "Interactive views of microservice boundaries, API request lifecycles and deployment flow.",
     "ai": "How AI agents assist architecture review, code review, security and performance checks, and documentation.",
     "about": "A student independently shipping production systems — experience, timeline and stack."

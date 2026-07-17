@@ -49,7 +49,7 @@ export default async function HomePage({ params }: Props) {
       {/* 01 / SELECTED WORK */}
       <section aria-labelledby="work-heading" className="tick border-t border-line-2 py-20 md:py-28">
         <Reveal>
-          <SectionHeading no="01" label="SELECTED WORK" />
+          <SectionHeading no="01" label="SELECTED PROJECTS" />
           <p className="mt-4 max-w-[46ch] text-sm text-muted md:text-base">{t('workNote')}</p>
         </Reveal>
         <h2 id="work-heading" className="sr-only">

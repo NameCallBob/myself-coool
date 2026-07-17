@@ -5,7 +5,8 @@
  * 內容原則:全部欄位來自 2026-07-17 對各 repo 的程式碼與 git 歷史分析
  * (docs/content-request.md 規格),每個數字皆可重跑指令驗證;
  * 語氣為「可信地陳述經驗」——不誇大、未上線就寫未上線、沒有數據就不寫。
- * hris、ai-nail-platform、naily-app、microservices-platform 為公司內部專案:
+ * hris、ai-nail-platform、naily-app、microservices-platform、retail-pos、
+ * b2b-wholesale-platform、field-sales-pwa 為公司內部專案:
  * 不揭露網域、內網位址、內部人員與現存弱點的重現細節。
  */
 export type Localized = { zh: string; en: string };
@@ -31,6 +32,8 @@ export type Project = {
   keyMetric?: { value: string; label: Localized };
   links?: { live?: string; repo?: string };
   featured: boolean;
+  /** public = 可展示 live 站或程式碼;internal = 公司商業專案,只以案例拆解呈現 */
+  visibility: 'public' | 'internal';
   caseStudy?: CaseStudy;
   /** 系統畫面(一律使用 mock/合成資料截圖,不含真實個資) */
   screenshots?: Screenshot[];
@@ -39,6 +42,7 @@ export type Project = {
 export const PROJECTS: Project[] = [
   {
     slug: 'hris-saas',
+    visibility: 'internal',
     title: {
       zh: '多租戶 SaaS 人資系統',
       en: 'Multi-tenant SaaS HRIS',
@@ -140,6 +144,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'ai-nail-platform',
+    visibility: 'internal',
     title: { zh: 'AI 美甲平台', en: 'AI Nail Platform' },
     oneLiner: {
       zh: 'AI 指甲辨識、AR 試戴、設計師平台到 CRM 與 POS 的完整商業系統。',
@@ -239,6 +244,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'naily-app',
+    visibility: 'internal',
     title: { zh: 'Naily — AI 美甲電商 App', en: 'Naily — AI Nail Commerce App' },
     oneLiner: {
       zh: 'Flutter 電商 App:裝置端 AI 指甲辨識、AR 試戴與客製穿戴甲。2025 年 11 月起由我接手全部開發與維護。',
@@ -337,6 +343,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'nkust-alumni',
+    visibility: 'public',
     title: {
       zh: '高科大智慧商務系系友會平台',
       en: 'NKUST Alumni Association Platform',
@@ -465,6 +472,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'nkust-borrow',
+    visibility: 'public',
     title: {
       zh: '高科大設備借用管理系統',
       en: 'NKUST Equipment Borrowing System',
@@ -599,20 +607,428 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'microservices-platform',
+    visibility: 'internal',
     title: {
-      zh: '大型 Django 微服務平台',
-      en: 'Large-scale Django Microservices Platform',
+      zh: '大型 Django 微服務全通路商務平台',
+      en: 'Large-scale Django Microservices Commerce Platform',
     },
     oneLiner: {
-      zh: '數十個微服務組成的單一平台:從身分驗證、訂單、庫存到日誌與媒體。',
-      en: 'Dozens of services on one platform — auth, orders, inventory, logging, media and more.',
+      zh: '33 個 Django 微服務支撐電商、多租戶門市 POS、B2B 採購、業務 CRM 與獎金、線上課程與設計師共創六大業務域;營運中。',
+      en: 'Thirty-three Django microservices behind six business domains — e-commerce, multi-tenant store POS, B2B purchasing, sales CRM and commissions, courses and designer co-creation. In production.',
     },
-    scope: { zh: '開發中', en: 'In development' },
-    stack: ['DJANGO', 'MYSQL', 'REDIS', 'NGINX'],
+    scope: { zh: '公司內部 · 營運中', en: 'Internal · in production' },
+    stack: ['DJANGO', 'DRF', 'CELERY', 'MYSQL', 'REDIS', 'NGINX'],
+    keyMetric: { value: '33', label: { zh: '微服務', en: 'microservices' } },
+    featured: true,
+    caseStudy: {
+      problem: [
+        {
+          zh: '同一家零售業者同時經營線上商城、連鎖門市、企業批發與外勤業務團隊:四個通路各自產生訂單、動用同一批庫存、面對同一群會員、走同一套金流。各建一套系統的結局是庫存超賣、會員身分割裂與對帳災難。這個平台以領域切分的微服務承載:每個業務域一個 Django 服務、一個獨立資料庫,跨域以帶重試的同步 REST 與 Celery 非同步任務整合;金流、電子發票、物流等對外整合集中在專責服務,其他服務不觸碰第三方憑證。',
+          en: 'One retailer runs an online mall, chain stores, B2B wholesale and a field sales team at once — four channels creating orders against the same inventory, the same members, the same payment rails. Separate systems per channel end in oversold stock, split identities and reconciliation chaos. This platform carries it on domain-split microservices: one Django service and one database per business domain, integrated across domains by retrying REST calls and Celery tasks; payments, e-invoicing and logistics live in dedicated services so nothing else touches third-party credentials.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '公司內部專案,程式碼不公開;所有規模數字皆可在 repo 內以指令重跑驗證。',
+          en: 'Company-internal; the codebase is private. Every scale figure here re-runs as a command inside the repo.',
+        },
+        {
+          zh: '裸機部署、無雲端託管預算:沒有 K8s,健康檢查、依賴順序三階段啟動與 Celery worker 管理全由自製啟動腳本承擔。',
+          en: 'Bare-metal with no cloud budget: no Kubernetes — health checks, three-stage dependency-ordered startup and Celery worker management all fall to a hand-built orchestration script.',
+        },
+        {
+          zh: '多租戶隔離是硬性要求:門市 POS 每租戶一庫,租戶 header 只能當「聲明」,權威必須來自 JWT 簽章內的 claim。',
+          en: 'Tenant isolation is non-negotiable: store POS runs one database per tenant, and the tenant header is only ever a claim — authority comes from the signed JWT.',
+        },
+        {
+          zh: '營運中系統不可停機:金流與訂單鏈路的修復必須在不中斷交易下上線。',
+          en: 'The system is live: payment- and order-path fixes must land without interrupting transactions.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '多服務架構——不是單體拆分,而是逐域生長:Django 4.2 LTS + DRF,33 個服務、807 個資料模型、729 個 ViewSet 註冊加 2,203 個自訂 action,Python 主體約 153 萬行(不含 migrations)。選多服務的核心理由是發布節奏與風險容忍度:金流服務的變更風險和內容服務完全不同,獨立部署邊界讓高風險域能單獨小步發布。',
+          en: 'A many-service architecture — grown domain by domain, not carved from a monolith: Django 4.2 LTS + DRF across 33 services, 807 data models, 729 ViewSet registrations plus 2,203 custom actions, ~1.53M lines of Python excluding migrations. The case for services is release cadence and risk: a payment service tolerates change very differently from a content service, and independent deploy boundaries let high-risk domains ship in small, separate steps.',
+        },
+        {
+          zh: '認證採 RS256 非對稱 JWT:單一簽發服務持私鑰、其餘服務只驗公鑰、不回查使用者庫,權限碼在簽發時注入 token。每服務一個 MySQL 庫、三個 Redis 實例分工(快取/Session 與分散鎖/Celery 佇列);跨服務只存對方主鍵、不設資料庫外鍵,ID 用 Snowflake 並以字串序列化防 JS 精度問題。每服務一個 Celery worker、5 個服務帶 Beat 排程;金流、電子發票、超商與宅配物流、FCM 推播、社群登入集中在專責服務。CI 之外另自建每週四層回歸:健康閘 → 218 端點唯讀煙霧基線比對 → pytest → 跨服務 E2E。',
+          en: 'Auth is asymmetric RS256 JWT: one issuing service holds the private key, everything else verifies with the public key and never calls back to the user store; permission codes are baked into the token at issue time. Each service owns a MySQL database; three Redis instances split cache, sessions-plus-locks, and Celery queues. Cross-service references store bare primary keys — no database foreign keys — with Snowflake IDs serialized as strings for JS precision. One Celery worker per service, five with Beat schedules; payments, e-invoicing, convenience-store and home logistics, FCM push and social login concentrate in dedicated services. Beyond CI, a weekly four-layer regression runs: health gate → a 218-endpoint read-only smoke baseline → pytest → cross-service E2E.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '主導開發:2025 年 1 月專案創始即參與,2025 年 9 月起為唯一主力;全期 731/825 個 commit(89%,兩組 git 身分皆為我)。範圍涵蓋服務架構與新業務域建置(POS 多租戶、B2B、業務 CRM 與獎金歸因、課程、設計共創)、跨平台資安/效能/正確性稽核修復、回歸測試基建與部署維運。',
+          en: 'Lead development: on the project since its start in January 2025, sole main contributor since September 2025 — 731 of 825 commits (89%, both git identities mine). Scope spans service architecture and new domains (multi-tenant POS, B2B, sales CRM and commission attribution, courses, designer co-creation), platform-wide security/performance/correctness audits, the regression infrastructure and deployment operations.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '稽核發現金流回調的驗簽實作與金流商規範不符——所有合法回調都會被拒,付款成功但訂單狀態不同步;且付款成功只更新電商主訂單,B2B 與 POS 通路沒有任何同步路徑。',
+            en: 'An audit found the payment-callback signature check implemented off-spec — every legitimate callback was rejected, so payments succeeded while orders never updated; and success only touched the e-commerce order, with no sync path at all for B2B and POS.',
+          },
+          s: {
+            zh: '重寫簽章演算法對齊規範;新建「付款後通路同步」單一入口,依訂單來源分流到電商/B2B/POS/訂閱四條路徑,並加入冪等分支讓重複回調自癒而非重複入帳;以金流沙盒的真實回調驗證閉環後上線。',
+            en: 'Rewrote the signature algorithm to spec and built a single post-payment sync entry point fanning out by order origin — e-commerce, B2B, POS, subscription — with idempotent branches so duplicate callbacks self-heal instead of double-booking. Verified the loop against real sandbox callbacks before shipping.',
+          },
+        },
+        {
+          c: {
+            zh: '多個服務的非同步任務看似正常註冊、無任何錯誤日誌,實際上從未執行:任務投遞到 TASK_ROUTES 宣告的佇列,worker 卻監聽另一組佇列名,訊息安靜堆在無人消費的佇列裡。同類錯配在 4 個服務獨立發生——告警長期未寄出、發獎鏈整條斷裂、圖片變體全停。',
+            en: 'Async tasks in several services registered cleanly, logged nothing — and never ran: tasks were routed to the queues declared in TASK_ROUTES while workers listened on differently named ones, messages piling up silently with no consumer. The same mismatch surfaced independently in four services — alerts never sent, the reward chain severed, image variants stalled.',
+          },
+          s: {
+            zh: '逐服務比對 TASK_ROUTES 與啟動腳本的 -Q 參數,統一為服務專屬佇列名慣例並修正啟動腳本;修復後以 Beat 實跑驗證告警真實寄達、發獎鏈 E2E 冪等通過。',
+            en: 'Diffed TASK_ROUTES against each startup script’s -Q flags, unified on a per-service queue-name convention and fixed the orchestration script — then proved it live: alert mail actually arriving, the reward chain passing an idempotent E2E.',
+          },
+        },
+        {
+          c: {
+            zh: '平台長到 30+ 服務後,熱路徑劣化無人統測:登入實測 4.08 秒(每次登入同步遠端查權限),庫存統計端點因 threading.Lock 重入自我死鎖直接卡死 20 秒。',
+            en: 'Past 30 services, hot-path decay had no owner: login measured 4.08 seconds (a synchronous remote permission lookup on every login), and the inventory stats endpoint hard-hung for 20 seconds on a re-entrant threading.Lock deadlock.',
+          },
+          s: {
+            zh: '先建 curl 基線入庫,再分波修復 28 個服務、逐項複測:登入 4.08s → 0.55~0.75s(約 5–7 倍),庫存統計 20 秒卡死 → 0.014s(Lock 改 RLock 解死鎖),全程零新增 5xx;並確立 gevent worker 下 CONN_MAX_AGE=0 為正解、全平台統一。',
+            en: 'Built a curl baseline first, then fixed 28 services in waves with re-measurement after each: login went 4.08s → 0.55–0.75s (~5–7×), the stats endpoint from a 20-second hang to 0.014s (Lock → RLock), zero new 5xx throughout — and settled CONN_MAX_AGE=0 as the platform-wide rule under gevent workers.',
+          },
+        },
+      ],
+      facts: [
+        { value: '33', label: { zh: '微服務(每服務獨立 DB)', en: 'microservices, one DB each' } },
+        { value: '807', label: { zh: '資料模型', en: 'data models' } },
+        { value: '16,433', label: { zh: '後端測試函式', en: 'backend test functions' } },
+        { value: '89%', label: { zh: '個人 commit(731/825)', en: 'of commits mine (731/825)' } },
+      ],
+      lessons: [
+        {
+          zh: '佇列名是一種契約,而人工同步的契約一定會斷:同一類 routes 與 worker 錯配在四個服務獨立重現,因為佇列名寫在兩個檔案裡靠人肉對齊。真正的修法不是修四次,而是讓啟動腳本從服務自身設定生成佇列參數——單一事實來源。',
+          en: 'A queue name is a contract, and contracts kept in sync by hand always break: the same routes-vs-worker mismatch recurred independently in four services because the name lived in two files. The real fix is not fixing it four times — it is generating worker queue flags from each service’s own config. One source of truth.',
+        },
+        {
+          zh: '效能要有人擁有基線,否則劣化是安靜的:登入 4 秒、統計 20 秒不是一夜發生,而是在沒有量測的日常中逐步累積,直到專項稽核才被看見。重來會在服務數突破十個時就建立熱路徑基線與定期複測,而不是等到 30 個。',
+          en: 'Performance needs an owned baseline, because decay is silent: a 4-second login and a 20-second hang did not happen overnight — they accrued through unmeasured routine until a dedicated audit made them visible. Next time the hot-path baseline starts at ten services, not thirty.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'retail-pos',
+    title: {
+      zh: '多租戶零售收銀系統',
+      en: 'Multi-tenant Retail POS System',
+    },
+    oneLiner: {
+      zh: '連鎖門市的收銀結帳、班次現金核對、企業客戶與電子發票整合在同一個多租戶平台,每租戶一個獨立資料庫;營運中。',
+      en: 'Checkout, shift cash reconciliation, B2B customers and e-invoicing for chain stores on one multi-tenant platform — one physical database per tenant. In production.',
+    },
+    scope: { zh: '公司內部 · 營運中 · 全端', en: 'Internal · in production · full stack' },
+    stack: ['DJANGO', 'DRF', 'MYSQL', 'REDIS', 'REACT', 'TYPESCRIPT'],
+    keyMetric: { value: '288', label: { zh: '後端 API 路由', en: 'backend API routes' } },
     featured: false,
+    caseStudy: {
+      problem: [
+        {
+          zh: '美業連鎖門市常見的現場問題:多間門市、多台收銀機各自為政,售價、庫存與會員資料在門市之間對不上;班次交接靠紙本核對現金;企業客戶的月結請款和一般消費訂單混在一起;電子發票沒進系統,就是多一道人工作業。這套系統把收銀、班次現金核對、企業客戶管理與電子發票開立整合進同一個多租戶平台——總部用同一套後台管理所有門市,門市端有一致的操作介面。',
+          en: 'A familiar scene in beauty-industry chain retail: stores and registers run independently, so prices, stock and member data drift apart; shift handovers reconcile cash on paper; corporate monthly billing tangles with consumer orders; e-invoicing without system support is one more manual chore. This platform folds checkout, shift cash reconciliation, corporate customers and e-invoice issuance into one multi-tenant system — headquarters manages every store from one console, and stores share one consistent interface.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '公司內部專案,程式碼不公開;前端已部署、營運中。',
+          en: 'Company-internal; the codebase is private. The frontend is deployed and in production.',
+        },
+        {
+          zh: '每個租戶一個獨立實體 MySQL 資料庫:中介層必須在每個請求開始時解析並綁定租戶,任何一處漏掉租戶邊界就是資料外洩或錯亂。',
+          en: 'One physical MySQL database per tenant: middleware must resolve and bind the tenant at the start of every request — any miss is a leak or data corruption.',
+        },
+        {
+          zh: '收銀熱路徑不能因網路不穩中斷交易:結帳離線時先寫本機,恢復連線後帶冪等鍵自動重試,不能重複收費。',
+          en: 'The checkout hot path must survive flaky networks: offline sales persist locally and retry with an idempotency key on reconnect — never charging twice.',
+        },
+        {
+          zh: '與平台其他約 30 個服務共用 Redis 與 MySQL:Celery 任務必須走服務專屬佇列,否則會被其他服務的 worker 搶走執行。',
+          en: 'Redis and MySQL are shared with ~30 other platform services: Celery tasks must ride a service-specific queue or other services’ workers will steal them.',
+        },
+      ],
+      architecture: [
+        {
+          zh: 'Django REST Framework 服務,是大型多服務平台的一員,自身刻意不再往下拆:收銀、購物車、班次、訂單、退款這些強關聯流程共用同一個資料庫交易邊界,比分散式交易簡單可靠。規模:8 個 app、24 個資料模型、288 個 API 路由(Django URL resolver 實測、排除框架路由)、後端約 2.7 萬行 Python;前端為獨立的 React 19 + TypeScript SPA,24 個頁面、49 個元件、94 個 API 呼叫點,約 4.5 萬行。',
+          en: 'A Django REST Framework service — one member of a larger multi-service platform, deliberately not subdivided further: checkout, cart, shifts, orders and refunds are tightly coupled flows sharing one database transaction boundary, far simpler than distributed transactions. Scale: 8 apps, 24 models, 288 API routes (measured via Django’s URL resolver, framework routes excluded), ~27k lines of Python; the frontend is a standalone React 19 + TypeScript SPA — 24 pages, 49 components, 94 API call sites, ~45k lines.',
+        },
+        {
+          zh: '多租戶以 thread-local 加自訂 DB Router 實作,每租戶一庫、請求進入時綁定。Redis 快取只用在唯讀的商品參考價(TTL 120 秒),購物車金額永遠即時重算,守住交易一致性;Celery 走專屬佇列;第三方整合為綠界電子發票的開立與列印;跨服務呼叫平台的認證、會員、庫存與企業客戶服務;CI 三條 GitHub Actions,後端以 gunicorn(gthread)部署。',
+          en: 'Multi-tenancy is thread-local state plus a custom DB router — one database per tenant, bound as each request enters. Redis caching applies only to read-only reference prices (120s TTL); cart totals are always recomputed live to protect transactional consistency. Celery rides a dedicated queue; ECPay handles e-invoice issuance and printing; the service calls the platform’s auth, membership, inventory and B2B services; CI runs three GitHub Actions workflows, and the backend deploys on gunicorn (gthread).',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '前後端獨立開發(2026/04–07,前端 93、後端 20 個 commit 皆出自我一人;後端所在 monorepo 有其他協作者,但 POS 兩個目錄無他人提交):資料模型與多租戶機制、API、收銀與班次流程、React 前端、效能優化與部署設定。',
+          en: 'Independent full-stack development (2026/04–07; all 93 frontend and 20 backend commits are mine — the surrounding monorepo has other contributors, but no one else touched the two POS paths): data models and multi-tenancy, APIs, checkout and shift flows, the React frontend, performance work and deployment config.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '收銀員在購物車快速連點加商品,系統開始回報 network error:20 個併發請求下 p95 拉到 427ms。根因是四層疊加——每點一次發一個請求、後端每次整車重查、結帳路徑有 3 秒逾時的同步外呼、後端只有 6 個併發處理槽。',
+            en: 'Rapid-fire taps on the cart made the register throw network errors: at 20 concurrent requests, p95 hit 427ms. Four causes stacked — one request per tap, a full cart re-query per response, a synchronous external pricing call with a 3-second timeout in the path, and only 6 concurrent slots on the backend.',
+          },
+          s: {
+            zh: '四層對應解:後端免整車重查、新增批次端點(一批品項單一交易寫入、只重算一次);唯讀參考價加 Redis 快取但金額計算絕不快取;前端 debounce 合併連點——第一版 180ms 視窗比真實連點間隔(200–400ms)還短、等於沒合併,改成「閒置 500ms 或最長 2000ms」雙保險;併發槽 6 調到 24。結果:20 併發 p95 從 427ms 降到 206ms 且零失敗,10 件商品批次送出約 74ms。',
+            en: 'Four matching fixes: the backend stopped re-querying the whole cart and gained a batch endpoint (one transaction, one recalculation per batch); read-only reference prices got Redis caching while totals stayed uncached; the frontend debounced taps — the first 180ms window was shorter than real tap intervals (200–400ms) and merged nothing, so it became “idle 500ms or max 2000ms”; concurrency went 6 → 24 slots. Result: p95 at 20 concurrent fell 427ms → 206ms with zero failures, and ten items submit as one ~74ms batch.',
+          },
+        },
+        {
+          c: {
+            zh: '前端登入成功後,幾乎所有 API 都回 500。追查發現租戶的雪花 ID 超出 JavaScript 的安全整數範圍:JSON.parse 把它轉成 float64 近似值、差了 4——每個請求帶的租戶 ID 都是錯的,查詢落到不含業務資料表的預設資料庫。',
+            en: 'After a successful login, nearly every API returned 500. The tenant’s Snowflake ID exceeded JavaScript’s safe-integer range: JSON.parse rounded it to a float64 approximation, off by 4 — every request carried the wrong tenant ID, and queries landed in a default database with no business tables.',
+          },
+          s: {
+            zh: '後端序列化層把該欄位強制輸出字串,前端型別同步改 string;並定下通則:任何會傳到前端、可能超過 2^53 的整數識別碼一律用字串,不等它真的出錯。',
+            en: 'The backend now serializes the field as a string and the frontend type changed to match — with a standing rule: any integer identifier that reaches the frontend and could exceed 2^53 travels as a string, without waiting for it to break.',
+          },
+        },
+        {
+          c: {
+            zh: '前端最初單檔打包,首屏要下載 666KB(gzip)的 JavaScript,門市網路下開機等待明顯偏長。',
+            en: 'The frontend originally shipped as one bundle: 666KB (gzipped) of JavaScript before first paint — a long boot on store-grade networks.',
+          },
+          s: {
+            zh: '改成路由層級懶加載,只留登入、條款與收銀台主畫面在首屏;掃碼元件移出收銀熱路徑;打包設定只固定拆 React/MUI/React Query/Router 幾個穩定套件——曾把圖表與掃碼函式庫也手動指定分包,反而因交叉引用被拉回首屏,改讓它們自然跟著懶加載邊界走。首屏 JavaScript 從 666KB 降到 310KB(-53%)。',
+            en: 'Moved to route-level lazy loading with only login, terms and the register screen eager; the scanner component left the checkout hot path; manual chunking pins only the stable vendors (React, MUI, React Query, Router) — hand-chunking the chart and scanner libraries had backfired, cross-references dragging them back into the entry, so they now follow their lazy boundaries. First-load JavaScript fell 666KB → 310KB (−53%).',
+          },
+        },
+      ],
+      facts: [
+        { value: '288', label: { zh: '後端 API 路由', en: 'backend API routes' } },
+        { value: '~45k', label: { zh: '前端 TS/TSX 行數', en: 'lines of TypeScript' } },
+        { value: '606', label: { zh: '測試案例(後端+前端)', en: 'test cases (BE + FE)' } },
+        { value: '113', label: { zh: 'commits · 單一開發者', en: 'commits, single author' } },
+      ],
+      lessons: [
+        {
+          zh: '併發問題常是疊加出來的,不是單一原因:只做 debounce,3 秒逾時的同步外呼仍會拖垮併發;只加併發槽,資料庫仍被大量小交易打滿。請求合併、快取邊界、資源配額要一起處理,單點優化只會帶來「感覺變好」的錯覺。',
+          en: 'Concurrency problems are usually stacked, not singular: debounce alone leaves the 3-second synchronous call to sink you; more worker slots alone leave the database drowning in tiny transactions. Request merging, cache boundaries and resource quotas have to move together — a single-point fix only feels like a fix.',
+        },
+        {
+          zh: '跨語言的數字精度是一種容易被忽略的系統邊界:雪花 ID 在資料庫與 Python 端毫無問題,只在「傳進 JavaScript」那一步壞掉,後端測試永遠抓不到。可能超過 2^53 的識別碼,一開始就該用字串傳輸。',
+          en: 'Cross-language numeric precision is a system boundary that is easy to forget: the Snowflake ID was flawless in the database and in Python, and broke only on entry into JavaScript — a failure no backend test can catch. Identifiers that might exceed 2^53 should travel as strings from day one.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'b2b-wholesale-platform',
+    title: {
+      zh: '多租戶 B2B 批發電商平台',
+      en: 'Multi-tenant B2B Wholesale Commerce Platform',
+    },
+    oneLiner: {
+      zh: '企業批發客戶的自助採購系統:分層報價、信用額度、月結對帳與金流物流同步;商家端營運中,管理後台已開發完成、因驗收暫緩啟用。',
+      en: 'Self-service wholesale purchasing for corporate clients — tiered pricing, credit limits, monthly billing and payment/logistics sync. The merchant portal is live; the admin console is complete but held back pending acceptance.',
+    },
+    scope: { zh: '公司內部 · 商家端營運中', en: 'Internal · merchant portal live' },
+    stack: ['DJANGO', 'DRF', 'CELERY', 'MYSQL', 'REACT', 'TYPESCRIPT'],
+    keyMetric: { value: '297', label: { zh: '後端測試函式', en: 'backend tests' } },
+    featured: false,
+    caseStudy: {
+      problem: [
+        {
+          zh: '批發與經銷客戶的下單,很容易停在電話、通訊軟體與 Excel:沒有依採購量自動套用的階梯報價、沒有信用額度控管,對帳靠人工核對出貨明細與請款金額。這套系統把 B2B 自助下單、權威報價(單價一律後端重算、不信任前端)、月結對帳與爭議申訴、訂單與金流物流狀態同步收斂到一個服務,讓企業客戶像操作一般電商一樣完成批發採購,內部保有額度與帳務的控管權。',
+          en: 'Wholesale ordering tends to live in phone calls, chat apps and spreadsheets: no volume-tiered pricing applied automatically, no credit-limit control, reconciliation done by hand against shipping manifests. This system pulls self-service B2B ordering, authoritative pricing (unit prices recomputed server-side, never trusted from the client), monthly billing with dispute handling, and order/payment/logistics sync into one service — corporate clients buy like it is ordinary e-commerce while credit and billing control stays in-house.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '公司內部專案,程式碼不公開;涉及金流與訂單的修復必須在不中斷交易下完成。',
+          en: 'Company-internal; the codebase is private. Payment- and order-path fixes must land without interrupting live transactions.',
+        },
+        {
+          zh: '必須與平台既有的 5 個以上服務整合而不破壞其契約:會員、金流閘道、庫存、分析、業務歸屬與佣金——本服務不持有這些領域的資料,只做整合。',
+          en: 'Must integrate with five-plus existing platform services without breaking their contracts — membership, the payment gateway, inventory, analytics, sales attribution — owning none of that data, only the integration.',
+        },
+        {
+          zh: '商家端與管理端共用同一組後端,任何一處漏掉權限檢查,商家就可能看到別家公司的資料。',
+          en: 'Merchant portal and admin console share one backend: a single missing permission check lets one company see another’s data.',
+        },
+        {
+          zh: '裸機自架、無雲端託管預算,服務生命週期由自製腳本管理。',
+          en: 'Bare-metal and self-hosted with no cloud budget; service lifecycles are managed by hand-built scripts.',
+        },
+      ],
+      architecture: [
+        {
+          zh: 'Django + DRF 獨立微服務,12 個業務 app(認證、公司、商品、B2B 定價、購物車、銷售訂單、對帳、報價單、通知、促銷、帳務、聯絡),35 個資料模型、21 個資源註冊加 97 個自訂 action、30 個 Celery 任務,後端約 1.4 萬行;前端為獨立 React 19 + TypeScript SPA,約 4.1 萬行,商家端 22 頁營運中、管理端 30 頁已開發待啟用。B2B 獨立成服務而非塞進既有電商的理由:報價、信用額度與月結規則和 B2C 的定價付款邏輯差異夠大,分開讓兩邊各自演進。',
+          en: 'A standalone Django + DRF microservice: 12 business apps (auth, company, product, B2B pricing, cart, sales orders, settlement, quotations, notifications, promotions, billing, contact), 35 models, 21 resource registrations plus 97 custom actions, 30 Celery tasks, ~14k lines; the frontend is a separate React 19 + TypeScript SPA of ~41k lines — 22 merchant pages live, 30 admin pages built and gated. B2B is its own service rather than a bolt-on to the e-commerce service because quoting, credit and monthly billing diverge enough from B2C pricing to deserve independent evolution.',
+        },
+        {
+          zh: 'JWT 認證、全域預設 IsAuthenticated,免認證端點(登入、註冊、金流回調、服務間呼叫)逐一顯式宣告;MySQL 加 Redis(快取與關鍵任務分庫),服務間以 REST 加共用內部密鑰溝通,金流走平台的全方位金流閘道。前端雙 axios instance(商家端/管理端各一),401 單飛換發 token、佇列重放併發請求。',
+          en: 'JWT auth with a global IsAuthenticated default — unauthenticated endpoints (login, registration, payment callbacks, service-to-service) are declared one by one. MySQL plus Redis (cache and critical tasks on separate logical DBs); services talk REST with a shared internal secret; payments ride the platform’s all-in-one gateway. The frontend runs dual axios instances (merchant/admin), with single-flight token refresh on 401 and queued replay of concurrent requests.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '前後端獨立開發(後端 24、前端 102 個 commit 皆為我;2025/10–2026/07):12 個業務模組的資料模型與 API、金流串接與退款鏈路、權限修復、後端測試,以及商家端與管理端全部頁面、雙 client 與設計 token 系統。對接的會員、金流閘道、庫存等服務本身屬平台其他服務,不在本專案範圍。',
+          en: 'Independent full-stack development (all 24 backend and 102 frontend commits mine; 2025/10–2026/07): models and APIs across 12 modules, the payment integration and refund chain, permission remediation and backend tests, plus every merchant and admin page, both clients and the design-token system. The membership, gateway and inventory services it integrates belong to the wider platform, not this project.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '稽核發現:取消已付款信用卡訂單的鏈路「看起來」完整——有排程、有呼叫退款服務的程式碼——但排程實際打的是一個只查詢、不執行退款的端點。訂單顯示已取消,持卡人的錢從未退回;問題橫跨三個服務,出在三方對「這支端點會不會真的退款」認知不一致。',
+            en: 'An audit found the cancel-paid-order path looked complete — a schedule existed, refund-service calls existed — but the schedule was hitting an endpoint that only queries, never refunds. Orders showed cancelled; cardholders’ money never moved. The flaw spanned three services disagreeing about whether that endpoint actually refunds.',
+          },
+          s: {
+            zh: '新增真正執行退刷的金流 client 並接上兩個取消入口;select_for_update 防兩台裝置同時取消造成重複退款;退款非冪等、明確標註禁止 retry;權益回沖改為交易提交後非同步派工,取消回應從 17 秒降到約 3 秒。以一筆真實訂單做端到端驗證:金流狀態確認取消、重複呼叫冪等。',
+            en: 'Added a client that performs the actual refund and wired it into both cancellation entry points; select_for_update stops two devices double-refunding one order; the refund call is non-idempotent and now explicitly marked no-retry; benefit reversals moved to post-commit async jobs, cutting cancellation response from 17 seconds to ~3. Verified end-to-end with a real order — gateway confirmed cancelled, repeat calls idempotent.',
+          },
+        },
+        {
+          c: {
+            zh: '結帳改走金流閘道的全方位支付後,付款頁偶發打不開,閘道回報簽章不符。乍看像演算法寫錯,但雙方演算法一致——真正原因是中轉頁把品項名稱直接塞進隱藏表單欄位,名稱含 & 或 < 時被瀏覽器截斷,實際送出的字串和簽章計算用的不一致。',
+            en: 'After moving checkout to the gateway’s all-in-one flow, the payment page intermittently failed with a signature-mismatch error. The algorithm looked wrong but matched the spec exactly — the real culprit was the relay page injecting item names into hidden form fields unescaped, so a name containing & or < got truncated by the HTML parser and the POSTed string no longer matched the signed one.',
+          },
+          s: {
+            zh: '中轉頁對隱藏欄位做 HTML escape,確保瀏覽器解析後送出的內容與簽章計算完全一致;同批修復加上 B2B 專屬的訂單類型分流,避免與 POS 訂單共用冪等序號互相覆蓋。修復後未再復現。',
+            en: 'The relay page now HTML-escapes every hidden field so what the browser posts is byte-for-byte what was signed; the same batch added a B2B order-type lane so B2B and POS orders stop overwriting each other’s idempotency sequence. The error has not recurred.',
+          },
+        },
+        {
+          c: {
+            zh: '安全檢查發現部分端點「內網來源免認證」,而內網判斷讀的是 X-Forwarded-For——用戶端可自由填寫的標頭,塞一個 127.0.0.1 就能跳過登入。同批稽核也發現結帳金額完全信任前端送來的單價,以及訂單層折扣未分攤、對帳單加總高於實際應收。',
+            en: 'A security review found endpoints exempting “internal” traffic from auth — with “internal” judged by X-Forwarded-For, a header any client can forge; one 127.0.0.1 skipped login entirely. The same audit caught checkout trusting client-sent unit prices, and order-level discounts not prorated, inflating statement totals above what was owed.',
+          },
+          s: {
+            zh: '移除可偽造的內網豁免,預設一律要登入、真正的例外逐一顯式宣告;新增權威定價模組,單價由後端依當時階梯價與促銷重算;修正折扣分攤讓對帳單與應收一致。三項修復連同對應測試一併提交,已上線運行。',
+            en: 'Removed the forgeable exemption — authentication is the default, real exceptions declared one by one; added an authoritative-pricing module recomputing unit prices server-side from current tiers and promotions; fixed discount proration so statements match receivables. All three landed with accompanying tests and are live.',
+          },
+        },
+      ],
+      facts: [
+        { value: '35', label: { zh: '資料模型(12 模組)', en: 'models across 12 apps' } },
+        { value: '297', label: { zh: '後端測試函式', en: 'backend test functions' } },
+        { value: '~41k', label: { zh: '前端 TS/TSX 行數', en: 'lines of TypeScript' } },
+        { value: '126', label: { zh: 'commits · 單一開發者', en: 'commits, single author' } },
+      ],
+      lessons: [
+        {
+          zh: '「排程有跑」不等於「業務有發生」:退款排程長期正常執行、零報錯,但打的是查詢端點。金流這類必須產生副作用的任務,監控要對準「副作用是否發生」,而不是排程有沒有觸發。',
+          en: '“The job ran” is not “the business happened”: the refund schedule executed cleanly for months while hitting a query endpoint. For jobs whose whole point is a side effect — refunds above all — monitor the side effect, not the trigger.',
+        },
+        {
+          zh: '後端位址寫死在前端原始碼,是當時圖快留下的債:現在要多一個測試環境,得改碼重建而不是換個環境變數。重來會在只有一個環境的第一天,就把 API 位址做成環境變數。',
+          en: 'Hard-coding the backend URL into the frontend was speed-bought debt: standing up a test environment now means editing code and rebuilding instead of flipping a variable. Next time the API base is an environment variable on day one, even with only one environment in sight.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'field-sales-pwa',
+    title: {
+      zh: '業務外勤現場開通 PWA',
+      en: 'Field Sales On-site Activation PWA',
+    },
+    oneLiner: {
+      zh: '給美業 B2B 通路業務員在客戶現場使用的手機優先 PWA:拍名片、當場開通企業客戶帳號、管理 CRM 與追蹤獎金;六天從零建置,已部署。',
+      en: 'A mobile-first PWA for field reps in a beauty-industry B2B channel — scan a business card, activate the client account on the spot, manage CRM and track commissions. Built from scratch in six days; deployed.',
+    },
+    scope: { zh: '公司內部 · 已部署', en: 'Internal · deployed' },
+    stack: ['REACT', 'VITE', 'MUI', 'REACT-QUERY', 'ZUSTAND', 'PWA'],
+    keyMetric: { value: '50', label: { zh: '後端 API 呼叫點', en: 'backend API call sites' } },
+    featured: false,
+    caseStudy: {
+      problem: [
+        {
+          zh: 'B2B 通路的業務員過去要幫客戶開通企業帳號,得先抄下資料、回辦公室用另一套後台操作,客戶當下無法直接下單;業務自己的獎金、待審核客戶與 CRM 進度也分散在不同系統。這個 PWA 把「現場拍名片 → 當場建立並開通帳號 → 客戶立即可下單」收斂成一支手機瀏覽器就能完成、可安裝離線使用的流程,並把獎金查詢、CRM 與客戶審核整合進同一個前台;服務對象是美業 B2B 通路的外勤業務。',
+          en: 'Field reps used to copy a client’s details onto paper and open the account later from a back-office system — the client could not order on the spot, and the rep’s commissions, pending reviews and CRM lived in yet other tools. This PWA folds “photograph the business card → create and activate the account on-site → the client orders immediately” into one installable, offline-tolerant mobile flow, with commissions, CRM and account review in the same console — built for field reps in a beauty-industry B2B channel.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '公司內部專案,程式碼不公開;已部署於內部網域。',
+          en: 'Company-internal; the codebase is private. Deployed on an internal domain.',
+        },
+        {
+          zh: '外勤現場網路品質不受控:任何操作——尤其開戶送出——都必須在斷網或逾時時有本機暫存與自動重送,不能讓業務白填一次表單。',
+          en: 'Field connectivity is uncontrolled: every action — above all account submission — needs local persistence and automatic resend on failure; a rep must never re-type a form.',
+        },
+        {
+          zh: '名片影像屬客戶個資:OCR 完全在裝置端執行,不把影像外送任何第三方服務——這也是無雲端 OCR 預算下的自建解。',
+          en: 'Business-card images are customer PII: OCR runs entirely on-device, never shipping the image to a third-party service — also the only option with no cloud-OCR budget.',
+        },
+        {
+          zh: '前端純消費後端 API,不落地任何業務規則:獎金計算與權限判定皆由後端決定。',
+          en: 'The frontend consumes APIs only — no business rules live client-side; commissions and permissions are decided by the backend.',
+        },
+      ],
+      architecture: [
+        {
+          zh: 'React 18 + Vite 6 SPA:MUI 5 元件、TanStack React Query 5 管伺服端快取、Zustand 只放一份登入身分狀態——17 個路由畫面、6 個 API 模組共 50 個呼叫點,對接平台的 4 個後端服務(認證、獎金、CRM、店家),全站約 8,200 行。刻意維持極簡狀態設計:伺服端資料一律進 React Query,客戶端狀態只有登入身分一項。',
+          en: 'A React 18 + Vite 6 SPA: MUI 5 components, TanStack React Query 5 for server-state caching, and a single Zustand store holding only the login identity — 17 routed screens and 6 API modules with 50 call sites against 4 platform backend services (auth, commissions, CRM, stores), ~8,200 lines in all. State design is deliberately minimal: server data lives in React Query; client state is the identity, nothing else.',
+        },
+        {
+          zh: '橫切設計:Axios 攔截器統一附加 token 與 401 刷新(併發請求排隊、只刷新一次);Service Worker 只做 app shell 離線容忍(靜態資源 cache-first、API 一律不快取);現場開戶頁自建三層弱網韌性——草稿即時落地、送出失敗轉本機離線佇列、連線恢復自動重送;OCR 以 tesseract.js 全跑瀏覽器端。部署為 nginx 靜態站,API 走同網域反向代理。',
+          en: 'Cross-cutting: an Axios interceptor attaches tokens and handles 401 refresh (concurrent requests queue behind a single refresh); the Service Worker covers app-shell offline only (cache-first statics, APIs never cached); the on-site activation page has three layers of weak-network resilience — live local drafts, an offline queue on failed submits, auto-resend on reconnect; OCR runs fully in-browser on tesseract.js. Deployment is a static nginx site with same-origin API reverse proxying.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '獨立開發:從空 repo 到部署共 6 天(2026/07/10–07/15),全部 commit 出自我一人;需求整理、架構、實作與部署皆由我完成。後端 API 為平台既有服務,不在本專案範圍。',
+          en: 'Independent development: empty repo to deployment in six days (2026/07/10–15), every commit mine — requirements, architecture, implementation and deployment. The backend APIs are existing platform services outside this project’s scope.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '店家頁一開始直打既有後端給其他前台用的查詢端點:拿不到業務員對應的內部歸戶 ID 時,它不報錯,而是靜默改用 user_id 過濾——畫面完全正常,但業務看到的店家清單是錯的。',
+            en: 'The store page initially hit an existing endpoint built for another frontend: missing the rep’s internal attribution ID, it did not error — it silently fell back to filtering by user_id. The screen looked fine; the list was wrong.',
+          },
+          s: {
+            zh: '改走後端提供的業務專屬端點,由後端解析登入業務的歸戶 ID 再過濾,前端不再自組歸戶邏輯;同一次提交把登入換成業務專屬閘門(消費者帳號一律 403)。修正只有 2 個檔案 14 行,解決的卻是「看起來正常、資料是錯的」這類最難被發現的 bug。',
+            en: 'Switched to a sales-specific endpoint where the backend resolves the rep’s own attribution ID before filtering, and moved login to a sales-only gate (consumer accounts get 403) in the same commit. The fix was 2 files and 14 lines — against the hardest kind of bug, the one that looks perfectly healthy.',
+          },
+        },
+        {
+          c: {
+            zh: '訂單退貨後,後端會回沖對應獎金,但三個獎金畫面仍顯示原始金額——業務看到的數字,和公司實際會發放的淨額對不起來。',
+            en: 'When an order was returned the backend clawed back its commission, but all three commission screens kept showing the gross figure — the number a rep saw never matched what would actually be paid.',
+          },
+          s: {
+            zh: '三頁一次改成淨額口徑(獎金-回沖):有回沖的紀錄標示回沖金額、全額回沖用刪除線保留原額,讓業務看得懂「這筆錢去哪了」,而不是數字憑空消失。',
+            en: 'Moved all three pages to net-of-clawback in one pass, annotating partial clawbacks and striking through fully clawed-back records instead of deleting them — a rep can see where the money went, not just watch it vanish.',
+          },
+        },
+        {
+          c: {
+            zh: '現場開戶是核心流程,但網路品質是客戶店裡有什麼就是什麼;名片又是客戶個資,不能送第三方雲端 OCR,公司也沒有採購預算。',
+            en: 'On-site activation is the core flow, yet connectivity is whatever the client’s shop happens to have; the business card is PII that cannot go to a cloud OCR — and there was no budget to buy one anyway.',
+          },
+          s: {
+            zh: '弱網做三層:表單變動即存本機草稿、送出遇連線失敗轉離線佇列、瀏覽器恢復連線自動重送。OCR 以 tesseract.js 在裝置端跑,只預填仍為空的欄位、不覆蓋手動輸入,結果一律由業務核對後才送出——零後端支援、零額外預算的純前端解。',
+            en: 'Resilience comes in three layers: live local drafts, an offline queue when the connection itself fails, auto-resend on reconnect. OCR runs on-device with tesseract.js, prefilling only still-empty fields and never overriding manual input, with the rep confirming before submit — a pure-frontend solution needing no backend work and no budget.',
+          },
+        },
+      ],
+      facts: [
+        { value: '17', label: { zh: '路由畫面', en: 'routed screens' } },
+        { value: '50', label: { zh: 'API 呼叫點', en: 'API call sites' } },
+        { value: '~190KB', label: { zh: 'vendor bundle(gzip)', en: 'vendor bundle (gzip)' } },
+        { value: '6', label: { zh: '天,從零到部署', en: 'days, zero to deployed' } },
+      ],
+      lessons: [
+        {
+          zh: '「查得到資料」不等於「資料是對的」——靜默降級比顯式錯誤更危險。共用端點在邊界情況下換了一套過濾邏輯而不報錯,呼叫端幾乎無從分辨。之後接既有端點,會先確認它的降級行為,而不是看到 200 就當作正確。',
+          en: 'Getting data back is not the same as getting the right data — a silent fallback is more dangerous than a loud error. A shared endpoint that swaps its filtering logic at the edge, without erroring, is indistinguishable from a working one. I now ask how an existing endpoint degrades before consuming it, instead of trusting a 200.',
+        },
+        {
+          zh: '弱網韌性要在設計期決定,事後補難得多:草稿、佇列、自動重送要嵌回已完成的表單狀態機,遠比一開始一起做困難。誠實的現狀是這個專案沒有自動化測試(斷網情境靠手動驗證),若要繼續維護,第一件事是替離線佇列與重送補上測試。',
+          en: 'Weak-network resilience is a design-time decision — retrofitting drafts, queues and resend into a finished form state machine is far harder than building them in. The honest gap: this project has no automated tests (offline paths were verified by hand); the first item of further maintenance is covering the queue and resend logic.',
+        },
+      ],
+    },
   },
   {
     slug: 'ai-workflow',
+    visibility: 'internal',
     title: { zh: 'AI 開發工作流', en: 'AI Development Workflow' },
     oneLiner: {
       zh: '以 AI Agent 執行 Code Review、Security Review、效能與架構審查及文件生成。',
