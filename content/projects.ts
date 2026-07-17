@@ -2,11 +2,11 @@
  * Project content — single source of truth for /work, home §01,
  * JSON-LD, and sitemap.
  *
- * 內容原則:全部欄位皆來自 2026-07-16 對實際 repo 的程式碼分析,
- * 無捏造數據;「⚠ 待確認」標示需 binbin 核實的描述(主要是角色範圍)。
+ * 內容原則:全部欄位來自 2026-07-17 對各 repo 的程式碼與 git 歷史分析
+ * (docs/content-request.md 規格),每個數字皆可重跑指令驗證;
+ * 語氣為「可信地陳述經驗」——不誇大、未上線就寫未上線、沒有數據就不寫。
  * hris、ai-nail-platform、naily-app、microservices-platform 為公司內部專案:
- * 不揭露網域、內部環境細節,亦不揭露任何線上系統的現存弱點;
- * 品牌名稱的揭露範圍由 binbin 決定(目前僅 naily-app 揭露)。
+ * 不揭露網域、內網位址、內部人員與現存弱點的重現細節。
  */
 export type Localized = { zh: string; en: string };
 
@@ -40,96 +40,96 @@ export const PROJECTS: Project[] = [
       en: 'Multi-tenant SaaS HRIS',
     },
     oneLiner: {
-      zh: '涵蓋出勤、排班、薪資、簽核到招募訓練的企業級人資平台,Web + iOS 雙端。',
-      en: 'An enterprise HR platform — attendance, scheduling, payroll, approvals, recruiting — on web and iOS.',
+      zh: '涵蓋出勤、排班、薪資、簽核到招募的多租戶人資平台,36 個功能模組;目前處於驗收與修復階段。',
+      en: 'A multi-tenant HR platform — attendance, scheduling, payroll, approvals, recruiting — across 36 modules; currently in acceptance and remediation.',
     },
-    scope: { zh: '公司內部 · 企業級 SaaS', en: 'Internal · Enterprise SaaS' },
-    stack: ['DJANGO', 'MYSQL', 'REDIS', 'CELERY', 'REACT', 'SWIFT'],
-    keyMetric: { value: '214', label: { zh: '資料模型', en: 'data models' } },
+    scope: { zh: '公司內部 · 驗收修復階段', en: 'Internal · acceptance stage' },
+    stack: ['DJANGO', 'DRF', 'MYSQL', 'REDIS', 'CELERY', 'REACT'],
+    keyMetric: { value: '728', label: { zh: '端點實測', en: 'endpoints tested' } },
     featured: true,
     caseStudy: {
       problem: [
         {
-          zh: '服務業組織的人資流程極度分散:出勤打卡、排班、請假加班、薪資與保險試算、簽核、招募與訓練,通常散落在紙本與多套工具之間。目標是一套多租戶 SaaS,讓多個組織在同一平台上各自安全地運作完整的 HR 流程。',
-          en: 'HR in service-industry organizations is scattered across paper and disconnected tools — punch clocks, shift scheduling, leave, payroll and insurance runs, approvals, recruiting and training. The goal: one multi-tenant SaaS where multiple organizations run their entire HR flow, each in strict isolation.',
+          zh: '中小企業的 HR 事務常散落在 Excel、紙本簽核與各自為政的工具之間,難以稽核也容易出錯,且每家公司都要重複導入一次。這個系統以多租戶 SaaS 的形態切入:單一部署服務多個組織,各租戶資料嚴格隔離、依訂閱開關功能模組,並內建台灣勞基法的合規檢查。',
+          en: 'HR in small and mid-sized companies is scattered across spreadsheets, paper approvals and disconnected tools — hard to audit, easy to get wrong, and re-implemented at every company. This system is a multi-tenant SaaS: one deployment serves multiple organizations with strict data isolation, subscription-gated modules, and built-in Taiwan labor-law compliance checks.',
         },
       ],
       constraints: [
         {
-          zh: '公司內部專案,程式碼不公開。',
-          en: 'Company-internal project; the codebase is not public.',
+          zh: '公司內部專案,程式碼不公開;目前以合成種子資料進行驗收,尚未正式上線。',
+          en: 'Company-internal; the codebase is private. Currently in acceptance with synthetic seed data — not yet in production.',
         },
         {
-          zh: '人資資料高度敏感:需欄位級加密、MFA、完整稽核軌跡與法遵要求。',
-          en: 'HR data is highly sensitive: field-level encryption, MFA, full audit trails and compliance requirements.',
+          zh: '多租戶隔離是硬性要求:任何一條查詢漏掉租戶條件都是資料外洩。',
+          en: 'Tenant isolation is non-negotiable — a single query missing its tenant filter is a data breach.',
         },
         {
-          zh: '多租戶必須做到嚴格隔離——任何一條查詢漏掉租戶條件都是資料外洩。',
-          en: 'Multi-tenancy demands strict isolation — a single query missing its tenant filter is a data breach.',
+          zh: '需符合台灣勞基法(工時上限、加班倍率、扣繳)並支援繁中/簡中/英文三語。',
+          en: 'Must implement Taiwan labor law (working-hour caps, overtime multipliers, withholding) and support three languages.',
         },
       ],
       architecture: [
         {
-          zh: '模組化單體:Django 4.2 依領域切成約 41 個 app(出勤、排班、薪資、簽核、招募、資產、報表⋯),共約 214 個資料模型、549 條 API 路由。刻意不拆微服務——單一交易邊界讓薪資與簽核這類跨模組流程簡單得多。',
-          en: 'A modular monolith: Django 4.2 split into ~41 domain apps (attendance, scheduling, payroll, approvals, recruiting, assets, reports…), totaling ~214 models and ~549 API routes. Deliberately not microservices — one transaction boundary keeps cross-module flows like payroll and approvals simple.',
+          zh: '模組化單體:Django 4.2 + DRF 依領域切成 36 個功能 app(出勤、排班、薪資、簽核、招募、資產、勞健保⋯),約 215 個資料模型、188 個資源路由,展開後在驗收中實測了 728 個端點。刻意不拆微服務——薪資與簽核這類跨模組流程在單一交易邊界裡簡單得多。',
+          en: 'A modular monolith: Django 4.2 + DRF split into 36 domain apps (attendance, scheduling, payroll, approvals, recruiting, assets, labor insurance…), with ~215 models and 188 registered resource routes — 728 concrete endpoints exercised during acceptance. Deliberately not microservices: payroll and approval flows are far simpler inside one transaction boundary.',
         },
         {
-          zh: '多租戶採 shared-schema、row-level 隔離:middleware 依 header 或子網域解析租戶,所有業務模型繼承 TenantAwareModel;權限為 5 級角色階層加約 20 個 DRF permission class。非同步層以 Celery(約 96 個任務)+ beat 排程處理班表產生、出勤歸檔、年終與保險試算;Channels WebSocket 推播即時通知;可觀測性用 Prometheus / Grafana / Loki / Sentry。',
-          en: 'Multi-tenancy is shared-schema with row-level isolation: middleware resolves the tenant from headers or subdomain, and every business model inherits TenantAwareModel. Authorization is a 5-tier role hierarchy plus ~20 DRF permission classes. Async work runs on Celery (~96 tasks) with beat schedules — shift generation, attendance archiving, year-end and insurance runs; Channels WebSockets push realtime notifications; observability via Prometheus / Grafana / Loki / Sentry.',
+          zh: '多租戶採 shared-schema、row-level 隔離:middleware 解析租戶,304 個類別繼承租戶感知基底。非同步層以 Celery + Beat 處理班表產生、出勤歸檔與法規/假日同步;Redis 作快取與 Channel;資料庫可依環境切換 PostgreSQL 或 MySQL;CI 用 GitHub Actions + pre-commit,並附 Prometheus / Grafana / Loki 可觀測性編排。',
+          en: 'Multi-tenancy is shared-schema with row-level isolation: middleware resolves the tenant and 304 classes inherit the tenant-aware base. Async work runs on Celery + Beat — shift generation, attendance archiving, holiday/regulation sync; Redis backs cache and channels; the database switches between PostgreSQL and MySQL per environment. CI runs on GitHub Actions with pre-commit, plus a Prometheus / Grafana / Loki observability stack.',
         },
       ],
       responsibilities: [
         {
-          zh: '前後端獨立開發:資料模型與多租戶機制、權限體系、各領域模組(出勤、排班、薪資、簽核⋯)、Celery 背景任務,以及 React 前端。',
-          en: 'Independent full-stack development: data models and multi-tenancy, the permission system, domain modules (attendance, scheduling, payroll, approvals…), Celery background jobs, and the React frontend.',
+          zh: '前後端獨立開發(後端 434、前端 123 個 commit 皆出自我的兩組 git 身分):資料模型與多租戶機制、權限體系、各領域模組、Celery 背景任務、React 前端與 CI。',
+          en: 'Independent full-stack development (all 434 backend and 123 frontend commits are mine, across two git identities): data models and multi-tenancy, the permission system, domain modules, Celery jobs, the React frontend and CI.',
         },
       ],
       challenges: [
         {
           c: {
-            zh: '多租戶隔離不能靠「記得加 where 條件」。',
-            en: "Tenant isolation can't depend on remembering a WHERE clause.",
+            zh: '資安稽核發現:部分自訂 API action 繞過了租戶過濾,可跨租戶操作帳號。',
+            en: 'A security audit found custom API actions bypassing tenant filtering — accounts could be manipulated across tenants.',
           },
           s: {
-            zh: '把隔離下沉到基底:TenantAwareModel + middleware 統一解析租戶,搭配租戶存取日誌稽核,讓「忘記過濾」在架構層面變得困難。',
-            en: 'Push isolation into the base layer: TenantAwareModel plus middleware-resolved tenant context, backed by tenant-access audit logs — forgetting the filter becomes structurally hard.',
+            zh: '把隔離下沉到基底(TenantAwareModel + middleware 統一解析),逐一修補繞過 queryset 的 action。該輪稽核共 35 項發現(含 2 項 Critical)全數確認,30 項修復完成、5 項部分修復,尚待 staging 環境複驗——這個狀態如實記錄。',
+            en: 'Isolation was pushed into the base layer (TenantAwareModel plus middleware-resolved context) and every queryset-bypassing action patched. The audit confirmed 35 findings (2 critical); 30 are fixed and 5 partially — pending staging re-verification, recorded as-is.',
           },
         },
         {
           c: {
-            zh: '人資資料的安全要求遠高於一般業務系統。',
-            en: 'HR data demands far stronger security than typical business systems.',
+            zh: '薪資 API 的快取鍵沒有包含使用者身分——同一個 TTL 窗內,一般員工可能命中管理員的快取,看到全公司薪資。',
+            en: "The payroll API's cache key ignored user identity — within one TTL window, an employee could hit an admin's cached response and see company-wide salaries.",
           },
           s: {
-            zh: '欄位級 Fernet 加密、TOTP MFA、JWT blacklist、速率限制與帳號鎖定,稽核日誌依 ISO 27001 A.12.4.1 設計並以 Celery 非同步寫入避免拖慢請求。',
-            en: 'Field-level Fernet encryption, TOTP MFA, JWT blacklisting, rate limiting and account lockout; audit logging designed to ISO 27001 A.12.4.1 and written asynchronously via Celery to keep requests fast.',
+            zh: '在快取裝飾器加入 vary_by_user,把使用者折進快取鍵;並用真實 HTTP 呼叫寫了回歸測試,證明兩個使用者互相看不到彼此的快取。',
+            en: 'Added vary_by_user to the cache decorator, folding the user into the key — then wrote a regression test with real HTTP calls proving two users can never see each other’s cache.',
           },
         },
         {
           c: {
-            zh: '排班與薪資是重計算,不能卡在請求路徑上。',
-            en: "Scheduling and payroll are heavy computations that can't block the request path.",
+            zh: '台灣的國定假日與法規參數每年變動,不能靠人工同步。',
+            en: "Taiwan's public holidays and regulatory parameters change yearly — manual syncing doesn't scale.",
           },
           s: {
-            zh: '全部任務化:Celery + beat 排程班表自動產生、出勤歸檔、保險與年終批次,報表產出也非同步化。',
-            en: 'Everything becomes a task: Celery + beat schedules auto-generate shifts, archive attendance, run insurance and year-end batches; report generation is async too.',
+            zh: 'Celery Beat 排程化:每年同步隔年假日、每日檢查法規到期、每週預告即將到來的假日;任務帶自動重試與指數退避。',
+            en: 'Scheduled it with Celery Beat: yearly next-year holiday sync, daily regulation-expiry checks, weekly upcoming-holiday notices — tasks retry automatically with exponential backoff.',
           },
         },
       ],
       facts: [
-        { value: '41', label: { zh: '領域模組', en: 'domain modules' } },
-        { value: '214', label: { zh: '資料模型', en: 'data models' } },
-        { value: '549', label: { zh: 'API 路由', en: 'API routes' } },
-        { value: '96', label: { zh: 'Celery 任務', en: 'Celery tasks' } },
+        { value: '36', label: { zh: '功能模組', en: 'domain modules' } },
+        { value: '215', label: { zh: '資料模型', en: 'data models' } },
+        { value: '728', label: { zh: '端點實測', en: 'endpoints tested' } },
+        { value: '87.5%', label: { zh: '驗收通過率', en: 'acceptance pass rate' } },
       ],
       lessons: [
         {
-          zh: '快取 key 必須包含身分維度——曾修正一個薪資快取未依使用者與角色隔離的問題。在多租戶系統裡,快取設計就是權限設計。',
-          en: 'Cache keys must carry identity — we fixed a payroll cache that was not keyed by user and role. In a multi-tenant system, cache design is authorization design.',
+          zh: '快取設計就是權限設計——薪資快取洩漏的根因,是快取鍵少了身分維度。在多租戶系統裡,這種錯誤不是效能問題,是資料外洩。',
+          en: 'Cache design is authorization design: the payroll leak came from a cache key missing the identity dimension. In a multi-tenant system that class of bug is not a performance issue — it is a breach.',
         },
         {
-          zh: '「模組化單體」對這個規模是對的:41 個模組共享一個交易邊界,複雜度花在領域切分而不是網路呼叫上。',
-          en: 'A modular monolith was right at this scale: 41 modules share one transaction boundary, spending complexity on domain boundaries instead of network calls.',
+          zh: '系統性的漏洞往往來自模型設計:全域角色與租戶角色雙軌並存,連帶引發提權與跨租戶問題。重來一次,我會從第一天就統一以租戶維度設計權限。',
+          en: 'Systemic vulnerabilities trace back to model design: dual global-vs-tenant role tracks caused the privilege and cross-tenant issues. Doing it again, I would design permissions on the tenant dimension from day one.',
         },
       ],
     },
@@ -179,8 +179,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '全端開發:營運後台前端的主要開發,以及平台後端(Django)API 的設計與開發。',
-          en: 'Full-stack development: primary owner of the ops console frontend, plus backend (Django) API design and development on the platform.',
+          zh: '營運後台前端的主要開發,以及平台後端(Django)API 的設計與開發。',
+          en: 'Primary development of the ops console frontend, plus backend (Django) API design and development on the platform.',
         },
       ],
       challenges: [
@@ -237,87 +237,87 @@ export const PROJECTS: Project[] = [
     slug: 'naily-app',
     title: { zh: 'Naily — AI 美甲電商 App', en: 'Naily — AI Nail Commerce App' },
     oneLiner: {
-      zh: 'Flutter 電商 App:裝置端 AI 指甲辨識、客製穿戴甲設計、完整金物流。上述平台的消費者端。',
-      en: 'A Flutter commerce app — on-device AI nail sizing, custom press-on design, full payment and logistics. The consumer face of the platform above.',
+      zh: 'Flutter 電商 App:裝置端 AI 指甲辨識、AR 試戴與客製穿戴甲。2025 年 11 月起由我接手全部開發與維護。',
+      en: 'A Flutter commerce app — on-device AI nail sizing, AR try-on and custom press-ons. I took over all development and maintenance in November 2025.',
     },
-    scope: { zh: '2025.11 起獨立接手維護', en: 'Sole maintainer since 2025.11' },
+    scope: { zh: '上架準備 · 2025.11 起接手', en: 'Pre-launch · takeover since 2025.11' },
     stack: ['FLUTTER', 'ONNX', 'FIREBASE', 'ECPAY'],
     keyMetric: { value: '82', label: { zh: '畫面', en: 'screens' } },
     featured: true,
     caseStudy: {
       problem: [
         {
-          zh: '消費者要在手機上完成「量指甲 → 客製設計 → 下單收貨」的完整旅程:以裝置端 AI 辨識指甲尺寸、3 步驟客製穿戴甲設計,加上電商必備的金流(信用卡、超商、定期定額)與物流(宅配、超商取貨)、推播、深連結與會員體系。',
-          en: 'Consumers complete the whole journey on their phone — measure nails, design custom press-ons, order and receive: on-device AI nail sizing, a 3-step designer, plus the commerce essentials of payments (cards, convenience-store codes, subscriptions), logistics (home delivery, CVS pickup), push, deep links and membership.',
+          zh: '穿戴甲是高度客製化的商品,消費者難以自行判斷指甲尺寸,線上下單常因尺寸不合而退換貨。這個 App 用手機相機加裝置端 AI 取代到店量測,把「設計 → 尺寸辨識 → AR 試戴 → 下單 → 金流物流」整合成單一流程。',
+          en: 'Press-on nails are highly customized; customers can rarely judge their own nail sizes, so online orders often bounce back over fit. This app replaces in-store measuring with the phone camera and on-device AI, folding design → sizing → AR try-on → checkout → payment and logistics into one flow.',
         },
       ],
       constraints: [
         {
-          zh: '多人共同開發的 codebase,2025 年 11 月之後由我一人接手全部開發與維護。',
-          en: 'A codebase built by multiple developers — fully handed over to me in November 2025.',
+          zh: '接手一個由原團隊建置的多人 codebase(接手前 198 個 commit),沒有交接期。',
+          en: 'Inherited a multi-author codebase built by the original team (198 commits before the handover), with no transition period.',
         },
         {
-          zh: 'AI 推論必須在裝置端執行(隱私與體驗),中低階手機也要順。',
-          en: 'AI inference must run on-device (privacy and UX) — and stay smooth on mid-range phones.',
+          zh: 'AI 推論必須在裝置端執行,受手機算力限制——接手時的 AR 試戴只有 1 FPS。',
+          en: 'AI inference must run on-device within phone-level compute — at handover, AR try-on ran at 1 FPS.',
         },
         {
-          zh: '已上線營運的商業 App:每個改動都面對真實使用者與真實金流。',
-          en: 'A live commercial app: every change faces real users and real money.',
+          zh: '涉及金流與個資:token 只能放 secure storage、日誌不得記錄完整 request body、iOS 需處理 ATT 追蹤同意;目前處於上架準備階段(P0–P2 上架就緒稽核修復中)。',
+          en: 'Payments and personal data are involved: tokens live in secure storage only, logs must not capture full request bodies, iOS requires ATT consent. The app is in pre-launch readiness (P0–P2 audit fixes).',
         },
       ],
       architecture: [
         {
-          zh: 'Flutter feature-first 分層(config / models / services / screens⋯),go_router 宣告式導航,不用 DI 框架、以 service singleton 收斂依賴——82 個畫面、約 70 個 service、533 個 Dart 檔、約 12.9 萬行。',
-          en: 'Feature-first Flutter layering (config / models / services / screens…), declarative navigation with go_router, no DI framework — dependencies converge on service singletons. 82 screens, ~70 services, 533 Dart files, ~129k lines.',
+          zh: 'Flutter 模組化單體:feature-first 分層(config / models / services / screens),GoRouter 宣告式導航——82 個畫面、72 個 service、44 個 model,共 533 個 Dart 檔、約 12.9 萬行,呼叫後端 123 個 API 端點。',
+          en: 'A modular Flutter app: feature-first layering (config / models / services / screens) with declarative GoRouter navigation — 82 screens, 72 services, 44 models across 533 Dart files (~129k lines), talking to 123 backend API endpoints.',
         },
         {
-          zh: '裝置端 AI 自成子套件:ONNX Runtime 執行 YOLO11 指甲偵測/分割與手掌關節點模型,iOS 以 platform channel 銜接 CoreML;AR 試戴與遮罩重上色等 CV 模組獨立封裝。金物流整合 ECPay 與超商取貨,Firebase 負責推播、Crashlytics 與分析,並有憑證釘選與裝置完整性檢查。',
-          en: 'On-device AI lives in self-contained sub-packages: ONNX Runtime drives YOLO11 nail detection/segmentation and hand-landmark models, with an iOS platform channel bridging to CoreML; AR try-on and mask-recolor CV modules are isolated. Commerce integrates ECPay and CVS pickup; Firebase handles push, Crashlytics and analytics, hardened with certificate pinning and device-integrity checks.',
+          zh: '裝置端 AI 拆成 6 個職責分離的 AR/CV 套件,以 ONNX Runtime 執行 4 個模型(YOLO11 指甲偵測/分割、手掌關節點),iOS 另以 platform channel 銜接原生 CoreML。商務面整合 ECPay 金流/物流/電子發票與四家社交登入;Firebase 負責推播、Crashlytics 與分析;CI 有三條 pipeline(兩階段 CI、夜間全量 E2E、tag 觸發簽署發版)。',
+          en: 'On-device AI is split into six single-purpose AR/CV packages running four ONNX models (YOLO11 nail detection/segmentation, hand landmarks), with an iOS platform channel to native CoreML. Commerce integrates ECPay payments/logistics/e-invoicing and four social logins; Firebase covers push, Crashlytics and analytics; CI runs three pipelines — staged CI, nightly full E2E, and tag-triggered signed releases.',
         },
       ],
       responsibilities: [
         {
-          zh: '2025/11 前參與共同開發;之後獨立承接全部開發、維護與發版——包含 CI、nightly E2E 與 release pipeline。',
-          en: 'Co-developed until 2025/11; since then the sole owner of all development, maintenance and releases — including CI, nightly E2E and the release pipeline.',
+          zh: '2025 年 11 月接手;此前的基礎架構與商城流程由原團隊建置。接手後的開發、維護與發版由我負責(該期間 121 個 commit、占 85%):FCM 與追蹤整合、客製穿戴甲功能、點數系統、AR 架構重寫、iOS CoreML 原生層、安全硬化與 CI/CD。後端 API 為獨立服務,不在此 repo 範圍。',
+          en: 'Took over in November 2025; the foundation and commerce flows were built by the original team. Since then all development, maintenance and releases are mine (121 commits, 85% of the period): FCM and tracking integration, the custom press-on feature, a points system, the AR rewrite, the iOS CoreML native layer, security hardening and CI/CD. The backend API is a separate service outside this repo.',
         },
       ],
       challenges: [
         {
           c: {
-            zh: '接手多人寫的 12 萬行 codebase,沒有交接期的奢侈。',
-            en: 'Inheriting a 120k-line multi-author codebase, without the luxury of a handover period.',
+            zh: '接手時的 AR 試戴只有 1 FPS,偵測時設計圖還會閃爍漂移。',
+            en: 'At handover, AR try-on ran at 1 FPS, with the design overlay flickering and drifting during detection.',
           },
           s: {
-            zh: '先立規矩再動手:把慣例明文化(統一 AppConfig / AppLogger / CacheService、畫面檔 800 行上限、僅 GoRouter 導航),再以編號化稽核(P0–P2)逐項清償正確性與品質債。',
-            en: 'Rules before refactors: codify conventions (single AppConfig / AppLogger / CacheService, an 800-line screen cap, GoRouter-only navigation), then pay down correctness and quality debt through a numbered P0–P2 audit.',
+            zh: '汰換三代舊實作,重寫為五個職責分離的套件(偵測、渲染、傳統 CV、遮罩重上色、手動工作室),iOS 改走原生 CoreML 偵測;再加跨幀遲滯消除閃爍。FPS 從 1 提升到即時,核心偵測頁從 3,051 行減到 1,356 行。',
+            en: 'Retired three generations of old implementations and rewrote it as five single-purpose packages (detection, rendering, classic CV, mask recolor, manual studio), moving iOS detection to native CoreML, plus cross-frame hysteresis to kill flicker. FPS went from 1 to realtime; the core detection page shrank from 3,051 to 1,356 lines.',
           },
         },
         {
           c: {
-            zh: '裝置端 AI 要同時做到準、小、快。',
-            en: 'On-device AI has to be accurate, small and fast at once.',
+            zh: '核心畫面是數千行的巨檔:訂單詳情 5,256 行、結帳 3,416 行,改一處動全身。',
+            en: 'Core screens were multi-thousand-line monsters — order detail at 5,256 lines, checkout at 3,416 — where every change rippled everywhere.',
           },
           s: {
-            zh: 'YOLO11 nano 級模型搭配自建 16KB page-size 的 ONNX Runtime 建置,iOS 走 CoreML platform channel;模型隨 App 內建,離線也能辨識。',
-            en: 'Nano-class YOLO11 models on a custom 16KB-page-size ONNX Runtime build, with CoreML via a platform channel on iOS; models ship inside the app and work offline.',
+            zh: '訂下每檔 800 行的上限,依 UI 區塊與邏輯拆分:訂單詳情 5,256 → 230 行(邏輯抽離)、購物車/結帳/訂閱結帳三巨檔合計 6,800 → 1,200 行加獨立元件。',
+            en: 'Set an 800-line-per-file cap and split by UI region and logic: order detail went 5,256 → 230 lines (logic extracted); the cart/checkout/subscription trio went 6,800 → 1,200 lines plus standalone widgets.',
           },
         },
         {
           c: {
-            zh: '上線 App 的錯誤處理不能靠運氣。',
-            en: "A live app's error handling can't run on luck.",
+            zh: 'Token 一過期使用者就被登出,而上架前的安全防護也不足。',
+            en: 'Expired tokens logged users out mid-session, and pre-launch security hardening was thin.',
           },
           s: {
-            zh: 'runZonedGuarded、FlutterError.onError 與 PlatformDispatcher.onError 三層全部收斂到 Crashlytics;Firebase 初始化失敗時 App 降級續跑,ErrorWidget 也有自訂 fallback。',
-            en: 'Three layers — runZonedGuarded, FlutterError.onError and PlatformDispatcher.onError — all converge on Crashlytics; the app degrades gracefully if Firebase init fails, with a custom ErrorWidget fallback.',
+            zh: '在 7 個 service 加入 401 攔截刷新(自動續期不中斷);上架硬化含原生層混淆、Dart obfuscate、憑證綁定與 root/越獄偵測。',
+            en: 'Added 401 intercept-and-refresh across seven services (seamless renewal), and hardened for launch with native-layer obfuscation, Dart obfuscation, certificate pinning and root/jailbreak detection.',
           },
         },
       ],
       facts: [
         { value: '82', label: { zh: '畫面', en: 'screens' } },
         { value: '~129k', label: { zh: 'Dart 行數', en: 'lines of Dart' } },
-        { value: '68', label: { zh: '測試檔', en: 'test files' } },
-        { value: '2025.11', label: { zh: '起唯一維護者', en: 'sole maintainer since' } },
+        { value: '121', label: { zh: '接手後 commits', en: 'commits since takeover' } },
+        { value: '64', label: { zh: '測試檔(單元+整合)', en: 'test files (unit + e2e)' } },
       ],
       lessons: [
         {
@@ -325,8 +325,8 @@ export const PROJECTS: Project[] = [
           en: 'The first step in a takeover is not refactoring — it is writing the conventions down. Once rules are explicit, every change makes the system more consistent instead of more divergent.',
         },
         {
-          zh: '債要列出來才會被還:幾個超過 800 行上限的大畫面被列在待辦清單上,而不是藏起來。有編號的債,才有被清償的一天。',
-          en: "Debt gets paid only when it's listed: the screens exceeding the 800-line cap sit on the backlog, not under the rug. Numbered debt is payable debt.",
+          zh: '佐證要以 git 為準:這個專案的 CHANGELOG 是事後重建的,日期與實際 commit 對不上。重要記錄應該跟 tag 一起產生,而不是回頭補寫。',
+          en: "Trust git, not prose: this project's CHANGELOG was reconstructed after the fact and its dates don't match the commits. Records worth keeping should be generated with tags, not backfilled.",
         },
       ],
     },
@@ -338,10 +338,10 @@ export const PROJECTS: Project[] = [
       en: 'NKUST Alumni Association Platform',
     },
     oneLiner: {
-      zh: '系友名錄、傑出系友、系友企業與徵才的正式官網,已上線營運。',
-      en: 'The official alumni site — member directory, distinguished alumni, alumni companies and job board. Live in production.',
+      zh: '系友名錄、系友企業與徵才的官方網站;2024 年起開發,現於校方網域營運中。',
+      en: 'The official alumni site — member directory, alumni companies and job board. In development since 2024, now running on the university domain.',
     },
-    scope: { zh: '正式營運 · 全端 + 維運', en: 'In production · Full stack + ops' },
+    scope: { zh: '營運中 · 全端 + 維運', en: 'In production · full stack + ops' },
     stack: ['DJANGO', 'DRF', 'MYSQL', 'REDIS', 'REACT'],
     keyMetric: { value: '100+', label: { zh: 'API endpoints', en: 'API endpoints' } },
     links: { live: 'https://aaic.nkust.edu.tw' },
@@ -349,78 +349,86 @@ export const PROJECTS: Project[] = [
     caseStudy: {
       problem: [
         {
-          zh: '系友會需要一個正式對外的官網:系友名錄與個人檔案、傑出系友、系友企業與產品、徵才刊登、電子報與會務資訊——內容要能被搜尋引擎索引,且由非技術背景的幹部自行維護。',
-          en: 'The alumni association needed an official public site: member directory and profiles, distinguished alumni, alumni-owned companies and products, job postings, newsletters and association info — indexable by search engines and maintainable by non-technical staff.',
+          zh: '系友會過去沒有統一的線上平台:系友名冊、合作企業、徵才與活動公告分散各處,靠人工維護。這個系統把「系友自助維護個資 → 管理員審核 → 對外公開展示」與「公司自助登錄職缺/產品」整合成單一平台,並提供傑出系友與系所的對外頁面。',
+          en: "The alumni association had no unified platform: rosters, partner companies, job posts and announcements were scattered and manually maintained. This system folds 'alumni self-service → admin review → public display' and company self-service job/product listings into one platform, plus public pages for distinguished alumni and the department.",
         },
       ],
       constraints: [
         {
-          zh: '掛在校方網域(aaic.nkust.edu.tw)正式對外,資安與穩定性要求高。',
-          en: 'Served on a university domain (aaic.nkust.edu.tw) — public, with high security and stability expectations.',
+          zh: '掛在校方網域正式對外,存有系友個資(屬個資法規管),資安要求高。',
+          en: 'Public on a university domain, holding alumni PII under data-protection law — security expectations are high.',
         },
         {
-          zh: '主機資源有限,沒有容器編排;部署與維運都要輕。',
-          en: 'Limited server resources and no container orchestration; deployment and ops had to stay light.',
+          zh: '單機部署(nginx + gunicorn),無容器編排;維運、資安與 UIUX 稽核都由一人完成。',
+          en: 'Single-server deployment (nginx + gunicorn), no orchestration; ops, security and UX audits all fall on one person.',
+        },
+        {
+          zh: '前端是 CRA(非 SSR),但系友會官網必須能被搜尋引擎索引。',
+          en: 'The frontend is CRA (no SSR), yet an alumni site must be indexable by search engines.',
         },
       ],
       architecture: [
         {
-          zh: 'Django 5 + DRF 單體(11 個業務 app、約 39 個模型、100+ endpoints)搭配 React 18 SPA。權限採 deny-by-default:全域預設 IsAuthenticated,公開端點逐一顯式標註;JWT 走 HttpOnly cookie。Redis 快取熱門查詢,nginx 反向代理加完整安全標頭。',
-          en: 'A Django 5 + DRF monolith (11 business apps, ~39 models, 100+ endpoints) with a React 18 SPA. Authorization is deny-by-default: IsAuthenticated globally, public endpoints explicitly opted in; JWT rides in HttpOnly cookies. Redis caches hot queries; nginx reverse-proxies with a full set of security headers.',
+          zh: 'Django 5 + DRF 單體(11 個業務 app、39 個資料模型,38 個資源路由加上 118 個自訂 action)搭配 React 18 SPA。權限為 deny-by-default:全域預設 IsAuthenticated,公開端點逐一顯式開放;JWT 走 HttpOnly cookie;Redis 快取熱門查詢。',
+          en: 'A Django 5 + DRF monolith (11 business apps, 39 models, 38 resource routes plus 118 custom actions) with a React 18 SPA. Authorization is deny-by-default — IsAuthenticated globally, public endpoints explicitly opted in; JWT rides in HttpOnly cookies; Redis caches hot queries.',
         },
         {
-          zh: '自建監控子系統:middleware 記錄請求、錯誤與效能指標,GeoIP 標註來源國別,管理員信件告警;日誌以每日輪替 + gzip 壓縮保存一年。',
-          en: 'A custom monitoring subsystem: middleware records requests, errors and performance metrics, GeoIP enriches origin country, and admins get email alerts; logs rotate daily with gzip compression, retained for a year.',
+          zh: '自建監控子系統:middleware 把請求、錯誤與效能指標寫進 7 個監控模型,GeoIP 標註來源國別,異常寄信告警;日誌每日輪替壓縮、保存一年,自 2025 年 5 月起持續記錄至今。',
+          en: 'A custom monitoring subsystem: middleware writes requests, errors and performance metrics into seven models, GeoIP tags origin countries, anomalies alert by email; logs rotate daily with gzip and a one-year retention — recording continuously since May 2025.',
         },
       ],
       responsibilities: [
         {
-          zh: '前後端獨立開發與維運:資料模型、API、權限與資安整改、React 前端、部署(nginx)與監控告警。',
-          en: 'Independent full-stack development and operations: data models, APIs, security hardening, the React frontend, deployment (nginx) and monitoring.',
+          zh: '前後端獨立開發與維運(2024/08 起,前後端共 169 個 commit):資料模型、API、權限與資安整改、React 前端、部署與監控。',
+          en: 'Independent full-stack development and operations since 2024/08 (169 commits across both repos): data models, APIs, security hardening, the React frontend, deployment and monitoring.',
         },
       ],
       challenges: [
         {
           c: {
-            zh: '對外站台每天都被掃描與濫用嘗試。',
-            en: 'A public site gets scanned and abused daily.',
+            zh: '上線前的資安審查發現一串高風險漏洞:註冊 API 可自我提權、序列化器有 mass assignment、會員端點可用遞增 id 列舉個資。',
+            en: 'A pre-launch security review surfaced serious flaws: privilege escalation via the registration API, serializer mass assignment, and member PII enumerable through sequential IDs.',
           },
           s: {
-            zh: '分級 throttling(登入 10/min、註冊 10/hr、聯絡表單 20/hr)、代理層信任設定取真實 IP、SEC 編號的資安整改流程,並為 IDOR 與權限提升寫回歸測試。',
-            en: 'Scoped throttling (login 10/min, registration 10/hr, contact 20/hr), trusted-proxy handling for real client IPs, a numbered security-remediation process, and regression tests for IDOR and privilege escalation.',
+            zh: '根因是全域 AllowAny + 逐點加鎖。把權限翻轉為 deny-by-default,以編號化流程(SEC-001~030)逐項修補:欄位白名單、擁有者過濾、敏感欄位遮罩、回應一致化防列舉——29 項修復落地,並補上針對提權與 IDOR 的回歸測試(7/7 通過)。',
+            en: 'The root cause was global AllowAny with per-endpoint locking. Authorization was flipped to deny-by-default and a numbered program (SEC-001–030) fixed items one by one — field whitelists, owner filtering, sensitive-field redaction, uniform responses against enumeration. 29 fixes landed, backed by privilege/IDOR regression tests (7/7 passing).',
           },
         },
         {
           c: {
-            zh: 'SPA 天生對 SEO 不利,但系友會官網必須被搜得到。',
-            en: 'SPAs are bad at SEO by default, but an alumni site must be findable.',
+            zh: 'CRA SPA 天生對搜尋引擎不友善,而 react-snap 這類現成方案的 puppeteer 版本過舊不可用。',
+            en: 'A CRA SPA is hostile to crawlers by default, and off-the-shelf prerenderers shipped a puppeteer too old to use.',
           },
           s: {
-            zh: 'Build 後 prerender 靜態頁、SEO helper 與 GA 事件,後端另設 seo app 管理索引內容。',
-            en: 'Post-build prerendering, SEO helpers and GA events, plus a backend seo app managing indexable content.',
+            zh: '自寫 prerender 腳本(puppeteer + Chrome for Testing):build 後對 14 條對外路由逐一渲染並寫回靜態 HTML,掛在 postbuild 自動執行;後端另建動態 sitemap,過程中順手修掉 sitemap 一律 500 的欄位錯誤。',
+            en: 'Wrote a custom prerender script (puppeteer + Chrome for Testing): after build it renders 14 public routes back to static HTML, wired into postbuild; the backend serves a dynamic sitemap — fixing, along the way, a field bug that had it returning 500s.',
           },
         },
         {
           c: {
-            zh: '通知信一旦寄丟,就是會務事故。',
-            en: 'A lost notification email is an operational incident.',
+            zh: '沒有 APM 預算,但對外站台需要知道誰在打它、哪裡在變慢。',
+            en: 'No budget for an APM, yet a public site needs to know who is hitting it and what is slowing down.',
           },
           s: {
-            zh: '以 Resend API 為主、SMTP 為備援的雙通道寄信,帳號建立、密碼重設與登入通知都有模板與紀錄。',
-            en: 'Dual-channel email — Resend API primary with SMTP fallback — with templates and logging for account, password-reset and login notifications.',
+            zh: '自建監控:middleware 記錄請求/錯誤/效能,GeoIP 標來源,分級 throttling(登入 10/min、註冊 10/hr)擋濫用;每日輪替的請求日誌從 2025 年 5 月持續累積至今,是系統真實營運的直接證據。',
+            en: 'Built it in: middleware logs requests/errors/perf, GeoIP tags origins, scoped throttling (login 10/min, registration 10/hr) blocks abuse. The daily-rotated logs accumulating since May 2025 are direct evidence of real operation.',
           },
         },
       ],
       facts: [
         { value: '11', label: { zh: '業務模組', en: 'business apps' } },
         { value: '100+', label: { zh: 'API endpoints', en: 'API endpoints' } },
+        { value: '30', label: { zh: 'SEC 稽核項(29 修復)', en: 'audit findings (29 fixed)' } },
         { value: '43', label: { zh: 'Playwright E2E', en: 'Playwright E2E specs' } },
-        { value: 'CI', label: { zh: '前後端皆有', en: 'on both repos' } },
       ],
       lessons: [
         {
-          zh: '快取要跟量測一起上——部分熱點快取因為沒有數據支撐先被關掉了。先量測、再快取,順序不能反。',
-          en: 'Ship caching with measurement — some hot-path caches were disabled because nothing proved them out. Measure first, cache second; the order is not negotiable.',
+          zh: '權限要從 default-deny 起步。AllowAny 加逐點加鎖讓整片攻擊面打開,上線前靠審查補救的成本,比一開始就做對高出太多。',
+          en: 'Start from default-deny. Global AllowAny with per-endpoint locking opened a whole attack surface — remediating before launch cost far more than doing it right from the start.',
+        },
+        {
+          zh: 'CRA + 自建預渲染能動,但脆弱:路由要手動維護、Chrome 版本綁死。重來會直接選有原生 SSR/SSG 的框架,省掉整條自維護管線。',
+          en: 'CRA plus a hand-rolled prerenderer works, but it is fragile — routes are maintained by hand and pinned to a Chrome build. Next time I would pick a framework with native SSR/SSG and delete the whole pipeline.',
         },
       ],
     },
@@ -432,93 +440,97 @@ export const PROJECTS: Project[] = [
       en: 'NKUST Equipment Borrowing System',
     },
     oneLiner: {
-      zh: '從條碼借還、逾期賠償到現金核帳的完整設備管理系統,含稽核軌跡。',
-      en: 'Barcode-driven borrowing, overdue and compensation handling, cash reconciliation — with a full audit trail.',
+      zh: '條碼借還、盤點、賠償與用餐基金記帳的系所內部系統;2025 年起獨立開發並部署。',
+      en: 'Barcode lending, inventory, compensation and a meal-fund ledger for a university department — solo-built and deployed since 2025.',
     },
-    scope: { zh: '正式營運 · 全端', en: 'In production · Full stack' },
+    scope: { zh: '已部署 · 獨立開發', en: 'Deployed · solo build' },
     stack: ['DJANGO', 'DRF', 'MYSQL', 'REACT', 'PLAYWRIGHT'],
-    keyMetric: { value: '79', label: { zh: '自動化測試檔', en: 'test files' } },
+    keyMetric: { value: '1,112', label: { zh: '後端測試函式', en: 'backend tests' } },
     links: { live: 'https://equipment-borrowing.binbinbob.work' },
     featured: true,
     caseStudy: {
       problem: [
         {
-          zh: '設備借還原本靠人工與紙本:設備狀態、逾期追蹤、損壞賠償、押金與現金收支都難以核對。需要一套從借出到歸還、從賠償到結算都留有紀錄、可稽核的系統。',
-          en: 'Equipment lending ran on paper: equipment status, overdue tracking, damage compensation and cash handling were nearly impossible to reconcile. The unit needed a system where everything — from checkout to return, compensation to settlement — is recorded and auditable.',
+          zh: '系所的設備借還原本依附在一套舊平台的模組上,資料髒、難維護;「用餐基金」則是一份人工維護的 Excel。這個系統同時承接兩件事:把設備借還(含逾期、賠償、盤點、套組)系統化,並把基金記帳轉成有帳戶餘額、結算期間與現金核對的正式帳。',
+          en: "The department's equipment lending lived inside a legacy platform module with messy data, and the shared meal fund was a hand-maintained spreadsheet. This system took over both: formalizing lending (overdue, compensation, stocktakes, kits) and turning the fund into real ledger accounting with balances, settlement periods and cash verification.",
         },
       ],
       constraints: [
         {
-          zh: '要承接舊系統的資料庫,資料不乾淨且結構不同。',
-          en: "Had to absorb a legacy database with messy, structurally different data.",
+          zh: '要承接舊系統資料庫,舊借用紀錄大量欄位為空、品質差。',
+          en: 'Had to absorb the legacy database — old borrowing records were riddled with empty fields.',
         },
         {
-          zh: '櫃檯借還是高頻操作,使用者非技術背景,流程必須秒級完成。',
-          en: 'Front-desk lending is high-frequency and operated by non-technical staff — each transaction must take seconds.',
+          zh: '櫃檯借還是高頻操作、使用者非技術背景,單筆流程必須在幾秒內完成。',
+          en: 'Front-desk lending is high-frequency and run by non-technical staff — each transaction must finish in seconds.',
+        },
+        {
+          zh: '單台 VPS、無容器與 Redis:快取用行程內 LocMemCache,速率限制改用 DB cache 以跨 worker 共享。',
+          en: 'One VPS, no containers or Redis: caching is in-process LocMemCache, with rate limits on a DB cache to share across workers.',
         },
       ],
       architecture: [
         {
-          zh: 'Django 5 + DRF 單體,依領域切成 15 個 app(borrowing、finance、audit、inventory、kits⋯),React 19 + Ant Design SPA。JWT 放 HttpOnly cookie 並做 refresh rotation 與 blacklist;RBAC 以 Role/Capability 建模;自訂 middleware 疊層處理安全標頭、輸入清洗、速率限制與請求記錄。',
-          en: 'A Django 5 + DRF monolith split into 15 domain apps (borrowing, finance, audit, inventory, kits…) with a React 19 + Ant Design SPA. JWT lives in HttpOnly cookies with refresh rotation and blacklisting; RBAC is modeled as Roles and Capabilities; a custom middleware stack handles security headers, input sanitization, rate limiting and request logging.',
+          zh: 'Django 5 + DRF 模組化單體,依領域切成 13 個 app(borrowing、finance、audit、inventory、kits⋯),27 個資料模型、23 個資源路由加 86 個自訂 action;前端 React 19 + Ant Design,40 個頁面。JWT 放 HttpOnly cookie 並做 refresh rotation 與 blacklist;RBAC 以 Role/Capability 建模。',
+          en: 'A Django 5 + DRF modular monolith split into 13 domain apps (borrowing, finance, audit, inventory, kits…) — 27 models, 23 resource routes plus 86 custom actions — with a React 19 + Ant Design frontend of 40 pages. JWT lives in HttpOnly cookies with refresh rotation and blacklisting; RBAC is modeled as Roles and Capabilities.',
         },
         {
-          zh: '稽核是獨立子系統:4 個稽核模型加 signals 與 middleware,自動記錄模型變更與使用者活動;金流模組涵蓋帳戶、交易、結算期與現金核帳。',
-          en: 'Auditing is its own subsystem: four audit models plus signals and middleware automatically record model changes and user activity; the finance module covers accounts, transactions, settlement periods and cash verification.',
+          zh: '稽核是獨立子系統:middleware 自動記錄操作(含敏感操作標記、耗時、回應狀態),另有欄位級的模型變更記錄。財務子系統做用餐基金:交易寫入時自動維護帳戶餘額,支援結算期間與現金核對,整套帳可從原始 Excel 一鍵匯入重建。',
+          en: 'Auditing is its own subsystem: middleware records every operation (sensitive-action flags, latency, response status), plus field-level model change logs. The finance subsystem runs the meal fund: transactions maintain account balances on write, with settlement periods and cash verification — and the whole ledger can be rebuilt from the original spreadsheet in one import.',
         },
       ],
       responsibilities: [
         {
-          zh: '前後端獨立開發:資料模型、API、權限、React 前端、測試策略(單元 + E2E)與部署(nginx + gunicorn + Cloudflare)。',
-          en: 'Independent full-stack development: data models, APIs, permissions, the React frontend, test strategy (unit + E2E) and deployment (nginx + gunicorn + Cloudflare).',
+          zh: '前後端獨立開發(git 全歷史單一作者,2025/09–2026/07):資料模型、API、權限、React 前端、測試策略與部署(nginx + gunicorn systemd)。',
+          en: 'Independent full-stack development (single author across the entire git history, 2025/09–2026/07): data models, APIs, permissions, the React frontend, test strategy and deployment (nginx + gunicorn under systemd).',
         },
       ],
       challenges: [
         {
           c: {
-            zh: '舊系統資料直接匯入會污染新 schema。',
-            en: 'Importing legacy data directly would poison the new schema.',
+            zh: '舊系統的借用紀錄要搬進新 schema,但資料髒到直接匯入必然失敗。',
+            en: 'Legacy borrowing records had to move into the new schema, but the data was too dirty to import directly.',
           },
           s: {
-            zh: '寫了一組遷移工具:mapper 轉換、verifier 驗證、批次執行並產出遷移報告,舊庫以獨立 connection 隔離。',
-            en: 'Built a migration toolkit — mappers to transform, verifiers to check, batched runs with generated reports — keeping the legacy DB behind a separate connection.',
+            zh: '寫了一組遷移工具(每個實體一個 mapper、獨立 verifier、支援 dry-run 與報表),舊庫以獨立 connection 隔離。一次實跑 180 秒搬入 9,138 筆借用單、3,336 名學生與 370 件設備;同時有 2,271 筆舊紀錄因空欄位報錯——這批錯誤被完整留在遷移報表裡,成為列管中的資料品質債,而不是被吞掉。',
+            en: 'Built a migration toolkit (one mapper per entity, a standalone verifier, dry-run and reports), keeping the legacy DB behind its own connection. One real run took 180 seconds and moved 9,138 borrow tickets, 3,336 students and 370 pieces of equipment — while 2,271 legacy rows failed on empty fields. Those errors live in the migration report as tracked data-quality debt, not swallowed.',
           },
         },
         {
           c: {
-            zh: '櫃檯人工輸入太慢,高峰期會排隊。',
-            en: 'Manual entry at the desk was too slow; peak hours meant queues.',
+            zh: '櫃檯要快:人工輸入太慢,而且桌機與手機的掃描硬體完全不同。',
+            en: 'The front desk needs speed — manual entry was too slow, and desktop and mobile scan with entirely different hardware.',
           },
           s: {
-            zh: '整條流程改為條碼驅動:後端產生設備條碼、前端列印與 @zxing 掃描,一掃帶出設備與借用單,借還各只需幾秒。',
-            en: 'Made the whole flow barcode-driven: backend-generated equipment barcodes, printable labels, @zxing scanning — one scan pulls up the equipment and ticket, cutting each transaction to seconds.',
+            zh: '整條流程條碼化:後端以 Code128 產生設備標籤,前端依裝置自動切換模式——桌機走掃碼槍輸入、手機開相機(@zxing),支援批次連掃與同碼短時間去重,一掃帶出設備與借用單。',
+            en: 'Made the whole flow barcode-driven: the backend generates Code128 labels; the frontend auto-switches by device — scanner-gun input on desktop, camera (@zxing) on mobile — with batch scanning and short-window dedup. One scan pulls up the equipment and its ticket.',
           },
         },
         {
           c: {
-            zh: '設備與金錢的每一步都需要留下可稽核的軌跡。',
-            en: 'Every movement of equipment and money needs an auditable trail.',
+            zh: '用餐基金的 Excel 有多年新舊資料混雜,轉成正式帳不能弄丟一筆。',
+            en: "Years of old and new records were tangled in the meal-fund spreadsheet — formalizing it couldn't lose a single row.",
           },
           s: {
-            zh: '獨立 audit app 以 signals + middleware 自動記錄;賠償與現金核帳走結算期制,對不上的帳有跡可循。',
-            en: 'A dedicated audit app records everything via signals and middleware; compensation and cash flows run through settlement periods, so discrepancies are traceable.',
+            zh: '寫成兩遍式匯入命令:第一遍建帳戶與收支類別,第二遍處理期初餘額、結算期間與逐筆交易,整體包在資料庫交易裡,支援 dry-run 與重跑;交易寫入自動維護餘額,月底有現金核對機制。',
+            en: 'Wrote a two-pass import command: pass one creates accounts and categories, pass two handles opening balances, settlement periods and every transaction — all inside a DB transaction, with dry-run and re-runs. Balances maintain themselves on write, and month-end cash verification closes the loop.',
           },
         },
       ],
       facts: [
-        { value: '15', label: { zh: '領域模組', en: 'domain apps' } },
-        { value: '85+', label: { zh: '自訂 API actions', en: 'custom API actions' } },
+        { value: '13', label: { zh: '領域模組', en: 'domain apps' } },
+        { value: '86', label: { zh: '自訂 API actions', en: 'custom API actions' } },
+        { value: '1,112', label: { zh: '後端測試函式', en: 'backend test functions' } },
         { value: '36', label: { zh: 'Playwright E2E', en: 'Playwright E2E specs' } },
-        { value: '~70k', label: { zh: '程式碼行數', en: 'lines of code' } },
       ],
       lessons: [
         {
-          zh: 'LocMemCache 在多 worker 下不共享——快取層下一步要搬到 Redis。通知目前只有逾期 email,持久化的通知中心已在規劃。',
-          en: "LocMemCache isn't shared across workers — the cache layer's next step is Redis. Notifications are overdue-email only for now; a persistent notification center is planned.",
+          zh: '遷移的防呆要做在 mapper 層:2,271 筆錯誤幾乎全是同一種空欄位問題,先清洗再匯入,整份錯誤報表就不會存在。',
+          en: 'Migration guards belong in the mapper: the 2,271 failures were nearly all one class of empty-field problem — clean first, import second, and that error report never exists.',
         },
         {
-          zh: '測試是這個專案最值得的投資:36 個 E2E 加單元測試,讓舊資料遷移與 API 調整可以放心地重構。',
-          en: 'Tests were the best investment here: 36 E2E specs plus unit tests made the data migration and API changes safe to refactor.',
+          zh: '把錯誤靜默成「一切正常」比壞掉更危險。後期 UIUX 稽核點出的重複頁面與假資料顯示,是快速堆功能階段留下的債——現在有清單、有編號地在還。',
+          en: "Silencing errors into 'everything is fine' is worse than breaking. The duplicate pages and fake-data displays a late UX audit surfaced are debt from the fast-stacking phase — now numbered, listed, and being paid down.",
         },
       ],
     },
@@ -530,113 +542,12 @@ export const PROJECTS: Project[] = [
       en: 'Large-scale Django Microservices Platform',
     },
     oneLiner: {
-      zh: '30+ 個 Django 微服務支撐電商、多租戶 POS、B2B、CRM 與線上課程六大業務域,搭配多個 Web 前端與原生 App。',
-      en: '30+ Django microservices powering e-commerce, multi-tenant POS, B2B, CRM and online courses — with multiple web frontends and native apps.',
+      zh: '數十個微服務組成的單一平台:從身分驗證、訂單、庫存到日誌與媒體。',
+      en: 'Dozens of services on one platform — auth, orders, inventory, logging, media and more.',
     },
-    scope: { zh: '開發中 · 全通路商務', en: 'In development · Omnichannel commerce' },
-    stack: ['DJANGO', 'CELERY', 'MYSQL', 'REDIS', 'REACT', 'FLUTTER', 'SWIFT'],
-    keyMetric: { value: '30+', label: { zh: '微服務', en: 'microservices' } },
-    featured: true,
-    caseStudy: {
-      problem: [
-        {
-          zh: '全通路商務不是單一商店:同一批商品與會員,要同時流經 B2C 電商、門市 POS、企業採購(B2B)、業務團隊(CRM + 傭金歸因)與線上課程。平台以 30+ 個 Django 微服務支撐這六大業務域,前端是 4 個 React 應用加 4 個原生行動 App(Flutter、SwiftUI)。',
-          en: 'Omnichannel commerce is never one storefront: the same products and members flow through B2C e-commerce, in-store POS, B2B procurement, a sales force (CRM + commission attribution) and online courses. The platform backs these six domains with 30+ Django microservices, fronted by 4 React apps and 4 native mobile apps (Flutter, SwiftUI).',
-        },
-      ],
-      constraints: [
-        {
-          zh: '公司商業專案,程式碼不公開。',
-          en: 'A commercial, closed-source project.',
-        },
-        {
-          zh: '金流、發票、物流全部接真:信用卡、BNPL、電子發票與多家物流商,每一筆交易都是真錢。',
-          en: 'Payments, invoicing and logistics are all live — cards, BNPL, e-invoicing and multiple carriers. Every transaction is real money.',
-        },
-        {
-          zh: '兩位主力開發者維護 170 萬行後端:橫切機制必須做成共享庫,而不是 30 份複製。',
-          en: 'Two core developers maintain 1.7M lines of backend: cross-cutting concerns must live in a shared library, not thirty copies.',
-        },
-      ],
-      architecture: [
-        {
-          zh: '每服務一庫:33 個 Django 服務各自擁有獨立的 MySQL schema,共 807 個資料模型;跨服務不建外鍵,只存邏輯參照與下單當下的快照。服務間走同步 REST(共享 client,逾時 + 指數退避),以 RS256 service JWT 互相認證;三個 Redis 實例分工快取、Session 與分散式鎖、Celery 佇列,每服務一個 worker,啟動依核心 → 業務 → 輔助三階段編排。',
-          en: 'Database-per-service: 33 Django services each own a MySQL schema — 807 models in total. No cross-service foreign keys; services keep logical references plus point-in-time snapshots. Inter-service calls are synchronous REST (a shared client with timeouts and exponential backoff), mutually authenticated with RS256 service JWTs. Three Redis instances split caching, sessions-and-locks and Celery queues — one worker per service, booted in a three-stage core → business → auxiliary order.',
-        },
-        {
-          zh: 'POS 把多租戶做到實體隔離:每租戶一個獨立資料庫,middleware 做零信任租戶解析,DB router 依 app 動態路由。金流域整合綠界(刷卡、BNPL、電子發票)與多家物流商;通知域涵蓋 134 個郵件模板、四憑證 FCM 推播與 LINE,全部走 Celery 非同步。',
-          en: 'POS pushes multi-tenancy to physical isolation: one database per tenant, zero-trust tenant resolution in middleware, and a DB router dispatching per app. The payment domain integrates ECPay (cards, BNPL, e-invoicing) and multiple logistics carriers; notifications span 134 email templates, four-credential FCM push and LINE — all asynchronous via Celery.',
-        },
-        {
-          zh: '前端不是一套打天下:每個 React 應用針對自己的場景做工程——B2B 採購端用伺服器權威報價、冪等鍵結帳與序號化樂觀更新(舊回應與舊回滾都不會倒灌);門市 POS 把收銀熱路徑做成 eager chunk(初始 JS 從 666kB 降到 310kB gz),班別 session 放 sessionStorage,共用收銀機關掉分頁即登出;外勤業務 PWA 以 tesseract.js 做裝置端名片 OCR(影像不出手機)加 GPS 地理圍欄業績歸因。',
-          en: 'The frontends are not one-size-fits-all: each React app is engineered for its context — the B2B portal runs server-authoritative quoting, idempotency-key checkout and sequence-numbered optimistic updates (stale responses and stale rollbacks can never clobber state); the in-store POS keeps the checkout hot path in an eager chunk (initial JS cut from 666kB to 310kB gzipped) and holds shift sessions in sessionStorage, so closing the tab logs a shared register out; the field-sales PWA does on-device business-card OCR with tesseract.js (images never leave the phone) plus GPS-geofenced commission attribution.',
-        },
-      ],
-      responsibilities: [
-        {
-          zh: '兩位主力開發者之一,全端開發:微服務後端(資料模型、API、服務間通訊、Celery 任務)、React 前端與行動端整合,以及每週回歸測試系統與部署工具。',
-          en: 'One of two core developers, working full-stack: the microservice backends (models, APIs, inter-service communication, Celery tasks), the React frontends and mobile integration, plus the weekly regression system and deployment tooling.',
-        },
-      ],
-      challenges: [
-        {
-          c: {
-            zh: '多租戶 POS 只要漏一次租戶判斷,就是跨店資料事故。',
-            en: 'In a multi-tenant POS, one missed tenant check is a cross-store data incident.',
-          },
-          s: {
-            zh: '零信任租戶解析:header 裡的租戶 ID 只是「聲明」,middleware 以 RS256 公鑰驗簽後,以 JWT 內的租戶 claim 為唯一權威,不符即 403;租戶資料本身落在實體隔離的獨立資料庫。',
-            en: "Zero-trust tenant resolution: the tenant ID header is merely a claim — middleware verifies the JWT against the RS256 public key and treats the token's tenant claim as the only authority, rejecting mismatches with 403. Tenant data itself lives in physically separate databases.",
-          },
-        },
-        {
-          c: {
-            zh: '金流回調是整個平台正確性的咽喉:一筆漏掉或重複,對帳就崩。',
-            en: "Payment callbacks are the platform's correctness chokepoint: one lost or duplicated callback breaks reconciliation.",
-          },
-          s: {
-            zh: '下單以商品快照落庫,付款回調通過驗簽後依通路(電商 / B2B / POS)分流同步,交易一律記入不可變(append-only)帳本,通知走 Celery 非同步——退款、發票與對帳都能事後回放。',
-            en: 'Orders persist product snapshots at checkout; verified callbacks fan out by channel (e-commerce / B2B / POS); every transaction lands in an append-only ledger, with notifications async on Celery — so refunds, invoices and reconciliation can always be replayed.',
-          },
-        },
-        {
-          c: {
-            zh: '門市與外勤的網路不可靠,但收銀與開戶不能停。',
-            en: "Store and field networks are unreliable — but checkout and onboarding can't stop.",
-          },
-          s: {
-            zh: 'POS 結帳斷線時進本地佇列、連線恢復自動重送(業務錯誤不盲目重試);業務 PWA 以 app-shell Service Worker 加送件佇列支援離線開戶,再用三層機制終結 SPA 換版白屏:舊 chunk 載入失敗自癒重載、資產缺檔回硬 404 而非 HTML、SW 版本化清快取。',
-            en: 'POS checkouts queue locally when offline and auto-resend on reconnect (business errors are never blindly retried); the sales PWA pairs an app-shell service worker with a submission queue for offline onboarding — and kills the classic stale-deploy white screen with three layers: self-healing reloads on stale-chunk failures, hard 404s for missing assets instead of HTML fallbacks, and versioned service-worker cache purges.',
-          },
-        },
-        {
-          c: {
-            zh: '上萬個測試不等於安全網——得先讓測試「可信」。',
-            en: "Sixteen thousand tests are not a safety net until you can trust them.",
-          },
-          s: {
-            zh: '建立四層回歸系統:全服務健康閘 → 218 個唯讀端點基線比對 → 掛 DB 安全守衛的 pytest(偵測到測試打向非隔離資料庫立即中止)→ 跨服務真 E2E;每週排程執行,全綠才滾動更新基線。',
-            en: 'Built a four-layer regression system: an all-service health gate → baseline comparison across 218 read-only endpoints → pytest behind a DB guard (any test touching a non-isolated database halts the run) → true cross-service E2E. It runs on a weekly schedule, and baselines only roll forward on all-green.',
-          },
-        },
-      ],
-      facts: [
-        { value: '30+', label: { zh: '微服務', en: 'microservices' } },
-        { value: '807', label: { zh: '資料模型', en: 'data models' } },
-        { value: '1.7M+', label: { zh: 'Python 行數', en: 'lines of Python' } },
-        { value: '16,433', label: { zh: '測試案例', en: 'test cases' } },
-      ],
-      lessons: [
-        {
-          zh: '微服務的代價在邊界處支付:沒有跨庫交易,一致性就得用快照、邏輯參照與不可變帳本來換——這些不是 workaround,是這個架構誠實的成本。',
-          en: 'Microservices charge their toll at the boundaries: without cross-database transactions, consistency is bought with snapshots, logical references and append-only ledgers — not workarounds, but the honest price of the architecture.',
-        },
-        {
-          zh: '測試先看可信度、再看數量:一個能擋下「打到真實資料庫」的守衛,比一千個綠燈更能保護一次重構。',
-          en: 'Trust before volume in testing: one guard that halts a test the moment it touches a real database protects a refactor better than a thousand green checks.',
-        },
-      ],
-    },
+    scope: { zh: '開發中', en: 'In development' },
+    stack: ['DJANGO', 'MYSQL', 'REDIS', 'NGINX'],
+    featured: false,
   },
   {
     slug: 'ai-workflow',

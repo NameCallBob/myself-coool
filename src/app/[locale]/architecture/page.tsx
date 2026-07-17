@@ -12,6 +12,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: t('architecture'),
     description: m('architecture'),
+    openGraph: { title: t('architecture'), description: m('architecture') },
     alternates: alternatesFor(locale, '/architecture'),
   };
 }

@@ -15,6 +15,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: t('title'),
     description: m('work'),
+    openGraph: { title: t('title'), description: m('work') },
     alternates: alternatesFor(locale, '/work'),
   };
 }

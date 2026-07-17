@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: project.title[loc],
     description: project.oneLiner[loc],
+    openGraph: { title: project.title[loc], description: project.oneLiner[loc] },
     alternates: alternatesFor(locale, `/work/${slug}`),
   };
 }
