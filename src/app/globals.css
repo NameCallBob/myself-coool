@@ -4,13 +4,40 @@
    Design tokens — Phase 4 spec
    Dark (Warm Graphite) is the default theme.
    ───────────────────────────────────────────── */
+/* Light first — "Drafting paper + red ink"(製圖紙 + 紅墨水批註) */
 :root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg-deep: #faf8f4;
+  --bg-base: #f2efe8;
+  --bg-raised: #ffffff;
+
+  --border-1: rgba(26, 23, 20, 0.07);
+  --border-2: rgba(26, 23, 20, 0.13);
+  --border-3: rgba(26, 23, 20, 0.22);
+
+  --fg: #1a1714;
+  --fg-muted: #5e574e;
+  --fg-faint: #8e867a;
+
+  --accent: #a31621; /* deep red ink — 7.4:1 on paper */
+  --accent-ink: #faf8f4;
+  --accent-dim: rgba(163, 22, 33, 0.12);
+
+  --data-teal: #2a7d7f;
+  --data-slate: #5a6478;
+
+  --noise-opacity: 0.035;
+  --glass: rgba(250, 248, 244, 0.8);
+}
+
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --bg-deep: #0c0b09;
-  --bg-base: #12110e;
-  --bg-raised: #1a1815;
+  --bg-deep: #12100e;
+  --bg-base: #181512;
+  --bg-raised: #201c18;
 
   --border-1: rgba(235, 225, 210, 0.07);
   --border-2: rgba(235, 225, 210, 0.13);
@@ -20,41 +47,15 @@
   --fg-muted: #a8a296;
   --fg-faint: #6b665c;
 
-  --accent: #e8a33d;
-  --accent-ink: #0c0b09;
-  --accent-dim: rgba(232, 163, 61, 0.14);
+  --accent: #e25d5d; /* 亮紅——深色底上維持 ≥4.5:1 */
+  --accent-ink: #12100e;
+  --accent-dim: rgba(226, 93, 93, 0.16);
 
   --data-teal: #5fb3b5;
   --data-slate: #8a93a6;
 
   --noise-opacity: 0.025;
-  --glass: rgba(12, 11, 9, 0.75);
-}
-
-[data-theme='light'] {
-  color-scheme: light;
-
-  --bg-deep: #f7f5f0;
-  --bg-base: #f0ede6;
-  --bg-raised: #ffffff;
-
-  --border-1: rgba(23, 21, 18, 0.08);
-  --border-2: rgba(23, 21, 18, 0.14);
-  --border-3: rgba(23, 21, 18, 0.24);
-
-  --fg: #171512;
-  --fg-muted: #5c574e;
-  --fg-faint: #8f887c;
-
-  --accent: #9a6410;
-  --accent-ink: #f7f5f0;
-  --accent-dim: rgba(184, 121, 20, 0.14);
-
-  --data-teal: #2a7d7f;
-  --data-slate: #5a6478;
-
-  --noise-opacity: 0.035;
-  --glass: rgba(247, 245, 240, 0.78);
+  --glass: rgba(18, 16, 14, 0.75);
 }
 
 @theme inline {
@@ -140,6 +141,31 @@ body::after {
   background: var(--border-1);
 }
 
+/* 首次載入:導線由上而下「畫」出來 */
+.js .guide-line {
+  transform-origin: top;
+  animation: line-in 900ms var(--ease-out-expo) both;
+}
+@keyframes line-in {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* ── Hero 逐字進場 ─────────────────────────── */
+.js .stagger-ch {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.35em);
+  animation: ch-in 600ms var(--ease-out-expo) forwards;
+}
+@keyframes ch-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Crosshair tick at section seams */
 .tick {
   position: relative;
@@ -166,6 +192,20 @@ body::after {
 .js .reveal.in {
   opacity: 1;
   transform: none;
+}
+
+/* ── 紅墨水底線(文字連結 hover)─────────── */
+.ink-link {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition:
+    background-size 300ms var(--ease-out-expo),
+    color 200ms;
+}
+.ink-link:hover {
+  background-size: 100% 1px;
 }
 
 /* ── Reduced motion baseline (Phase 5 §4) ─── */

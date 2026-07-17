@@ -10,7 +10,7 @@
     "home": "回到首頁"
   },
   "footer": {
-    "statement": "設計能扛規模的系統,從資料庫到 AI Workflow。",
+    "statement": "以工程文件的形式,記錄我建置與維運的系統。",
     "github": "GitHub 個人頁"
   },
   "a11y": {
@@ -20,17 +20,16 @@
     "schematicLabel": "微服務系統拓撲示意圖:請求由 Web 與 App 客戶端經 Nginx 進入 Auth、Member、Product、Order、Inventory 等微服務,存取 MySQL 與 Redis"
   },
   "home": {
-    "title": "我建大型系統。",
-    "subtitle": "從資料庫結構到 AI Workflow,以後端為核心的完整系統開發。",
-    "roles": "BACKEND ENGINEER · SYSTEM DESIGN · AI INTEGRATION",
-    "ctaWork": "檢視作品",
-    "ctaContact": "聯絡我",
-    "workAll": "全部作品",
-    "archTitle": "系統不是畫出來的,是取捨出來的。",
-    "archBlurb": "數十個微服務如何切分邊界、共享資料、彼此協作——完整架構可以互動探索。",
-    "archCta": "探索完整架構",
-    "contactTitle": "需要能扛規模的系統?",
-    "contactBlurb": "我目前任職於日秀美學,同時開放討論系統設計與後端開發的合作機會。"
+    "name": "binbin",
+    "tagline": "全端工程師,目前仍在學。",
+    "intro": "2025 年 6 月起,在日秀美學股份有限公司參與 AI 美甲平台與多租戶人資系統的開發;課餘時間獨立開發並維運兩個目前在高雄科技大學實際使用中的系統。這個網站以工程文件的形式,記錄這些系統的設計、取捨與過程中學到的事。",
+    "roles": "BACKEND · SYSTEM DESIGN · AI INTEGRATION",
+    "schematicCaption": "簡化示意:我日常開發的微服務拓撲,節點為實際存在的服務。",
+    "workNote": "每個系統以相同的格式記錄:問題、限制、架構、挑戰與結果。",
+    "archNote": "微服務邊界、API 請求的生命週期與部署流程,以圖解方式整理。",
+    "archCta": "查看系統架構",
+    "principlesNote": "幾個我在工作中反覆驗證過的原則。",
+    "contactNote": "如果想討論系統設計或後端開發,歡迎來信。"
   },
   "work": {
     "title": "作品",
@@ -38,7 +37,8 @@
     "metricPending": "數據整理中"
   },
   "meta": {
-    "work": "五個真實系統的深度拆解:多租戶 SaaS、AI 商業平台、行動 App 與校園營運系統。",
+    "home": "全端工程師。在日秀美學開發 AI 美甲平台與多租戶人資系統,並獨立維運兩個在高雄科技大學使用中的系統。",
+    "work":"五個真實系統的深度拆解:多租戶 SaaS、AI 商業平台、行動 App 與校園營運系統。",
     "architecture": "以互動圖解呈現微服務邊界、API 請求生命週期與部署流程。",
     "ai": "AI Agent 如何協助架構審查、Code Review、安全與效能檢測及文件生成。",
     "about": "在學學生,同時獨立開發多個生產系統——經歷、時間軸與技術棧。"

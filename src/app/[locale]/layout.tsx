@@ -44,7 +44,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'home' });
+  const m = await getTranslations({ locale, namespace: 'meta' });
   const title =
     locale === 'zh-TW'
       ? 'binbin — 全端工程師 · 系統設計 · AI 整合'
@@ -53,14 +53,14 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title: { default: title, template: '%s — binbin' },
-    description: t('subtitle'),
+    description: m('home'),
     alternates: alternatesFor(locale, ''),
     openGraph: {
       type: 'website',
       siteName: 'binbin',
       locale: ogLocale(locale),
       title,
-      description: t('subtitle'),
+      description: m('home'),
     },
     twitter: { card: 'summary_large_image' },
   };
@@ -100,7 +100,7 @@ export default async function LocaleLayout({
             __html: "document.documentElement.classList.add('js')",
           }}
         />
-        <ThemeProvider attribute="data-theme" defaultTheme="dark">
+        <ThemeProvider attribute="data-theme" defaultTheme="light">
           <LenisProvider />
           <NextIntlClientProvider messages={clientMessages}>
             <a

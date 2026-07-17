@@ -101,7 +101,7 @@ export function Nav() {
           <ThemeToggle label={a11y('toggleTheme')} />
           <a
             href={`mailto:${CONTACT_EMAIL}`}
-            className="hidden h-11 items-center rounded-full bg-accent px-5 text-sm font-medium text-accent-ink transition-transform duration-200 hover:shadow-[0_0_24px_var(--accent-dim)] active:scale-[0.97] md:flex"
+            className="hidden h-11 items-center px-2 text-base text-muted transition-colors duration-200 hover:text-fg md:flex"
           >
             {t('contact')}
           </a>
@@ -134,7 +134,7 @@ export function Nav() {
             <a
               href={`mailto:${CONTACT_EMAIL}`}
               onClick={() => setOpen(false)}
-              className="mt-6 flex h-12 items-center justify-center rounded-full bg-accent text-base font-medium text-accent-ink"
+              className="mt-6 flex h-12 items-center justify-center rounded-full border border-line-3 text-base text-fg"
             >
               {t('contact')}
             </a>

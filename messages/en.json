@@ -10,7 +10,7 @@
     "home": "Back to home"
   },
   "footer": {
-    "statement": "Designing systems that scale — from database schemas to AI workflows.",
+    "statement": "An engineering-notes record of the systems I build and run.",
     "github": "GitHub profile"
   },
   "a11y": {
@@ -20,17 +20,16 @@
     "schematicLabel": "Microservices topology diagram: requests flow from web and app clients through Nginx into services such as Auth, Member, Product, Order and Inventory, backed by MySQL and Redis"
   },
   "home": {
-    "title": "I build large-scale systems.",
-    "subtitle": "Backend-driven system development, from database schemas to AI workflows.",
-    "roles": "BACKEND ENGINEER · SYSTEM DESIGN · AI INTEGRATION",
-    "ctaWork": "View work",
-    "ctaContact": "Get in touch",
-    "workAll": "All work",
-    "archTitle": "Systems aren't drawn. They're traded off.",
-    "archBlurb": "How dozens of microservices divide boundaries, share data and cooperate — explore the full architecture interactively.",
-    "archCta": "Explore the architecture",
-    "contactTitle": "Need a system that can take the load?",
-    "contactBlurb": "I currently work at Rissiu Aesthetics, and I'm open to conversations about system design and backend work."
+    "name": "binbin",
+    "tagline": "Full-stack developer, still a student.",
+    "intro": "Since June 2025 I've been working on an AI nail platform and a multi-tenant HRIS at Rissiu Aesthetics Co., Ltd. Outside work, I independently built and now run two systems in daily use at NKUST. This site records how these systems were designed — the trade-offs made and the lessons learned — in the form of engineering notes.",
+    "roles": "BACKEND · SYSTEM DESIGN · AI INTEGRATION",
+    "schematicCaption": "Simplified view: the microservice topology I work on day to day — every node is a real service.",
+    "workNote": "Each system is documented in the same format: problem, constraints, architecture, challenges, results.",
+    "archNote": "Microservice boundaries, API request lifecycles and deployment flow, organized as diagrams.",
+    "archCta": "View the architecture",
+    "principlesNote": "A few principles these projects kept proving true.",
+    "contactNote": "If you'd like to talk about system design or backend work, email me."
   },
   "work": {
     "title": "Work",
@@ -38,7 +37,8 @@
     "metricPending": "metrics pending"
   },
   "meta": {
-    "work": "Deep teardowns of five real systems: multi-tenant SaaS, an AI commerce platform, a mobile app and campus operations systems.",
+    "home": "Full-stack developer building an AI nail platform and a multi-tenant HRIS at Rissiu Aesthetics, and independently running two systems in production at NKUST.",
+    "work":"Deep teardowns of five real systems: multi-tenant SaaS, an AI commerce platform, a mobile app and campus operations systems.",
     "architecture": "Interactive views of microservice boundaries, API request lifecycles and deployment flow.",
     "ai": "How AI agents assist architecture review, code review, security and performance checks, and documentation.",
     "about": "A student independently shipping production systems — experience, timeline and stack."
