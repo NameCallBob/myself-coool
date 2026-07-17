@@ -64,3 +64,9 @@
 - 學校科系與預計畢業年(要不要放網站上?)
 - 公司英文名(目前暫譯 Rissiu Aesthetics Co., Ltd.)
 - 有沒有想放的自我一句話(現在首頁寫「全端工程師,目前仍在學。」)
+
+## 保密邊界
+
+`hris-saas`、`ai-nail-platform`、`naily-app`、`naily-storefront`、`microservices-platform`、
+`retail-pos`、`b2b-wholesale-platform`、`field-sales-pwa` 為公司內部專案:網站文案與截圖
+不得出現網域、內網位址、內部人員姓名,或現存弱點的可重現細節。

@@ -2,12 +2,11 @@
  * Project content — single source of truth for /work, home §01,
  * JSON-LD, and sitemap.
  *
- * 內容原則:全部欄位來自 2026-07-17 對各 repo 的程式碼與 git 歷史分析
- * (docs/content-request.md 規格),每個數字皆可重跑指令驗證;
- * 語氣為「可信地陳述經驗」——不誇大、未上線就寫未上線、沒有數據就不寫。
- * hris、ai-nail-platform、naily-app、microservices-platform、retail-pos、
- * b2b-wholesale-platform、field-sales-pwa 為公司內部專案:
- * 不揭露網域、內網位址、內部人員與現存弱點的重現細節。
+ * Every field is sourced from repo/git-history analysis per
+ * docs/content-request.md; each number is independently re-verifiable.
+ * Tone: state what actually happened — no exaggeration, no invented
+ * metrics. Confidentiality boundaries for internal-company projects
+ * are documented in docs/content-request.md.
  */
 export type Localized = { zh: string; en: string };
 
@@ -32,12 +31,12 @@ export type Project = {
   keyMetric?: { value: string; label: Localized };
   links?: { live?: string; repo?: string };
   featured: boolean;
-  /** public = 可展示 live 站或程式碼;internal = 公司商業專案,只以案例拆解呈現 */
+  /** public = live site or repo can be shown; internal = company project, case-study only */
   visibility: 'public' | 'internal';
-  /** 專案性質:全端 / 後端 / 前端 / 行動 App / AI 工具鏈 */
+  /** Nature of the work: full-stack / backend / frontend / mobile app / AI tooling */
   domain: 'fullstack' | 'backend' | 'frontend' | 'mobile' | 'ai';
   caseStudy?: CaseStudy;
-  /** 系統畫面(一律使用 mock/合成資料截圖,不含真實個資) */
+  /** Screenshots — always mock/synthetic data, never real PII */
   screenshots?: Screenshot[];
 };
 
@@ -158,7 +157,7 @@ export const PROJECTS: Project[] = [
     stack: ['AI', 'AR', 'DJANGO', 'REACT', 'B2B'],
     keyMetric: { value: '50+', label: { zh: '業務模組', en: 'business modules' } },
     featured: true,
-    // caseStudy 僅涵蓋可公開的營運後台部分;消費者端(AI/AR)待可公開時補上。
+    // caseStudy 涵蓋營運後台;消費者端網頁前台見 naily-storefront、行動端見 naily-app。
     caseStudy: {
       problem: [
         {
@@ -192,8 +191,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '營運後台前端的主要開發,以及平台後端(Django)API 的設計與開發。',
-          en: 'Primary development of the ops console frontend, plus backend (Django) API design and development on the platform.',
+          zh: '營運後台前端:2025 年 9 月起接手為唯一貢獻者(330 個 commit、佔全庫 72.8%),初版骨架由原團隊於 2025 年 8–9 月建立;接手後統一響應式與錯誤處理架構、重建深色模式與 design token,並執行四輪跨模組稽核與修復。另負責平台後端(Django)API 的設計與開發。',
+          en: 'The ops console frontend: sole contributor since taking over in September 2025 (330 commits, 72.8% of the repo) — the original team built the initial skeleton in Aug–Sep 2025. Since the takeover: unified the responsive and error-handling architecture, rebuilt dark mode and the design tokens, and ran four cross-module audits with fixes landed. Also responsible for backend (Django) API design and development on the platform.',
         },
       ],
       challenges: [
@@ -219,20 +218,30 @@ export const PROJECTS: Project[] = [
         },
         {
           c: {
-            zh: '快速堆功能的階段過後,留下跨模組的正確性與一致性債。',
-            en: 'A fast feature-stacking phase left cross-module correctness and consistency debt.',
+            zh: '一輪涵蓋工作流程、表單、權限、無障礙與效能的企業級稽核,產出 163 筆原始發現;其中最高槓桿的一類,是跨 4 個以上模組重演的「假成功」反模式——表單顯示儲存成功但沒有真正寫進後端、按鈕顯示成功但功能早已被靜默停用。',
+            en: 'An enterprise audit across workflows, forms, permissions, accessibility and performance produced 163 raw findings — the highest-leverage class being a “fake success” anti-pattern recurring in four-plus modules: forms toasting success without persisting to the backend, buttons reporting success on silently disabled features.',
           },
           s: {
-            zh: '建立編號化的稽核修復流程,分「資料正確性」與「業務流程」兩軌逐項清償,並以 conventional commits 追蹤——已完成 21 項系統性修復。',
-            en: 'Set up a numbered audit-and-fix process with two tracks — data correctness and business flow — paying items down one by one under conventional commits; 21 systematic fixes landed.',
+            zh: '163 筆先去重為 49 筆;21 筆 Critical/High 逐一交叉驗證(21/21 確認為真)後才投入修復,對應 18 個批次的系列 commit——含修正假成功動作、讓 8 個佣金相關檔案改回統一的 errorHandler。其餘 28 筆 Medium/Low 如實列管、未虛報進度。',
+            en: 'The 163 were deduplicated to 49; the 21 Critical/High items were each cross-verified (21/21 confirmed real) before any fix, then landed across 18 batched commits — repairing the fake-success actions and returning eight commission files to the unified errorHandler. The remaining 28 Medium/Low findings stay tracked as open, with no progress inflated.',
+          },
+        },
+        {
+          c: {
+            zh: '庫存尺寸頁的表格與提示框會不斷向下延伸、撐爆容器——而且只在有實體捲軸的瀏覽器重現。headless 測試用的是不佔空間的 overlay 捲軸,自動化截圖完全看不出異常,一度被誤判為「已穩定」。',
+            en: 'A stock-size table and its alert kept growing downward until they burst the container — but only in browsers with space-occupying scrollbars. Headless testing uses overlay scrollbars, so automated screenshots showed nothing wrong and the page was once misjudged as stable.',
+          },
+          s: {
+            zh: '根因是表格自帶 scroll 與 fixed 首欄,和全域的 overflow-x:auto 疊成兩層水平捲動容器,fixed 欄再觸發 Ant Design 的 ResizeObserver 反覆重量測,形成「捲軸出現 → 容器變窄 → 再量測」的迴圈。移除該表格自己的 scroll/fixed、交給全域 wrapper 做單層捲動,並以 Playwright 在 1280/900/600/375 四種寬度驗證穩定不溢出。',
+            en: 'The root cause: the table’s own scroll plus a fixed first column, stacked on a global overflow-x:auto, formed two nested horizontal scroll containers — and the fixed column kept re-triggering Ant Design’s ResizeObserver in a “scrollbar appears → container narrows → remeasure” loop. Removing the table-level scroll/fixed and letting the global wrapper own a single scroll layer fixed it, verified with Playwright at 1280/900/600/375 widths.',
           },
         },
       ],
       facts: [
-        { value: '50+', label: { zh: '業務模組', en: 'business modules' } },
+        { value: '91', label: { zh: '管理路由', en: 'admin routes' } },
         { value: '~600k', label: { zh: '前端程式碼行數', en: 'lines of frontend code' } },
-        { value: '1,951', label: { zh: 'API 呼叫點', en: 'API call sites' } },
-        { value: '30+', label: { zh: 'Feature Flags', en: 'feature flags' } },
+        { value: '1,193', label: { zh: '測試案例(Jest + E2E)', en: 'test cases (Jest + E2E)' } },
+        { value: '72.8%', label: { zh: '個人 commit(330/453)', en: 'of commits mine (330/453)' } },
       ],
       lessons: [
         {
@@ -242,6 +251,10 @@ export const PROJECTS: Project[] = [
         {
           zh: '技術債要掛編號才會被還:有編號、有優先級的稽核項目會被逐一清償;「有空再修」的那個「有空」永遠不會來。',
           en: "Tech debt gets paid only when it has a number: audited, prioritized items get fixed one by one — 'when we have time' never arrives on its own.",
+        },
+        {
+          zh: '「操作顯示成功」和「資料真的被寫入」是兩件要分開驗證的事:這輪稽核重複率最高的反模式就是假成功——toast 亮了,資料卻沒有持久化。寫入類操作上線前,要同時確認使用者看到的回饋與後端的資料狀態一致。',
+          en: '“The UI said success” and “the data was actually written” are two different claims to verify: the audit’s most repeated anti-pattern was fake success — a toast fires while nothing persists. Every write operation now gets checked on both sides before shipping: the feedback the user sees, and the state the backend holds.',
         },
       ],
     },
@@ -342,6 +355,127 @@ export const PROJECTS: Project[] = [
         {
           zh: '佐證要以 git 為準:這個專案的 CHANGELOG 是事後重建的,日期與實際 commit 對不上。重要記錄應該跟 tag 一起產生,而不是回頭補寫。',
           en: "Trust git, not prose: this project's CHANGELOG was reconstructed after the fact and its dates don't match the commits. Records worth keeping should be generated with tags, not backfilled.",
+        },
+      ],
+    },
+  },
+  {
+    slug: 'naily-storefront',
+    domain: 'frontend',
+    visibility: 'internal',
+    title: {
+      zh: 'Naily 電商前台與 Canvas 客製化設計工具',
+      en: 'Naily Storefront & Canvas Product Customizer',
+    },
+    oneLiner: {
+      zh: '穿戴甲品牌的消費端電商前台:購物流程、金流發票、四種社群登入,以及瀏覽器內 Canvas 客製化設計編輯器;涵蓋 CRA 商城的模組開發與重構,及 Next.js 15 版的設計債清償。',
+      en: 'The consumer storefront for a press-on nail brand — shopping flow, payments and e-invoicing, four social logins, and an in-browser Canvas design editor; spanning module work and a redesign on the CRA site, and design-debt cleanup on its Next.js 15 successor.',
+    },
+    scope: { zh: '營運中 · 參與 → 重構主力', en: 'In production · contributor → refactor lead' },
+    stack: ['REACT', 'NEXTJS', 'CANVAS', 'ANTD', 'STYLED-COMPONENTS', 'PLAYWRIGHT'],
+    keyMetric: { value: '72', label: { zh: '前台路由', en: 'storefront routes' } },
+    featured: false,
+    caseStudy: {
+      problem: [
+        {
+          zh: 'Naily 賣的是客製化穿戴甲,消費者要的不是填表單,而是「上傳自己的指甲照片 → 編修設計 → 即時預覽成品」——這需要一個在瀏覽器內即時渲染、支援十指獨立設計的 Canvas 編輯工具。同時它又是一個功能持續疊加的完整電商 SPA:購物車、結帳、台灣電子發票、綠界金流、四種社群登入與行銷追蹤全在同一個 codebase,CSS 與元件層長出重複造輪子與命名衝突。2026 年初的重構把 5 步驟的客製化流程重做為 3 步並統一全站視覺;其後前台遷移到 Next.js 15 App Router 以取得 SSR 與 SEO,遷移完成後緊接著一輪系統性的設計 token 債務清償。',
+          en: 'Naily sells custom press-on nails, and what customers need is not a form — it is “upload a photo of your nails → edit the design → preview the result live”, which demands an in-browser Canvas editor with ten independently designable nails. Around it sits a full e-commerce SPA that kept accreting features: cart, checkout, Taiwan e-invoicing, ECPay payments, four social logins and marketing analytics in one codebase, with duplicated components and clashing styles growing in the gaps. An early-2026 redesign cut the five-step customization flow to three and unified the visual language; the storefront then moved to Next.js 15 App Router for SSR and SEO, followed immediately by a systematic design-token debt cleanup.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '品牌商業專案,程式碼不公開;CRA 商城為 5 人協作,本篇如實區分我負責與不負責的部分。',
+          en: 'A commercial brand project; the codebase is private. The CRA site had five contributors — this page keeps my share and others’ work explicit.',
+        },
+        {
+          zh: '效能與技術債要在「不增加後端資源」的前提下用純前端手段處理:bundle 精簡、CSS 變數整併、圖片壓縮。',
+          en: 'Performance and debt work had to stay frontend-only, with no new backend resources: bundle trimming, CSS-variable consolidation, image compression.',
+        },
+        {
+          zh: 'Next.js 版的登入狀態存 localStorage,而 middleware 跑在讀不到 localStorage 的 Edge Runtime——集中式登入導轉做不了,保護邏輯必須下放到每個頁面的 Client Component。',
+          en: 'The Next.js build keeps auth in localStorage, but middleware runs on the Edge Runtime, which cannot read it — centralized login redirects were impossible, so protection devolves to each page’s client component.',
+        },
+        {
+          zh: 'Next.js repo 僅 3 個測試檔、沒有 CI:大規模刪除死碼只能靠全庫 grep 二次驗證加乾淨 build 把關,而非測試套件。',
+          en: 'The Next.js repo has three test files and no CI: large-scale dead-code deletion is gated by full-repo grep re-verification plus a clean build, not a test suite.',
+        },
+      ],
+      architecture: [
+        {
+          zh: 'CRA 商城:React 18 SPA,react-router v7 管 72 條路由、其中 56 個元件走 React.lazy 分割;狀態刻意只用 4 個 Context 加 37 個 service 檔、不引入 Redux——多數狀態是單一使用者的購物流程,不是跨模組共享。單一 Axios 入口統一 JWT 刷新、json-bigint 精度與訪客容錯;GA4/GTM/Pixel 埋點以近 2,500 行的事件 schema 集中定義與驗證;測試為 572 個 Jest 案例加 33 個 Playwright E2E,GitHub Actions 每日排程執行。',
+          en: 'The CRA site: a React 18 SPA with 72 routes under react-router v7, 56 components code-split via React.lazy; state is deliberately four Contexts plus 37 service files, no Redux — most state is one shopper’s flow, not cross-module. A single Axios entry point owns JWT refresh, json-bigint precision and guest-mode fallbacks; GA4/GTM/Pixel instrumentation is defined and validated by a ~2,500-line event schema; tests are 572 Jest cases plus 33 Playwright E2E specs on a daily GitHub Actions schedule.',
+        },
+        {
+          zh: 'Next.js 15 版:自 CRA 遷移到 App Router 以導入 SSR/SSG——53 個路由頁、55 個功能模組、352 個元件檔,部署為 standalone build 加 PM2。遷移後的全站盤點揭開債務的實際規模:design token 檔案引用率僅 5%、Ant Design / react-bootstrap / styled-components / CSS Modules 四套樣式方案並存、純 CSS 硬編碼色碼 3,463 處——這是設計債清償階段的起點,目前進行中。',
+          en: 'The Next.js 15 build: migrated from CRA to the App Router for SSR/SSG — 53 page routes, 55 feature modules, 352 component files, deployed standalone under PM2. A post-migration sitewide inventory exposed the real debt: the design-token file referenced by only 5% of files, four styling systems coexisting (Ant Design, react-bootstrap, styled-components, CSS Modules), and 3,463 hard-coded hex colors in CSS — the starting line of the ongoing debt-cleanup phase.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '兩個時期、兩種角色,如實區分。CRA 商城為 5 人協作,我佔 136/629 個 commit(21.6%):2025/05–07 開發內部後台管理模組(方案、使用者、商品庫存、訂單、金流與發票),2026/02–03 為全站重構期的主要開發者(Canvas 編輯器與三步驟客製流程、首頁效能、CSS 債務治理、無痕模式稽核)。Next.js 版的設計債清償為獨立完成:141 個 commit 全數出自我(2026/07、5 天集中執行),其中 8 個標註與 Claude 結對。',
+          en: 'Two periods, two roles, kept distinct. On the CRA site — five contributors — I account for 136 of 629 commits (21.6%): building the internal admin modules in May–July 2025 (plans, users, products and inventory, orders, payments and invoicing), then serving as the main developer of the early-2026 redesign (the Canvas editor and three-step custom flow, homepage performance, CSS debt, the incognito-mode audit). The Next.js design-debt cleanup is solo: all 141 commits are mine (July 2026, five focused days), eight of them tagged as paired with Claude.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '舊版客製化流程有 5 個步驟,過長的流程本身就是轉換率風險;舊架構也沒有草稿保存、上傳記錄複用與 API 重試,使用者一旦中斷就得從頭開始。',
+            en: 'The old customization flow ran five steps — length itself is a conversion risk — and the old architecture had no draft saving, no reuse of past uploads, no API retry: an interrupted session started over from scratch.',
+          },
+          s: {
+            zh: '重新設計為 3 步驟(規格 → 設計 → 預覽),一次交付 9 大模塊:30 秒間隔草稿自動保存、上傳記錄複用、API 重試、6 種甲型 SVG 渲染、十指獨立設計狀態、圖片編修、雙視圖預覽與分享面板。開發方式是把 9 個模塊拆給 8 個並行 AI coding agent 同步產出(單一 commit 77 檔、25,804 行),再由我整合驗收——之後仍需兩輪精修 commit 才達可上線品質。',
+            en: 'Redesigned to three steps (spec → design → preview), delivering nine modules at once: 30-second draft autosave, reusable upload history, API retry, six nail-shape SVG renderers, ten independently designed nails, image editing, dual-view preview and a share panel. The build split the nine modules across eight parallel AI coding agents in one pass (one commit: 77 files, 25,804 lines), with me doing the integration acceptance — and it still took two more polish commits to reach shippable quality.',
+          },
+        },
+        {
+          c: {
+            zh: 'Next.js 版有三份 token 檔各自宣告同名 CSS 變數、給不同的值,實際生效值完全取決於 webpack chunk 載入順序——症狀之一是 --font-size-lg 到 5xl 全被攤平成 1rem,全站標題字級跑掉而沒人注意。',
+            en: 'Three token files in the Next.js build each declared the same CSS custom properties with different values — which one won depended entirely on webpack chunk load order. One symptom: --font-size-lg through 5xl all flattened to 1rem, silently collapsing every heading size on the site.',
+          },
+          s: {
+            zh: '不做表面對齊,先追出「現在實際生效的是哪組值」再統一:z-index 保留已被 15+ 個元件以自洽順序依賴的 unified 系統,讓另外兩檔改為轉發引用;字級/圓角/陰影則轉發 consolidated 的 token——變數名不變、值收斂。修復後在 build 產物逐一確認每個 token 在所有 chunk 組合下都是同一個值;硬編碼色碼從 3,463 處降到 2,131(-38%),分支仍在進行中。',
+            en: 'Instead of surface alignment, first traced which values were actually winning, then converged on those: z-index kept the unified system already depended on by 15+ components in a self-consistent order, with the other two files re-pointed to it; font, radius and shadow tokens now forward to the consolidated file — same names, one value. Every token was then verified identical across all chunk combinations in the build output; hard-coded hex colors fell from 3,463 to 2,131 (−38%), branch still in progress.',
+          },
+        },
+        {
+          c: {
+            zh: '專案累積大量重複與無引用的 CSS/資源檔(Cart.module.css 與 Cart2025.module.css 並存這類),但整個 repo 只有 3 個測試檔——沒有任何測試能保證「刪這個檔不會弄壞某個頁面」。',
+            en: 'The repo had piled up duplicated and unreferenced CSS and assets (Cart.module.css coexisting with Cart2025.module.css, and so on), yet held only three test files — nothing guaranteed that deleting a file would not break a page.',
+          },
+          s: {
+            zh: '把刪除門檻定為「全庫 grep 二次驗證確無任何 import/@import,且乾淨跑過一次 build」:第一輪刪除 80 個確認無引用的檔案,後續分支再刪 111 檔、淨減約 4.4 萬行(進行中)。這個方法有效但明確不可規模化、也蓋不到動態 import——列管中的限制,不是被掩蓋的風險。',
+            en: 'The deletion gate became “full-repo grep re-verification of zero imports, plus one clean build”: round one removed 80 confirmed-dead files; the current branch removes another 111, a net ~44k lines down (in progress). The method works but explicitly does not scale and cannot see dynamic imports — a tracked limitation, not a hidden risk.',
+          },
+        },
+        {
+          c: {
+            zh: 'Safari 等瀏覽器的無痕模式會限制甚至停用 localStorage,而商城多處(裝置識別、訪客訂單追蹤、資料同步)直接裸呼原生 API——一拋 DOMException,訪客訂單查詢這類核心功能就整個失效。',
+            en: 'Incognito mode in Safari and others restricts or disables localStorage outright, and the site called the raw API in many places — device identity, guest order tracking, data sync — so one DOMException took whole features like guest order lookup down.',
+          },
+          s: {
+            zh: '全站稽核標出 19 個問題點,確立 safeStorage(帶記憶體 fallback 的安全封裝)為修復標準;截至盤點,50 個檔案已遷移、36 個檔案(含稽核點名的核心等級檔案)仍未遷移——稽核完成、修復進行中,如實記錄。',
+            en: 'A sitewide audit flagged 19 issues and established safeStorage — a wrapper with an in-memory fallback — as the fix standard. As of this inventory, 50 files have migrated and 36 (including core-severity files the audit named) have not: audit done, remediation in progress, recorded as-is.',
+          },
+        },
+      ],
+      facts: [
+        { value: '72', label: { zh: '路由(56 個懶加載)', en: 'routes (56 lazy-loaded)' } },
+        { value: '25,804', label: { zh: '行,單一 commit 交付 9 模塊', en: 'lines shipped in one commit' } },
+        { value: '605', label: { zh: '測試(572 Jest + 33 E2E)', en: 'tests (572 Jest + 33 E2E)' } },
+        { value: '-38%', label: { zh: '硬編碼色碼(3,463→2,131)', en: 'hard-coded colors (3,463→2,131)' } },
+      ],
+      lessons: [
+        {
+          zh: '大量並行生成拿得到功能骨架,拿不到一致性:8 個 agent 一次產出 2.5 萬行後,仍需兩輪精修與後續的 token/圖示庫收斂才成為單一風格。重來會在拆任務給並行 agent 之前先鎖定共用的 design token 與元件慣例,而不是事後合併。',
+          en: 'Massively parallel generation buys a skeleton, not consistency: after eight agents produced 25k lines in one pass, it still took two polish rounds and a later token-and-icon consolidation to converge on one style. Next time the shared design tokens and component conventions get locked before the work is split across agents, not merged after.',
+        },
+        {
+          zh: 'CSS 載入順序本身是一種隱性契約:三個檔案宣告同名 token 不同值,生效者由 chunk 順序決定,不是任何人的設計意圖。重來會從第一天強制單一 token 來源,並用 lint 擋掉 raw hex 與重複宣告,而不是等累積 3,463 處才回頭清。',
+          en: 'CSS load order is an implicit contract: with three files declaring the same tokens at different values, the winner was decided by chunk order, not by anyone’s intent. Next time a single token source is enforced from day one, with lint blocking raw hex and duplicate declarations — instead of cleaning up 3,463 instances later.',
+        },
+        {
+          zh: '稽核出的問題若不接著排優先序執行,就只是一份文件:無痕模式稽核早就列出 19 個問題點與修復計畫,半年後仍有 36 個檔案未遷移。要嘛當場排進衝刺,要嘛承認它就是「已知未修」——別讓文件本身變成完成的假象。',
+          en: 'An audit not followed by scheduled execution is just a document: the incognito audit listed 19 issues and a phased plan, and half a year later 36 files remain unmigrated. Either the findings go into the sprint on the spot, or the state is honestly “known and unfixed” — the document must never impersonate the fix.',
         },
       ],
     },
@@ -1036,6 +1170,123 @@ export const PROJECTS: Project[] = [
         {
           zh: '弱網韌性要在設計期決定,事後補難得多:草稿、佇列、自動重送要嵌回已完成的表單狀態機,遠比一開始一起做困難。誠實的現狀是這個專案沒有自動化測試(斷網情境靠手動驗證),若要繼續維護,第一件事是替離線佇列與重送補上測試。',
           en: 'Weak-network resilience is a design-time decision — retrofitting drafts, queues and resend into a finished form state machine is far harder than building them in. The honest gap: this project has no automated tests (offline paths were verified by hand); the first item of further maintenance is covering the queue and resend logic.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'agm-evoting-system',
+    domain: 'fullstack',
+    visibility: 'internal',
+    title: {
+      zh: '股東常會電子投票系統',
+      en: 'Shareholder AGM E-Voting System',
+    },
+    oneLiner: {
+      zh: '股東常會的電子投票平台:OTP 登入、會議與議程管理、選舉制議案與迴避條款、SHA-256 雜湊鏈稽核;9 天獨立建置,目前處於驗收與修復階段。',
+      en: 'An e-voting platform for shareholder AGMs — OTP login, meeting and agenda management, election-type motions with recusal rules, and a SHA-256 hash-chained audit log. Built solo in nine days; currently in acceptance and remediation.',
+    },
+    scope: { zh: '公司內部 · 驗收修復階段', en: 'Internal · acceptance stage' },
+    stack: ['DJANGO', 'DRF', 'MYSQL', 'REACT', 'TYPESCRIPT', 'JWT'],
+    keyMetric: { value: '51', label: { zh: 'API 端點實測', en: 'API endpoints measured' } },
+    featured: false,
+    caseStudy: {
+      problem: [
+        {
+          zh: '台灣中小型公司的股東常會,多半仰賴現場紙本投票與人工計票:流程耗時、結果難以追溯,也沒有可稽核的紀錄。這套系統讓股東以 OTP 快速登入、依身分(股東/管理員/來賓/員工)分權操作,支援一般議案與含法定迴避條款的選舉制議案;設計的優先順序放在個資保護與稽核鏈完整性這類合規要求,而不是大規模併發。',
+          en: 'Shareholder AGMs at small and mid-sized Taiwanese companies still run on paper ballots and manual counting: slow, hard to trace, and with no auditable record. This system lets shareholders log in quickly via OTP, operate under role-scoped permissions (shareholder, admin, guest, staff), and vote on both ordinary motions and election-type motions with statutory recusal rules. Design priorities are compliance-shaped — PII protection and audit-chain integrity — rather than large-scale concurrency.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '公司內部委託專案,程式碼不公開。',
+          en: 'A company-internal commissioned project; the codebase is private.',
+        },
+        {
+          zh: '單人、時程壓縮:11 個 commit 集中在 9 天內,其中 8 個在最後一天完成安全與效能加固。',
+          en: 'Solo and compressed: 11 commits over nine days, eight of them landing security and performance hardening on the final day.',
+        },
+        {
+          zh: '個資保護是硬性要求(對應 ISO 27001 控制項):身分證後四碼、電話後三碼只能以雜湊儲存,稽核日誌的 IP 與 User-Agent 必須遮罩。',
+          en: 'PII protection is non-negotiable (mapped to ISO 27001 controls): ID and phone digits are stored only as hashes, and audit-log IPs and user agents must be masked.',
+        },
+        {
+          zh: '不引入 Redis/Celery 等外部基礎設施;OTP 目前以 console 模擬發送、尚未接正式簡訊/Email 服務——如實記錄。',
+          en: 'No Redis, Celery or other external infrastructure; OTP delivery is currently console-simulated, not yet wired to a real SMS/email service — recorded as-is.',
+        },
+      ],
+      architecture: [
+        {
+          zh: 'Django 5.2 + DRF 單體:5 個 app(accounts、meetings、voting、otp_module、audits)、11 個資料模型、5 組資源路由加 21 個自訂 action,共 51 個實測 API 端點;前端 React 19 + TypeScript + MUI,11 個路由頁面、約 4,500 行。刻意不拆微服務——單人開發、業務規模是單一公司的股東會,投票與稽核鏈需要同一個交易邊界,拆分只會增加維運成本而無實益。',
+          en: 'A Django 5.2 + DRF monolith: five apps (accounts, meetings, voting, otp_module, audits), 11 data models, five resource routes plus 21 custom actions — 51 measured API endpoints — with a React 19 + TypeScript + MUI frontend of 11 routed pages (~4,500 lines). Deliberately not microservices: one developer, one company’s AGM as the workload, and voting plus its audit chain need a single transaction boundary — splitting adds operations cost and nothing else.',
+        },
+        {
+          zh: '認證為 JWT(含 token 黑名單)加 OTP 雙因子,另整合 Keycloak SSO(員工/股東各一組 realm、環境變數開關);權限以三個自訂 Permission 類別分流。四個核心模型套用軟刪除 Mixin(支援 restore 與 hard delete);throttle 依端點分級——OTP 請求 5/min、OTP 驗證 10/min、投票 20/min;CI 為 GitHub Actions 四階段(後端 lint → 後端測試 → 前端 lint → 前端 build),部署以 gunicorn + Nginx。',
+          en: 'Auth is JWT (with token blacklisting) plus OTP as a second factor, and Keycloak SSO integration (separate staff and shareholder realms, toggled by environment); authorization flows through three custom permission classes. Four core models share a soft-delete mixin (restore and hard-delete supported); throttling is tiered per endpoint — OTP requests 5/min, verification 10/min, voting 20/min. CI is a four-stage GitHub Actions pipeline (backend lint → backend tests → frontend lint → frontend build); deployment is gunicorn behind Nginx.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '獨立開發:11 個 commit 全數出自我(2026/04/04–04/12),涵蓋 Django 後端、React 前端、資料模型、個資保護與稽核鏈設計、查詢效能優化與 CI 建置。',
+          en: 'Independent development: all 11 commits are mine (2026/04/04–12), covering the Django backend, the React frontend, data models, the PII-protection and audit-chain design, query performance work and the CI pipeline.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '稽核日誌必須「不可竄改」,但投票內容(誰投了什麼)是高敏感個資——把投票 payload 直接存進日誌,等於製造第二個個資外洩點。',
+            en: 'The audit log must be tamper-evident, yet ballot content — who voted for what — is highly sensitive PII: storing the vote payload in the log would just create a second leak surface.',
+          },
+          s: {
+            zh: '所有日誌走 create_log() 單一入口:寫入前自動遮罩敏感欄位(身分證/電話/OTP/token 一律標記 ***,投票內容只留議案類型與完成旗標)、IP 與 User-Agent 遮罩後才落地、依動作類型自動分級嚴重度;每筆記錄再以 SHA-256 串接前一筆的 hash 形成雜湊鏈——任何歷史記錄被竄改,後續整條鏈就會斷裂、可被檢測。',
+            en: 'Every log entry goes through a single create_log() gate: sensitive fields are masked before write (ID, phone, OTP and tokens become ***; ballot content keeps only motion type and a completed flag), IPs and user agents land masked, and severity is auto-classified by action. Each record then chains the previous record’s hash into its own SHA-256 — tampering with any historical entry breaks every link after it, detectably.',
+          },
+        },
+        {
+          c: {
+            zh: '身分證後四碼與電話後三碼原本以明碼存庫,作為登入比對依據——資料庫一旦外洩就是直接可識別的個資;而且表裡已有既存明碼資料,不能砍掉重灌。',
+            en: 'ID and phone digits were originally stored in plaintext as the login comparison key — a database leak would expose directly identifiable PII — and the tables already held live plaintext rows, so “wipe and reload” was not an option.',
+          },
+          s: {
+            zh: '新增 hash_pii()(salt + SHA-256),用 Django 資料遷移把既有明碼欄位就地轉成雜湊,比對全面改走雜湊;salt 從環境變數讀取、未設定直接拋錯而非靜默用預設值。同一模式後續重複用在股票代號欄位,成為可重用的 PII 遷移範式。',
+            en: 'Added hash_pii() (salt + SHA-256) and converted the existing plaintext columns in place via a Django data migration, with all comparisons moving to hash-vs-hash; the salt comes from an environment variable and a missing value throws instead of silently defaulting. The same pattern was reused for the stock-number field later — a repeatable PII-migration recipe.',
+          },
+        },
+        {
+          c: {
+            zh: '議程投票統計原本用 8 個獨立查詢分別算票數與加權股數:議程與股東越多、查詢數線性增加,而且沒有任何查詢數的約束或測試。',
+            en: 'Tallying an agenda originally took eight separate queries for counts and weighted shares — scaling linearly with agendas and shareholders, with no constraint or test on query volume at all.',
+          },
+          s: {
+            zh: '改用 Case/When 條件聚合,把 8 次查詢合併成 1 次 aggregate 同時算出票數與加權股數;並補上以 CaptureQueriesContext 斷言查詢數 ≤ 10 的效能測試——讓「效能是否退化」變成 CI 會直接擋下的條件,而不是上線後靠感覺發現。',
+            en: 'Replaced them with one Case/When conditional aggregate computing counts and weighted shares together, and added a performance test asserting query count ≤ 10 via CaptureQueriesContext — turning “did performance regress” into a condition CI enforces, not something users eventually feel.',
+          },
+        },
+        {
+          c: {
+            zh: '驗收複驗時發現:原始碼定義了 225 個測試,實際只有 215 個被收集、其中 9 個失敗;另有 10 個測試因為 accounts/tests/ 目錄缺 __init__.py、又與 accounts/tests.py 撞名,寫完後從未被執行過,也沒有任何提示。',
+            en: 'Acceptance re-verification found 225 tests defined in source but only 215 collected — nine of them failing — and another 10 tests that had never run at all: the accounts/tests/ package lacked an __init__.py and collided with accounts/tests.py, so they were silently skipped since the day they were written.',
+          },
+          s: {
+            zh: '完成診斷與根因定位:9 個失敗可歸責到三次各自獨立的改動(登入契約改版、日誌訊息中文化、random→secrets 安全重構),每一次都沒同步更新對應測試;撞名則是測試組織的結構性缺陷。目前狀態如實記錄:206/215 通過、9 個待修、10 個待重新納入收集——修復列管中。',
+            en: 'Diagnosis and root-cause attribution are done: the nine failures trace to three independent changes (a login-contract revision, log-message localization, and a random→secrets security refactor), none of which updated its tests; the collision is a structural flaw in test organization. Current state, recorded as-is: 206/215 passing, nine to fix, ten to bring back into collection — remediation tracked.',
+          },
+        },
+      ],
+      facts: [
+        { value: '51', label: { zh: 'API 端點實測', en: 'API endpoints measured' } },
+        { value: '11', label: { zh: '資料模型(5 app)', en: 'models across 5 apps' } },
+        { value: '206/215', label: { zh: '測試通過(9 個待修)', en: 'tests passing (9 to fix)' } },
+        { value: '9', label: { zh: '天,從零到驗收', en: 'days, zero to acceptance' } },
+      ],
+      lessons: [
+        {
+          zh: '沒有查詢數斷言的效能優化,等於沒有驗證:8 次查詢併成 1 次之後補上 ≤10 的斷言,日後任何人把聚合改回逐項查詢,CI 會直接失敗。這件事應該在最初設計時就連測試一起做,而不是優化時才回頭補。',
+          en: 'A performance fix without a query-count assertion is unverified: after merging eight queries into one, the ≤10 assertion means anyone who reverts to per-option queries fails CI immediately. That test belonged in the original design, not retrofitted at optimization time.',
+        },
+        {
+          zh: '「測試都寫了」不等於「測試都在跑」,更不等於「跑的測試還對得上程式碼」:10 個測試因缺 __init__.py 與撞名而從未執行、7 個測試因登入契約改版而過期。重來會在 CI 加一道「定義數 vs 實際收集數」的核對,並把「改端點契約必跑對應測試」列為明確流程。',
+          en: '“The tests are written” is neither “the tests are running” nor “the running tests still match the code”: ten tests never executed thanks to a missing __init__.py and a name collision, and seven more went stale when the login contract changed. Next time CI gets a defined-vs-collected count check, and contract changes carry a mandatory run of their tests.',
         },
       ],
     },
