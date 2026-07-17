@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
+import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { CaseStudyJsonLd } from '@/lib/jsonld';
 import { alternatesFor } from '@/lib/seo';
@@ -63,7 +64,13 @@ export default async function CaseStudyPage({ params }: Props) {
       <p className="mt-6 max-w-[52ch] text-base text-muted md:text-lg">{project.oneLiner[loc]}</p>
 
       {/* Meta row */}
-      <dl className="mt-12 grid grid-cols-1 gap-6 border-y border-line-2 py-6 font-mono text-xs md:grid-cols-3">
+      <dl className="mt-12 grid grid-cols-1 gap-6 border-y border-line-2 py-6 font-mono text-xs md:grid-cols-4">
+        <div>
+          <dt className="tracking-[0.12em] text-faint">TYPE</dt>
+          <dd className="mt-2">
+            <DomainBadge domain={project.domain} />
+          </dd>
+        </div>
         <div>
           <dt className="tracking-[0.12em] text-faint">SCOPE</dt>
           <dd className="mt-2 text-fg">{project.scope[loc]}</dd>

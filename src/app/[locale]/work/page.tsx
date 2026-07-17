@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ArrowUpRight, Lock } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
+import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { alternatesFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../content/projects';
@@ -40,8 +41,9 @@ function ProjectRows({ projects, loc }: { projects: Project[]; loc: 'zh' | 'en' 
               {String(i + 1).padStart(2, '0')}
             </span>
             <div>
-              <h3 className="text-lg font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-xl">
+              <h3 className="flex flex-wrap items-center gap-3 text-lg font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-xl">
                 {p.title[loc]}
+                <DomainBadge domain={p.domain} />
               </h3>
               <p className="mt-1 max-w-[56ch] text-sm text-muted">{p.oneLiner[loc]}</p>
             </div>

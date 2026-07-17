@@ -4,6 +4,7 @@ import { Link } from '@/i18n/navigation';
 import { HeroSchematic } from '@/components/diagrams/HeroSchematic';
 import { Reveal } from '@/components/motion/Reveal';
 import { StaggerHeading } from '@/components/motion/StaggerHeading';
+import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { CONTACT_EMAIL, GITHUB_URL, PHILOSOPHY } from '../../../content/site';
 import { PROJECTS } from '../../../content/projects';
@@ -63,8 +64,9 @@ export default async function HomePage({ params }: Props) {
                 className="group grid grid-cols-1 gap-2 border-b border-line-2 py-7 transition-colors duration-200 first:border-t hover:bg-base md:grid-cols-[1fr_auto_auto] md:items-center md:gap-8"
               >
                 <div>
-                  <h3 className="text-lg font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-xl">
+                  <h3 className="flex flex-wrap items-center gap-3 text-lg font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-xl">
                     {p.title[loc]}
+                    <DomainBadge domain={p.domain} />
                   </h3>
                   <p className="mt-2 max-w-[60ch] text-sm text-muted md:text-base">
                     {p.oneLiner[loc]}

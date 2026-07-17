@@ -34,6 +34,8 @@ export type Project = {
   featured: boolean;
   /** public = 可展示 live 站或程式碼;internal = 公司商業專案,只以案例拆解呈現 */
   visibility: 'public' | 'internal';
+  /** 專案性質:全端 / 後端 / 前端 / 行動 App / AI 工具鏈 */
+  domain: 'fullstack' | 'backend' | 'frontend' | 'mobile' | 'ai';
   caseStudy?: CaseStudy;
   /** 系統畫面(一律使用 mock/合成資料截圖,不含真實個資) */
   screenshots?: Screenshot[];
@@ -42,6 +44,7 @@ export type Project = {
 export const PROJECTS: Project[] = [
   {
     slug: 'hris-saas',
+    domain: 'fullstack',
     visibility: 'internal',
     title: {
       zh: '多租戶 SaaS 人資系統',
@@ -144,6 +147,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'ai-nail-platform',
+    domain: 'fullstack',
     visibility: 'internal',
     title: { zh: 'AI 美甲平台', en: 'AI Nail Platform' },
     oneLiner: {
@@ -244,6 +248,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'naily-app',
+    domain: 'mobile',
     visibility: 'internal',
     title: { zh: 'Naily — AI 美甲電商 App', en: 'Naily — AI Nail Commerce App' },
     oneLiner: {
@@ -343,6 +348,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'nkust-alumni',
+    domain: 'fullstack',
     visibility: 'public',
     title: {
       zh: '高科大智慧商務系系友會平台',
@@ -472,6 +478,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'nkust-borrow',
+    domain: 'fullstack',
     visibility: 'public',
     title: {
       zh: '高科大設備借用管理系統',
@@ -607,6 +614,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'microservices-platform',
+    domain: 'backend',
     visibility: 'internal',
     title: {
       zh: '大型 Django 微服務全通路商務平台',
@@ -713,6 +721,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'retail-pos',
+    domain: 'fullstack',
     visibility: 'internal',
     title: {
       zh: '多租戶零售收銀系統',
@@ -819,6 +828,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'b2b-wholesale-platform',
+    domain: 'fullstack',
     visibility: 'internal',
     title: {
       zh: '多租戶 B2B 批發電商平台',
@@ -925,6 +935,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'field-sales-pwa',
+    domain: 'frontend',
     visibility: 'internal',
     title: {
       zh: '業務外勤現場開通 PWA',
@@ -1031,6 +1042,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'ai-workflow',
+    domain: 'ai',
     visibility: 'internal',
     title: { zh: 'AI 開發工作流', en: 'AI Development Workflow' },
     oneLiner: {
