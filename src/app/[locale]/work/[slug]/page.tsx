@@ -85,15 +85,28 @@ export default async function CaseStudyPage({ params }: Props) {
         <div>
           <dt className="tracking-[0.12em] text-faint">LINKS</dt>
           <dd className="mt-2 text-fg">
-            {project.links?.live ? (
-              <a
-                href={project.links.live}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-accent transition-opacity hover:opacity-80"
-              >
-                LIVE <ArrowUpRight size={12} strokeWidth={1.5} />
-              </a>
+            {project.links ? (
+              <span className="flex flex-wrap gap-x-4 gap-y-1">
+                {(
+                  [
+                    ['LIVE', project.links.live],
+                    ['APP STORE', project.links.appStore],
+                    ['GOOGLE PLAY', project.links.googlePlay],
+                  ] as const
+                ).map(([label, href]) =>
+                  href ? (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-accent transition-opacity hover:opacity-80"
+                    >
+                      {label} <ArrowUpRight size={12} strokeWidth={1.5} />
+                    </a>
+                  ) : null
+                )}
+              </span>
             ) : (
               <span className="text-muted">{tc('internal')}</span>
             )}

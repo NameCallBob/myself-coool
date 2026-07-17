@@ -29,7 +29,7 @@ export type Project = {
   scope: Localized;
   stack: string[];
   keyMetric?: { value: string; label: Localized };
-  links?: { live?: string; repo?: string };
+  links?: { live?: string; repo?: string; appStore?: string; googlePlay?: string };
   featured: boolean;
   /** public = live site or repo can be shown; internal = company project, case-study only */
   visibility: 'public' | 'internal';
@@ -268,9 +268,13 @@ export const PROJECTS: Project[] = [
       zh: 'Flutter 電商 App:裝置端 AI 指甲辨識、AR 試戴與客製穿戴甲。2025 年 11 月起由我接手全部開發與維護。',
       en: 'A Flutter commerce app — on-device AI nail sizing, AR try-on and custom press-ons. I took over all development and maintenance in November 2025.',
     },
-    scope: { zh: '上架準備 · 2025.11 起接手', en: 'Pre-launch · takeover since 2025.11' },
+    scope: { zh: '雙平台上架 · 2025.11 起接手', en: 'Live on both stores · takeover since 2025.11' },
     stack: ['FLUTTER', 'ONNX', 'FIREBASE', 'ECPAY'],
     keyMetric: { value: '82', label: { zh: '畫面', en: 'screens' } },
+    links: {
+      appStore: 'https://apps.apple.com/tw/app/naily-%E6%97%A5%E7%A7%80%E7%BE%8E%E5%AD%B8/id6748354584',
+      googlePlay: 'https://play.google.com/store/apps/details?id=com.manience.NailyApp&hl=zh_TW',
+    },
     featured: true,
     caseStudy: {
       problem: [
@@ -289,8 +293,8 @@ export const PROJECTS: Project[] = [
           en: 'AI inference must run on-device within phone-level compute — at handover, AR try-on ran at 1 FPS.',
         },
         {
-          zh: '涉及金流與個資:token 只能放 secure storage、日誌不得記錄完整 request body、iOS 需處理 ATT 追蹤同意;目前處於上架準備階段(P0–P2 上架就緒稽核修復中)。',
-          en: 'Payments and personal data are involved: tokens live in secure storage only, logs must not capture full request bodies, iOS requires ATT consent. The app is in pre-launch readiness (P0–P2 audit fixes).',
+          zh: '涉及金流與個資:token 只能放 secure storage、日誌不得記錄完整 request body、iOS 需處理 ATT 追蹤同意;上架前完成 P0–P2 上架就緒稽核修復,現已於雙平台上架。',
+          en: 'Payments and personal data are involved: tokens live in secure storage only, logs must not capture full request bodies, iOS requires ATT consent. P0–P2 launch-readiness audit fixes were completed before release; the app is now live on both stores.',
         },
       ],
       architecture: [
@@ -374,6 +378,7 @@ export const PROJECTS: Project[] = [
     scope: { zh: '營運中 · 參與 → 重構主力', en: 'In production · contributor → refactor lead' },
     stack: ['REACT', 'NEXTJS', 'CANVAS', 'ANTD', 'STYLED-COMPONENTS', 'PLAYWRIGHT'],
     keyMetric: { value: '72', label: { zh: '前台路由', en: 'storefront routes' } },
+    links: { live: 'https://manience.com' },
     featured: false,
     caseStudy: {
       problem: [
@@ -1295,13 +1300,13 @@ export const PROJECTS: Project[] = [
     slug: 'ai-workflow',
     domain: 'ai',
     visibility: 'internal',
-    title: { zh: 'AI 開發工作流', en: 'AI Development Workflow' },
+    title: { zh: 'Agentic 開發工作流', en: 'Agentic Development Workflow' },
     oneLiner: {
-      zh: '以 AI Agent 執行 Code Review、Security Review、效能與架構審查及文件生成。',
-      en: 'AI agents running code, security, performance and architecture reviews — plus docs.',
+      zh: '從 vibe coding 到 agentic:規格驅動、驗證迴圈與人工審核構成的 AI 開發流程。',
+      en: 'From vibe coding to agentic — a spec-driven AI development loop with verification gates and human review.',
     },
-    scope: { zh: 'AI Agents × Review', en: 'AI Agents × Review' },
-    stack: ['AI AGENTS', 'AUTOMATION'],
+    scope: { zh: 'Spec × Verify × Review', en: 'Spec × Verify × Review' },
+    stack: ['AI AGENTS', 'SPEC-DRIVEN', 'VERIFICATION'],
     featured: false,
   },
 ];
