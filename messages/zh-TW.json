@@ -2,7 +2,7 @@
   "nav": {
     "work": "專案經歷",
     "architecture": "系統架構",
-    "ai": "AI Workflow",
+    "ai": "Agentic 工程",
     "about": "關於",
     "contact": "聯絡我",
     "menuOpen": "開啟選單",
@@ -17,7 +17,8 @@
     "skipToContent": "跳至主要內容",
     "toggleTheme": "切換深淺主題",
     "switchLocale": "Switch to English",
-    "schematicLabel": "微服務系統拓撲示意圖:請求由 Web 與 App 客戶端經 Nginx 進入 Auth、Member、Product、Order、Inventory 等微服務,存取 MySQL 與 Redis"
+    "schematicLabel": "微服務系統拓撲示意圖:請求由 Web 與 App 客戶端經 Nginx 進入 Auth、Member、Product、Order、Inventory 等微服務,存取 MySQL 與 Redis",
+    "agenticLoopLabel": "Agentic 開發迴圈示意圖:規格與上下文進入 agent,產出經過測試、E2E、無障礙與效能驗證,失敗退回 agent 重做,通過後由人工審核把關才 commit"
   },
   "home": {
     "name": "binbin",
@@ -44,7 +45,7 @@
     "home": "全端工程師。在日秀美學開發 AI 美甲平台與多租戶人資系統,並獨立維運兩個在高雄科技大學使用中的系統。",
     "work": "專案經歷:公開的校園系統與公司內部商業專案,以同一套格式拆解問題、架構與取捨。",
     "architecture": "以互動圖解呈現微服務邊界、API 請求生命週期與部署流程。",
-    "ai": "AI Agent 如何協助架構審查、Code Review、安全與效能檢測及文件生成。",
+    "ai": "從 vibe coding 到 agentic engineering:規格先行、受控上下文、驗證迴圈與人工審核,以本網站與兩個校園生產系統為實證。",
     "about": "在學學生,同時獨立開發多個生產系統——經歷、時間軸與技術棧。"
   },
   "case": {

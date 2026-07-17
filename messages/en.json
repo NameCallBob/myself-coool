@@ -2,7 +2,7 @@
   "nav": {
     "work": "Projects",
     "architecture": "Architecture",
-    "ai": "AI Workflow",
+    "ai": "Agentic Engineering",
     "about": "About",
     "contact": "Contact",
     "menuOpen": "Open menu",
@@ -17,7 +17,8 @@
     "skipToContent": "Skip to main content",
     "toggleTheme": "Toggle color theme",
     "switchLocale": "切換為中文",
-    "schematicLabel": "Microservices topology diagram: requests flow from web and app clients through Nginx into services such as Auth, Member, Product, Order and Inventory, backed by MySQL and Redis"
+    "schematicLabel": "Microservices topology diagram: requests flow from web and app clients through Nginx into services such as Auth, Member, Product, Order and Inventory, backed by MySQL and Redis",
+    "agenticLoopLabel": "Agentic development loop diagram: spec and context feed the agent; output passes tests, E2E, accessibility and performance verification, failures return to the agent, and a human review gate stands before commit"
   },
   "home": {
     "name": "binbin",
@@ -44,7 +45,7 @@
     "home": "Full-stack developer building an AI nail platform and a multi-tenant HRIS at Manience Inc., and independently running two systems in production at NKUST.",
     "work": "Project experience: public campus systems and internal commercial work, each broken down by problem, architecture and trade-offs.",
     "architecture": "Interactive views of microservice boundaries, API request lifecycles and deployment flow.",
-    "ai": "How AI agents assist architecture review, code review, security and performance checks, and documentation.",
+    "ai": "From vibe coding to agentic engineering: spec-first, controlled context, verification loops and human review — evidenced by this site and two campus systems in production.",
     "about": "A student independently shipping production systems — experience, timeline and stack."
   },
   "case": {
