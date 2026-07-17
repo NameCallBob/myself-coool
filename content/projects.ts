@@ -499,7 +499,7 @@ export const PROJECTS: Project[] = [
     featured: true,
     screenshots: [
       {
-        src: '/images/work/nkust-alumni/home.png',
+        src: '/images/work/nkust-alumni/home.webp',
         alt: {
           zh: '系友會平台首頁:主視覺輪播、搜尋列與最新消息',
           en: 'Alumni platform home: hero carousel, search bar and latest news',
@@ -507,7 +507,7 @@ export const PROJECTS: Project[] = [
         caption: { zh: '首頁(輪播與最新消息)', en: 'Home (carousel and news)' },
       },
       {
-        src: '/images/work/nkust-alumni/search.png',
+        src: '/images/work/nkust-alumni/search.webp',
         alt: {
           zh: '系友企業搜尋頁:關鍵字搜尋、行業別篩選與企業卡片',
           en: 'Alumni company search: keyword search, industry filters and company cards',
@@ -515,7 +515,7 @@ export const PROJECTS: Project[] = [
         caption: { zh: '系友企業搜尋(篩選與排序)', en: 'Company search (filters and sorting)' },
       },
       {
-        src: '/images/work/nkust-alumni/recruit.png',
+        src: '/images/work/nkust-alumni/recruit.webp',
         alt: {
           zh: '系友企業職缺頁:表格/卡片雙檢視的徵才列表',
           en: 'Alumni job board: table and card views of postings',
@@ -629,7 +629,7 @@ export const PROJECTS: Project[] = [
     featured: true,
     screenshots: [
       {
-        src: '/images/work/nkust-borrow/login.png',
+        src: '/images/work/nkust-borrow/login.webp',
         alt: {
           zh: '設備借用管理系統登入頁',
           en: 'Equipment borrowing system login page',
@@ -637,7 +637,7 @@ export const PROJECTS: Project[] = [
         caption: { zh: '登入(自建 JWT 認證)', en: 'Login (self-built JWT auth)' },
       },
       {
-        src: '/images/work/nkust-borrow/borrow-return.png',
+        src: '/images/work/nkust-borrow/borrow-return.webp',
         alt: {
           zh: '借還作業中心:借用/歸還/快速查詢分頁、今日借還統計與掃描條碼流程',
           en: 'Borrow/return center: tabs for lending, returns and quick lookup, daily stats and barcode scanning',
@@ -648,7 +648,7 @@ export const PROJECTS: Project[] = [
         },
       },
       {
-        src: '/images/work/nkust-borrow/equipment-management.png',
+        src: '/images/work/nkust-borrow/equipment-management.webp',
         alt: {
           zh: '設備管理中心:分類樹瀏覽、設備列表、批次匯入與批次列印條碼',
           en: 'Equipment management: category tree, equipment list, batch import and batch barcode printing',
