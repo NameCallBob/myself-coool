@@ -3,8 +3,8 @@ import { defineRouting } from 'next-intl/routing';
 export const routing = defineRouting({
   locales: ['zh-TW', 'en'],
   defaultLocale: 'zh-TW',
-  // GitHub Pages 是純靜態主機,無 middleware 可做語系改寫,
-  // 因此固定前綴(/zh-TW、/en),root 由 public/index.html 轉導。
+  // GitHub Pages is static-only hosting — no middleware for locale rewriting,
+  // so the prefix is always on (/zh-TW, /en); root redirects via public/index.html.
   localePrefix: 'always',
 });
 

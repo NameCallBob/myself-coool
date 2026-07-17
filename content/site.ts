@@ -7,7 +7,7 @@ export const SITE_NAME = 'binbin';
 export const CONTACT_EMAIL = 'robin92062574@gmail.com';
 export const GITHUB_URL = 'https://github.com/NameCallBob';
 
-/** 開發哲學(首頁 03)— 草稿文案,待 binbin 確認 */
+/** Engineering philosophy — home §03 */
 export const PHILOSOPHY: { zh: string; en: string }[] = [
   {
     zh: '先量測,再優化。',

@@ -23,7 +23,7 @@ export default async function HomePage({ params }: Props) {
 
   return (
     <div className="relative z-10 mx-auto max-w-[1200px] px-5 md:px-6">
-      {/* 00 / PROFILE — 自介以陳述事實為主,非口號 */}
+      {/* 00 / PROFILE — states facts, not slogans */}
       <section aria-labelledby="hero-heading" className="pt-36 pb-20 md:pt-44 md:pb-28">
         <SectionHeading no="00" label="PROFILE" />
         <StaggerHeading
@@ -115,7 +115,7 @@ export default async function HomePage({ params }: Props) {
         </div>
       </section>
 
-      {/* 03 / ARCHITECTURE — 文件式指引,非行銷區塊 */}
+      {/* 03 / ARCHITECTURE — a documentation pointer, not a marketing block */}
       <section aria-label="Architecture" className="tick border-t border-line-2 py-20 md:py-28">
         <Reveal>
           <SectionHeading no="03" label="ARCHITECTURE" />
@@ -150,7 +150,7 @@ export default async function HomePage({ params }: Props) {
         </ul>
       </section>
 
-      {/* 05 / CONTACT — 純文字聯絡資訊 */}
+      {/* 05 / CONTACT — plain-text contact info */}
       <section id="contact" aria-label="Contact" className="tick border-t border-line-2 py-20 md:py-32">
         <Reveal>
           <SectionHeading no="05" label="CONTACT" />

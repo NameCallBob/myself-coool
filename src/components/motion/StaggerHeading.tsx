@@ -1,6 +1,7 @@
 /**
- * 逐字進場標題 — 純 CSS 動畫(globals.css .stagger-ch),
- * 讀屏只讀 sr-only 的完整字串;no-JS / reduced-motion 直接顯示。
+ * Character-by-character reveal heading — pure CSS animation
+ * (globals.css .stagger-ch). Screen readers get the sr-only full
+ * string; no-JS / reduced-motion renders it plainly.
  */
 export function StaggerHeading({
   text,

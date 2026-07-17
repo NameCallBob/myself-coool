@@ -1,9 +1,6 @@
 import type { Localized } from './projects';
 
-/**
- * 經歷 — 真實資料。
- * ⚠ 學校名稱與更完整的 highlight 數據待 binbin 提供。
- */
+/** Experience — real, verified data. */
 export type Experience = {
   org: Localized;
   role: Localized;
