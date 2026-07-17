@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { alternatesFor } from '@/lib/seo';
+import { alternatesFor, ogFor } from '@/lib/seo';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: t('ai'),
     description: m('ai'),
-    openGraph: { title: t('ai'), description: m('ai') },
+    openGraph: ogFor(locale, { title: t('ai'), description: m('ai') }),
     alternates: alternatesFor(locale, '/ai'),
   };
 }

@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { HeroSchematic } from '@/components/diagrams/HeroSchematic';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { alternatesFor } from '@/lib/seo';
+import { alternatesFor, ogFor } from '@/lib/seo';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: t('architecture'),
     description: m('architecture'),
-    openGraph: { title: t('architecture'), description: m('architecture') },
+    openGraph: ogFor(locale, { title: t('architecture'), description: m('architecture') }),
     alternates: alternatesFor(locale, '/architecture'),
   };
 }

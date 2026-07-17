@@ -15,9 +15,10 @@ const PATHS = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // No lastModified: stamping build time on every URL is noise search
+  // engines learn to distrust — omit it until real per-page dates exist.
   return PATHS.map((path) => ({
     url: `${SITE_URL}/zh-TW${path}`,
-    lastModified: new Date(),
     alternates: {
       languages: Object.fromEntries(
         routing.locales.map((l) => [l, `${SITE_URL}/${l}${path}`])

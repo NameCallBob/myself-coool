@@ -4,7 +4,7 @@ import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
 import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { alternatesFor } from '@/lib/seo';
+import { alternatesFor, ogFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../content/projects';
 import type { Project } from '../../../../content/projects';
 
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: t('title'),
     description: m('work'),
-    openGraph: { title: t('title'), description: m('work') },
+    openGraph: ogFor(locale, { title: t('title'), description: m('work') }),
     alternates: alternatesFor(locale, '/work'),
   };
 }

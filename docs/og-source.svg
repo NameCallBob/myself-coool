@@ -1,0 +1,71 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <!-- paper -->
+  <rect width="1200" height="630" fill="#faf8f4"/>
+
+  <!-- blueprint grid -->
+  <g stroke="#1a1714" stroke-opacity="0.055" stroke-width="1">
+    <path d="M100 0V630M300 0V630M500 0V630M700 0V630M900 0V630M1100 0V630"/>
+    <path d="M0 105H1200M0 315H1200M0 525H1200"/>
+  </g>
+  <!-- margin guides -->
+  <g stroke="#1a1714" stroke-opacity="0.12" stroke-width="1">
+    <path d="M72 0V630M1128 0V630M0 64H1200M0 566H1200"/>
+  </g>
+  <!-- corner ticks -->
+  <g stroke="#a31621" stroke-width="2">
+    <path d="M72 64h14M72 64v14M1128 64h-14M1128 64v14M72 566h14M72 566v-14M1128 566h-14M1128 566v-14"/>
+  </g>
+
+  <!-- header row -->
+  <text x="96" y="98" font-family="Menlo, monospace" font-size="15" letter-spacing="3" fill="#726a5d">BINBINBOB.WORK</text>
+  <text x="1104" y="98" text-anchor="end" font-family="Menlo, monospace" font-size="15" letter-spacing="3" fill="#726a5d">PORTFOLIO — NO.01</text>
+
+  <!-- name -->
+  <text x="90" y="305" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="132" font-weight="700" letter-spacing="-3" fill="#1a1714">binbin</text>
+
+  <!-- accent rule -->
+  <rect x="96" y="345" width="64" height="4" fill="#a31621"/>
+
+  <!-- role lines -->
+  <text x="96" y="404" font-family="Menlo, monospace" font-size="26" letter-spacing="4" fill="#1a1714">FULL-STACK DEVELOPER</text>
+  <text x="96" y="446" font-family="Menlo, monospace" font-size="19" letter-spacing="3" fill="#5e574e">SYSTEM DESIGN · AI INTEGRATION</text>
+  <text x="96" y="500" font-family="'PingFang TC', 'Noto Sans TC', sans-serif" font-size="21" letter-spacing="6" fill="#726a5d">全端工程師 · 系統設計 · AI 整合</text>
+
+  <!-- schematic (right) : CLIENT → NGINX → services → stores -->
+  <g font-family="Menlo, monospace" font-size="12" letter-spacing="1.5">
+    <!-- routes -->
+    <g fill="none" stroke="#726a5d" stroke-opacity="0.55" stroke-width="1.2">
+      <path d="M955 160v36"/>
+      <path d="M955 240v30h-75v34"/>
+      <path d="M955 240v30h75v34"/>
+      <path d="M880 348v34h75v-6"/>
+      <path d="M1030 348v34h-37"/>
+      <path d="M955 376v60"/>
+    </g>
+    <!-- pulses -->
+    <g fill="#a31621">
+      <circle cx="955" cy="178" r="3.5"/>
+      <circle cx="880" cy="290" r="3.5"/>
+      <circle cx="1030" cy="382" r="3.5"/>
+    </g>
+    <!-- nodes -->
+    <g fill="#faf8f4" stroke="#1a1714" stroke-opacity="0.7" stroke-width="1.2">
+      <rect x="905" y="128" width="100" height="32" rx="2"/>
+      <rect x="905" y="208" width="100" height="32" rx="2"/>
+      <rect x="830" y="304" width="100" height="32" rx="2"/>
+      <rect x="980" y="304" width="100" height="32" rx="2"/>
+      <rect x="905" y="436" width="100" height="32" rx="2"/>
+    </g>
+    <g fill="#1a1714" text-anchor="middle">
+      <text x="955" y="149">CLIENT</text>
+      <text x="955" y="229">NGINX</text>
+      <text x="880" y="325">AUTH</text>
+      <text x="1030" y="325">ORDER</text>
+      <text x="955" y="457">MYSQL</text>
+    </g>
+  </g>
+
+  <!-- footer -->
+  <text x="96" y="552" font-family="Menlo, monospace" font-size="13" letter-spacing="2.5" fill="#726a5d">DJANGO · REACT · FLUTTER · MYSQL · REDIS</text>
+  <text x="1104" y="552" text-anchor="end" font-family="Menlo, monospace" font-size="13" letter-spacing="2.5" fill="#a31621">SCALE: 1200×630</text>
+</svg>

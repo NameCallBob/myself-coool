@@ -10,7 +10,7 @@ import { Footer } from '@/components/layout/Footer';
 import { GridGuides } from '@/components/layout/GridGuides';
 import { LenisProvider } from '@/components/motion/LenisProvider';
 import { SiteJsonLd } from '@/lib/jsonld';
-import { alternatesFor, ogLocale } from '@/lib/seo';
+import { alternatesFor, OG_IMAGE, ogFor } from '@/lib/seo';
 import { SITE_URL } from '../../../content/site';
 import '../globals.css';
 
@@ -55,14 +55,8 @@ export async function generateMetadata({
     title: { default: title, template: '%s — binbin' },
     description: m('home'),
     alternates: alternatesFor(locale, ''),
-    openGraph: {
-      type: 'website',
-      siteName: 'binbin',
-      locale: ogLocale(locale),
-      title,
-      description: m('home'),
-    },
-    twitter: { card: 'summary_large_image' },
+    openGraph: ogFor(locale, { title, description: m('home') }),
+    twitter: { card: 'summary_large_image', images: [OG_IMAGE.url] },
   };
 }
 
