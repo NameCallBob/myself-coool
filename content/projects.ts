@@ -350,6 +350,32 @@ export const PROJECTS: Project[] = [
     keyMetric: { value: '100+', label: { zh: 'API endpoints', en: 'API endpoints' } },
     links: { live: 'https://aaic.nkust.edu.tw' },
     featured: true,
+    screenshots: [
+      {
+        src: '/images/work/nkust-alumni/home.png',
+        alt: {
+          zh: '系友會平台首頁:主視覺輪播、搜尋列與最新消息',
+          en: 'Alumni platform home: hero carousel, search bar and latest news',
+        },
+        caption: { zh: '首頁(輪播與最新消息)', en: 'Home (carousel and news)' },
+      },
+      {
+        src: '/images/work/nkust-alumni/search.png',
+        alt: {
+          zh: '系友企業搜尋頁:關鍵字搜尋、行業別篩選與企業卡片',
+          en: 'Alumni company search: keyword search, industry filters and company cards',
+        },
+        caption: { zh: '系友企業搜尋(篩選與排序)', en: 'Company search (filters and sorting)' },
+      },
+      {
+        src: '/images/work/nkust-alumni/recruit.png',
+        alt: {
+          zh: '系友企業職缺頁:表格/卡片雙檢視的徵才列表',
+          en: 'Alumni job board: table and card views of postings',
+        },
+        caption: { zh: '徵才職缺(表格/卡片雙檢視)', en: 'Job board (table/card views)' },
+      },
+    ],
     caseStudy: {
       problem: [
         {
