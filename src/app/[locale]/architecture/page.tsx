@@ -27,7 +27,7 @@ export default async function ArchitecturePage({ params }: Props) {
   return (
     <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
       <SectionHeading no="00" label="SYSTEM ARCHITECTURE" />
-      <h1 className="mt-6 text-4xl font-semibold tracking-tight md:text-6xl">
+      <h1 className="mt-6 font-serif text-4xl font-semibold tracking-tight md:text-6xl">
         {t('architecture')}
       </h1>
       {/* 互動版(pan/zoom/節點詳情)開發中;先展示全景示意 */}

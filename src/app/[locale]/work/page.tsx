@@ -4,6 +4,7 @@ import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
 import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { SectionOpener } from '@/components/ui/SectionOpener';
 import { alternatesFor, ogFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../content/projects';
 import type { Project } from '../../../../content/projects';
@@ -41,7 +42,7 @@ function ProjectRows({ projects, loc }: { projects: Project[]; loc: 'zh' | 'en' 
               {String(i + 1).padStart(2, '0')}
             </span>
             <div>
-              <h3 className="flex flex-wrap items-center gap-3 text-lg font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-xl">
+              <h3 className="flex flex-wrap items-center gap-3 font-serif text-xl font-semibold transition-transform duration-200 group-hover:translate-x-1 md:text-2xl">
                 {p.title[loc]}
                 <DomainBadge domain={p.domain} />
               </h3>
@@ -72,15 +73,16 @@ export default async function WorkPage({ params }: Props) {
   return (
     <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
       <SectionHeading no="00" label="PROJECT EXPERIENCE" />
-      <h1 className="mt-6 text-4xl font-semibold tracking-tight md:text-6xl">{t('title')}</h1>
+      <h1 className="mt-6 font-serif text-4xl font-semibold tracking-tight md:text-6xl">
+        {t('title')}
+      </h1>
       <p className="mt-6 max-w-[46ch] text-base text-muted md:text-lg">{t('description')}</p>
 
       {/* 公開專案 */}
       <section aria-label={t('publicLabel')} className="tick mt-20 border-t border-line-2 pt-14">
         <Reveal>
-          <SectionHeading no="01" label="PUBLIC" />
-          <h2 className="mt-4 text-2xl font-medium md:text-3xl">{t('publicLabel')}</h2>
-          <p className="mt-2 max-w-[52ch] text-sm text-muted">{t('publicNote')}</p>
+          <SectionOpener no="01" label="PUBLIC" title={t('publicLabel')} />
+          <p className="mt-3 max-w-[52ch] text-sm text-muted">{t('publicNote')}</p>
         </Reveal>
         <div className="mt-10">
           <ProjectRows projects={publicProjects} loc={loc} />
@@ -90,12 +92,12 @@ export default async function WorkPage({ params }: Props) {
       {/* 公司內部專案 */}
       <section aria-label={t('internalLabel')} className="tick mt-20 border-t border-line-2 pt-14">
         <Reveal>
-          <SectionHeading no="02" label="INTERNAL" />
-          <h2 className="mt-4 flex items-center gap-3 text-2xl font-medium md:text-3xl">
+          <SectionOpener no="02" label="INTERNAL" />
+          <h2 className="mt-6 flex items-center gap-3 font-serif text-3xl font-semibold tracking-tight md:text-4xl">
             {t('internalLabel')}
             <Lock size={18} strokeWidth={1.5} className="text-faint" aria-hidden />
           </h2>
-          <p className="mt-2 max-w-[52ch] text-sm text-muted">{t('internalNote')}</p>
+          <p className="mt-3 max-w-[52ch] text-sm text-muted">{t('internalNote')}</p>
         </Reveal>
         <div className="mt-10">
           <ProjectRows projects={internalProjects} loc={loc} />

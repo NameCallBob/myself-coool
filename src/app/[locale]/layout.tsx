@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Archivo, JetBrains_Mono, Noto_Sans_TC } from 'next/font/google';
+import { Archivo, JetBrains_Mono, Noto_Sans_TC, Noto_Serif_TC } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
@@ -24,6 +24,13 @@ const notoSansTC = Noto_Sans_TC({
   subsets: ['latin'],
   weight: ['400', '500', '700'],
   variable: '--font-noto-tc',
+  display: 'swap',
+});
+
+const notoSerifTC = Noto_Serif_TC({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-noto-serif-tc',
   display: 'swap',
 });
 
@@ -84,7 +91,7 @@ export default async function LocaleLayout({
     <html
       lang={locale === 'zh-TW' ? 'zh-Hant-TW' : 'en'}
       suppressHydrationWarning
-      className={`${archivo.variable} ${notoSansTC.variable} ${jetbrainsMono.variable}`}
+      className={`${archivo.variable} ${notoSansTC.variable} ${notoSerifTC.variable} ${jetbrainsMono.variable}`}
     >
       <body>
         <SiteJsonLd locale={locale} />

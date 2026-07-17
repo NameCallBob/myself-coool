@@ -6,6 +6,7 @@ import { Reveal } from '@/components/motion/Reveal';
 import { StaggerHeading } from '@/components/motion/StaggerHeading';
 import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { SectionOpener } from '@/components/ui/SectionOpener';
 import { CONTACT_EMAIL, GITHUB_URL, PHILOSOPHY } from '../../../content/site';
 import { PROJECTS } from '../../../content/projects';
 import { EXPERIENCE } from '../../../content/experience';
@@ -29,12 +30,10 @@ export default async function HomePage({ params }: Props) {
         <StaggerHeading
           id="hero-heading"
           text={t('name')}
-          className="mt-6 text-[clamp(3rem,9vw,6.5rem)] leading-none font-semibold tracking-tight"
+          className="mt-6 font-serif text-[clamp(3.25rem,10vw,7.5rem)] leading-none font-semibold tracking-tight"
         />
-        <p className="mt-4 text-xl text-muted md:text-2xl">{t('tagline')}</p>
-        <p className="mt-8 max-w-[42rem] text-base leading-relaxed md:text-lg">
-          {t('intro')}
-        </p>
+        <p className="mt-5 font-serif text-xl text-muted md:text-2xl">{t('tagline')}</p>
+        <p className="mt-10 max-w-[42rem] text-base leading-relaxed md:text-lg">{t('intro')}</p>
         <p className="mt-8 font-mono text-xs tracking-[0.12em] text-faint">{t('roles')}</p>
 
         <figure className="mt-16">
@@ -50,8 +49,8 @@ export default async function HomePage({ params }: Props) {
       {/* 01 / SELECTED WORK */}
       <section aria-labelledby="work-heading" className="tick border-t border-line-2 py-20 md:py-28">
         <Reveal>
-          <SectionHeading no="01" label="SELECTED PROJECTS" />
-          <p className="mt-4 max-w-[46ch] text-sm text-muted md:text-base">{t('workNote')}</p>
+          <SectionOpener no="01" label="SELECTED PROJECTS" />
+          <p className="mt-6 max-w-[46ch] text-sm text-muted md:text-base">{t('workNote')}</p>
         </Reveal>
         <h2 id="work-heading" className="sr-only">
           {tw('title')}
@@ -64,7 +63,7 @@ export default async function HomePage({ params }: Props) {
                 className="group grid grid-cols-1 gap-2 border-b border-line-2 py-7 transition-colors duration-200 first:border-t hover:bg-surface md:grid-cols-[1fr_auto_auto] md:items-center md:gap-8"
               >
                 <div>
-                  <h3 className="flex flex-wrap items-center gap-3 text-lg font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-xl">
+                  <h3 className="flex flex-wrap items-center gap-3 font-serif text-xl font-semibold transition-transform duration-200 group-hover:translate-x-1 md:text-2xl">
                     {p.title[loc]}
                     <DomainBadge domain={p.domain} />
                   </h3>
@@ -95,7 +94,7 @@ export default async function HomePage({ params }: Props) {
         className="tick border-t border-line-2 py-20 md:py-28"
       >
         <Reveal>
-          <SectionHeading no="02" label="EXPERIENCE" />
+          <SectionOpener no="02" label="EXPERIENCE" />
         </Reveal>
         <div className="mt-10 space-y-10">
           {EXPERIENCE.map((e) => (
@@ -103,9 +102,12 @@ export default async function HomePage({ params }: Props) {
               <div className="grid grid-cols-1 gap-2 md:grid-cols-[200px_1fr] md:gap-10">
                 <p className="font-mono text-xs tracking-[0.1em] text-faint">{e.period}</p>
                 <div>
-                  <h3 className="text-base font-medium md:text-lg">
+                  <h3 className="font-serif text-lg font-semibold md:text-xl">
                     {e.role[loc]}
-                    <span className="text-muted"> — {e.org[loc]}</span>
+                    <span className="font-sans text-base font-medium text-muted md:text-lg">
+                      {' '}
+                      — {e.org[loc]}
+                    </span>
                   </h3>
                   <p className="mt-1 max-w-[60ch] text-sm text-muted">{e.summary[loc]}</p>
                 </div>
@@ -118,7 +120,7 @@ export default async function HomePage({ params }: Props) {
       {/* 03 / ARCHITECTURE — a documentation pointer, not a marketing block */}
       <section aria-label="Architecture" className="tick border-t border-line-2 py-20 md:py-28">
         <Reveal>
-          <SectionHeading no="03" label="ARCHITECTURE" />
+          <SectionOpener no="03" label="ARCHITECTURE" />
           <p className="mt-4 max-w-[46ch] text-sm text-muted md:text-base">{t('archNote')}</p>
           <Link
             href="/architecture"
@@ -133,17 +135,20 @@ export default async function HomePage({ params }: Props) {
       {/* 04 / PRINCIPLES */}
       <section aria-label="Principles" className="tick border-t border-line-2 py-20 md:py-28">
         <Reveal>
-          <SectionHeading no="04" label="PRINCIPLES" />
-          <p className="mt-4 max-w-[46ch] text-sm text-muted md:text-base">
+          <SectionOpener no="04" label="PRINCIPLES" />
+          <p className="mt-6 max-w-[46ch] text-sm text-muted md:text-base">
             {t('principlesNote')}
           </p>
         </Reveal>
-        <ul className="mt-10 max-w-[42rem] space-y-6">
+        <ul className="mt-14 max-w-[46rem] space-y-14 md:ml-[200px]">
           {PHILOSOPHY.map((s, i) => (
             <Reveal key={s.en} delay={i * 40}>
-              <li className="flex gap-5 border-l-2 border-accent/40 pl-5">
-                <span className="font-mono text-xs leading-7 text-faint">0{i + 1}</span>
-                <p className="text-lg leading-relaxed font-medium md:text-xl">{s[loc]}</p>
+              <li>
+                <span aria-hidden className="block h-px w-10 bg-accent" />
+                <span className="mt-4 block font-mono text-xs tracking-[0.12em] text-faint">
+                  0{i + 1}
+                </span>
+                <p className="pull-quote mt-3">{s[loc]}</p>
               </li>
             </Reveal>
           ))}
@@ -153,7 +158,7 @@ export default async function HomePage({ params }: Props) {
       {/* 05 / CONTACT — plain-text contact info */}
       <section id="contact" aria-label="Contact" className="tick border-t border-line-2 py-20 md:py-32">
         <Reveal>
-          <SectionHeading no="05" label="CONTACT" />
+          <SectionOpener no="05" label="CONTACT" />
           <p className="mt-4 max-w-[46ch] text-sm text-muted md:text-base">{t('contactNote')}</p>
           <dl className="mt-8 space-y-3 font-mono text-sm">
             <div className="flex gap-6">

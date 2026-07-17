@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
 import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { SectionOpener } from '@/components/ui/SectionOpener';
 import { CaseStudyJsonLd } from '@/lib/jsonld';
 import { alternatesFor, ogFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../../content/projects';
@@ -32,11 +33,27 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-function Paragraphs({ items, loc }: { items: Localized[]; loc: 'zh' | 'en' }) {
+function Paragraphs({
+  items,
+  loc,
+  lede = false,
+}: {
+  items: Localized[];
+  loc: 'zh' | 'en';
+  /** Magazine lede: the first paragraph opens large in serif with a drop cap */
+  lede?: boolean;
+}) {
   return (
     <div className="mt-8 max-w-[65ch] space-y-6">
-      {items.map((p) => (
-        <p key={p.en.slice(0, 40)} className="text-base leading-relaxed text-fg md:text-lg">
+      {items.map((p, i) => (
+        <p
+          key={p.en.slice(0, 40)}
+          className={
+            lede && i === 0
+              ? 'drop-cap font-serif text-lg leading-relaxed text-fg md:text-xl'
+              : 'text-base leading-relaxed text-fg md:text-lg'
+          }
+        >
           {p[loc]}
         </p>
       ))}
@@ -61,7 +78,7 @@ export default async function CaseStudyPage({ params }: Props) {
     <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
       <CaseStudyJsonLd project={project} locale={locale} />
       <SectionHeading no={String(index + 1).padStart(2, '0')} label="WORK / CASE STUDY" />
-      <h1 className="mt-6 max-w-[20ch] text-4xl leading-[1.2] font-semibold tracking-tight md:text-6xl">
+      <h1 className="mt-6 max-w-[20ch] font-serif text-4xl leading-[1.25] font-semibold tracking-tight md:text-6xl">
         {project.title[loc]}
       </h1>
       <p className="mt-6 max-w-[52ch] text-base text-muted md:text-lg">{project.oneLiner[loc]}</p>
@@ -124,14 +141,14 @@ export default async function CaseStudyPage({ params }: Props) {
         <div>
           <section className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionHeading no="01" label="PROBLEM" />
-              <Paragraphs items={cs.problem} loc={loc} />
+              <SectionOpener no="01" label="PROBLEM" />
+              <Paragraphs items={cs.problem} loc={loc} lede />
             </Reveal>
           </section>
 
           <section className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionHeading no="02" label="CONSTRAINTS" />
+              <SectionOpener no="02" label="CONSTRAINTS" />
               <ul className="mt-8 max-w-[65ch] space-y-4">
                 {cs.constraints.map((c) => (
                   <li
@@ -147,21 +164,21 @@ export default async function CaseStudyPage({ params }: Props) {
 
           <section className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionHeading no="03" label="ARCHITECTURE" />
+              <SectionOpener no="03" label="ARCHITECTURE" />
               <Paragraphs items={cs.architecture} loc={loc} />
             </Reveal>
           </section>
 
           <section className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionHeading no="04" label="RESPONSIBILITIES" />
+              <SectionOpener no="04" label="RESPONSIBILITIES" />
               <Paragraphs items={cs.responsibilities} loc={loc} />
             </Reveal>
           </section>
 
           <section className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionHeading no="05" label="CHALLENGES → SOLUTIONS" />
+              <SectionOpener no="05" label="CHALLENGES → SOLUTIONS" />
             </Reveal>
             <div className="mt-10 space-y-12">
               {cs.challenges.map((ch, i) => (
@@ -189,12 +206,12 @@ export default async function CaseStudyPage({ params }: Props) {
 
           <section className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionHeading no="06" label="SYSTEM FACTS" />
+              <SectionOpener no="06" label="SYSTEM FACTS" />
             </Reveal>
             <div className="mt-10 grid grid-cols-2 gap-8 md:grid-cols-4">
               {cs.facts.map((f, i) => (
                 <Reveal key={f.label.en} delay={i * 40}>
-                  <p className="tabular text-4xl font-semibold tracking-tight text-accent md:text-5xl">
+                  <p className="tabular font-serif text-4xl font-semibold tracking-tight text-accent md:text-5xl">
                     {f.value}
                   </p>
                   <p className="mt-2 font-mono text-xs tracking-[0.08em] text-muted">
@@ -207,15 +224,13 @@ export default async function CaseStudyPage({ params }: Props) {
 
           <section className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionHeading no="07" label="LESSONS" />
-              <div className="mt-8 max-w-[60ch] space-y-8">
+              <SectionOpener no="07" label="LESSONS" />
+              <div className="mt-10 max-w-[46rem] space-y-12 md:ml-[200px]">
                 {cs.lessons.map((l) => (
-                  <p
-                    key={l.en.slice(0, 40)}
-                    className="border-l-2 border-line-3 pl-6 text-lg leading-relaxed font-medium md:text-xl"
-                  >
-                    {l[loc]}
-                  </p>
+                  <div key={l.en.slice(0, 40)}>
+                    <span aria-hidden className="block h-px w-10 bg-accent" />
+                    <p className="pull-quote mt-4">{l[loc]}</p>
+                  </div>
                 ))}
               </div>
             </Reveal>
@@ -227,7 +242,7 @@ export default async function CaseStudyPage({ params }: Props) {
       {project.screenshots && project.screenshots.length > 0 && (
         <section className="tick mt-20 border-t border-line-2 pt-14">
           <Reveal>
-            <SectionHeading no="08" label="SCREENS" />
+            <SectionOpener no="08" label="SCREENS" />
             <p className="mt-4 font-mono text-xs tracking-[0.06em] text-faint">
               {tc('mockNote')}
             </p>
@@ -262,7 +277,7 @@ export default async function CaseStudyPage({ params }: Props) {
       >
         <div>
           <p className="font-mono text-[11px] tracking-[0.12em] text-faint">NEXT</p>
-          <p className="mt-2 text-2xl font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-3xl">
+          <p className="mt-2 font-serif text-2xl font-semibold transition-transform duration-200 group-hover:translate-x-1 md:text-3xl">
             {next.title[loc]}
           </p>
         </div>

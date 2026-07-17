@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { AgenticLoopSchematic } from '@/components/diagrams/AgenticLoopSchematic';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { SectionOpener } from '@/components/ui/SectionOpener';
 import { alternatesFor, ogFor } from '@/lib/seo';
 import { AGENTIC } from '../../../../content/agentic';
 
@@ -30,11 +31,21 @@ export default async function AiPage({ params }: Props) {
     <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
       {/* 00 / header — the vibe → agentic narrative */}
       <SectionHeading no="00" label="AGENTIC ENGINEERING" />
-      <h1 className="mt-6 text-4xl font-semibold tracking-tight md:text-6xl">{t('ai')}</h1>
-      <div className="mt-10 max-w-[42rem] space-y-6 text-base leading-relaxed md:text-lg">
+      <h1 className="mt-6 font-serif text-4xl font-semibold tracking-tight md:text-6xl">
+        {t('ai')}
+      </h1>
+      <div className="mt-10 max-w-[42rem] space-y-6">
         {AGENTIC.intro.map((p, i) => (
           <Reveal key={p.en} delay={i * 60}>
-            <p>{p[loc]}</p>
+            <p
+              className={
+                i === 0
+                  ? 'drop-cap font-serif text-lg leading-relaxed md:text-xl'
+                  : 'text-base leading-relaxed md:text-lg'
+              }
+            >
+              {p[loc]}
+            </p>
           </Reveal>
         ))}
       </div>
@@ -45,10 +56,7 @@ export default async function AiPage({ params }: Props) {
         className="tick mt-20 border-t border-line-2 pt-16 md:mt-28"
       >
         <Reveal>
-          <SectionHeading no="01" label="FROM VIBE TO AGENTIC" />
-          <h2 className="mt-6 text-2xl font-semibold tracking-tight md:text-3xl">
-            {AGENTIC.method.title[loc]}
-          </h2>
+          <SectionOpener no="01" label="FROM VIBE TO AGENTIC" title={AGENTIC.method.title[loc]} />
           <p className="mt-4 max-w-[46ch] text-sm text-muted md:text-base">
             {AGENTIC.method.note[loc]}
           </p>
@@ -84,7 +92,7 @@ export default async function AiPage({ params }: Props) {
       {/* 02 / the loop */}
       <section aria-label="Loop" className="tick mt-20 border-t border-line-2 pt-16 md:mt-28">
         <Reveal>
-          <SectionHeading no="02" label="THE LOOP" />
+          <SectionOpener no="02" label="THE LOOP" />
         </Reveal>
         <figure className="mt-10 rounded-[6px] border border-line-2 bg-surface p-4 md:p-8">
           <AgenticLoopSchematic label={a11y('agenticLoopLabel')} />
@@ -102,10 +110,7 @@ export default async function AiPage({ params }: Props) {
           className="tick mt-20 border-t border-line-2 pt-16 md:mt-28"
         >
           <Reveal>
-            <SectionHeading no={c.no} label={c.label} />
-            <h2 className="mt-6 text-2xl font-semibold tracking-tight md:text-3xl">
-              {c.title[loc]}
-            </h2>
+            <SectionOpener no={c.no} label={c.label} title={c.title[loc]} />
             <p className="mt-6 max-w-[62ch] text-sm leading-relaxed text-muted md:text-base">
               {c.prose[loc]}
             </p>
@@ -131,20 +136,20 @@ export default async function AiPage({ params }: Props) {
         className="tick mt-20 border-t border-line-2 pt-16 md:mt-28"
       >
         <Reveal>
-          <SectionHeading no="05" label="BOUNDARIES" />
-          <h2 className="mt-6 text-2xl font-semibold tracking-tight md:text-3xl">
-            {AGENTIC.boundaries.title[loc]}
-          </h2>
+          <SectionOpener no="05" label="BOUNDARIES" title={AGENTIC.boundaries.title[loc]} />
           <p className="mt-4 max-w-[46ch] text-sm text-muted md:text-base">
             {AGENTIC.boundaries.note[loc]}
           </p>
         </Reveal>
-        <ul className="mt-10 max-w-[42rem] space-y-6">
+        <ul className="mt-14 max-w-[46rem] space-y-12 md:ml-[200px]">
           {AGENTIC.boundaries.items.map((s, i) => (
             <Reveal key={s.en} delay={i * 40}>
-              <li className="flex gap-5 border-l-2 border-accent/40 pl-5">
-                <span className="font-mono text-xs leading-7 text-faint">0{i + 1}</span>
-                <p className="text-base leading-relaxed md:text-lg">{s[loc]}</p>
+              <li>
+                <span aria-hidden className="block h-px w-10 bg-accent" />
+                <span className="mt-4 block font-mono text-xs tracking-[0.12em] text-faint">
+                  0{i + 1}
+                </span>
+                <p className="pull-quote mt-3">{s[loc]}</p>
               </li>
             </Reveal>
           ))}
