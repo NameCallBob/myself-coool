@@ -713,6 +713,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'retail-pos',
+    visibility: 'internal',
     title: {
       zh: '多租戶零售收銀系統',
       en: 'Multi-tenant Retail POS System',
@@ -818,6 +819,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'b2b-wholesale-platform',
+    visibility: 'internal',
     title: {
       zh: '多租戶 B2B 批發電商平台',
       en: 'Multi-tenant B2B Wholesale Commerce Platform',
@@ -923,6 +925,7 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'field-sales-pwa',
+    visibility: 'internal',
     title: {
       zh: '業務外勤現場開通 PWA',
       en: 'Field Sales On-site Activation PWA',
