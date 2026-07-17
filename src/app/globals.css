@@ -2,9 +2,9 @@
 
 /* ─────────────────────────────────────────────
    Design tokens — Phase 4 spec
-   Dark (Warm Graphite) is the default theme.
+   Light (Drafting paper + red ink) is the default theme;
+   dark (Warm Graphite) is the opt-in alternate.
    ───────────────────────────────────────────── */
-/* Light first — "Drafting paper + red ink"(製圖紙 + 紅墨水批註) */
 :root,
 [data-theme='light'] {
   color-scheme: light;
@@ -19,7 +19,7 @@
 
   --fg: #1a1714;
   --fg-muted: #5e574e;
-  --fg-faint: #8e867a;
+  --fg-faint: #726a5d; /* ≥4.5:1 on paper (WCAG AA) */
 
   --accent: #a31621; /* deep red ink — 7.4:1 on paper */
   --accent-ink: #faf8f4;
@@ -45,9 +45,9 @@
 
   --fg: #ede8df;
   --fg-muted: #a8a296;
-  --fg-faint: #6b665c;
+  --fg-faint: #89847a; /* ≥4.5:1 on dark bg (WCAG AA) */
 
-  --accent: #e25d5d; /* 亮紅——深色底上維持 ≥4.5:1 */
+  --accent: #e25d5d; /* bright red — keeps ≥4.5:1 on dark bg */
   --accent-ink: #12100e;
   --accent-dim: rgba(226, 93, 93, 0.16);
 
@@ -141,7 +141,7 @@ body::after {
   background: var(--border-1);
 }
 
-/* 首次載入:導線由上而下「畫」出來 */
+/* Initial load: guide lines "draw" in from top to bottom */
 .js .guide-line {
   transform-origin: top;
   animation: line-in 900ms var(--ease-out-expo) both;
@@ -152,7 +152,7 @@ body::after {
   }
 }
 
-/* ── Hero 逐字進場 ─────────────────────────── */
+/* ── Hero character-by-character reveal ───── */
 .js .stagger-ch {
   display: inline-block;
   opacity: 0;
@@ -194,7 +194,7 @@ body::after {
   transform: none;
 }
 
-/* ── 紅墨水底線(文字連結 hover)─────────── */
+/* ── Red-ink underline (text link hover) ──── */
 .ink-link {
   background-image: linear-gradient(var(--accent), var(--accent));
   background-size: 0% 1px;
