@@ -35,7 +35,7 @@ function ProjectRows({ projects, loc }: { projects: Project[]; loc: 'zh' | 'en' 
         <Reveal key={p.slug} delay={i * 40}>
           <Link
             href={`/work/${p.slug}`}
-            className="group grid grid-cols-1 gap-2 border-b border-line-2 py-7 transition-colors duration-200 hover:bg-base md:grid-cols-[64px_1fr_240px_40px] md:items-center md:gap-6"
+            className="group grid grid-cols-1 gap-2 border-b border-line-2 py-7 transition-colors duration-200 hover:bg-surface md:grid-cols-[64px_1fr_240px_40px] md:items-center md:gap-6"
           >
             <span className="tabular font-mono text-xs text-accent">
               {String(i + 1).padStart(2, '0')}

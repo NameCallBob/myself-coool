@@ -31,7 +31,7 @@ export default async function ArchitecturePage({ params }: Props) {
         {t('architecture')}
       </h1>
       {/* 互動版(pan/zoom/節點詳情)開發中;先展示全景示意 */}
-      <div className="mt-16 rounded-[6px] border border-line-2 bg-base p-6 md:p-10">
+      <div className="mt-16 rounded-[6px] border border-line-2 bg-surface p-6 md:p-10">
         <HeroSchematic label={a11y('schematicLabel')} />
       </div>
       <p className="mt-10 max-w-[46ch] font-mono text-sm leading-relaxed text-muted">

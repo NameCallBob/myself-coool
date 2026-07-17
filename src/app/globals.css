@@ -60,7 +60,7 @@
 
 @theme inline {
   --color-deep: var(--bg-deep);
-  --color-base: var(--bg-base);
+  --color-surface: var(--bg-base);
   --color-raised: var(--bg-raised);
   --color-line-1: var(--border-1);
   --color-line-2: var(--border-2);

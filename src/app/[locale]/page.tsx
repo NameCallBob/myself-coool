@@ -61,7 +61,7 @@ export default async function HomePage({ params }: Props) {
             <Reveal key={p.slug} delay={i * 40}>
               <Link
                 href={`/work/${p.slug}`}
-                className="group grid grid-cols-1 gap-2 border-b border-line-2 py-7 transition-colors duration-200 first:border-t hover:bg-base md:grid-cols-[1fr_auto_auto] md:items-center md:gap-8"
+                className="group grid grid-cols-1 gap-2 border-b border-line-2 py-7 transition-colors duration-200 first:border-t hover:bg-surface md:grid-cols-[1fr_auto_auto] md:items-center md:gap-8"
               >
                 <div>
                   <h3 className="flex flex-wrap items-center gap-3 text-lg font-medium transition-transform duration-200 group-hover:translate-x-1 md:text-xl">
