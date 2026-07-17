@@ -22,7 +22,7 @@
   "home": {
     "name": "binbin",
     "tagline": "Full-stack developer, still a student.",
-    "intro": "Since June 2025 I've been working on an AI nail platform and a multi-tenant HRIS at Rissiu Aesthetics Co., Ltd. Outside work, I independently built and now run two systems in daily use at NKUST. This site records how these systems were designed — the trade-offs made and the lessons learned — in the form of engineering notes.",
+    "intro": "Since June 2025 I've been working on an AI nail platform and a multi-tenant HRIS at Manience Inc. Outside work, I independently built and now run two systems in daily use at NKUST. This site records how these systems were designed — the trade-offs made and the lessons learned — in the form of engineering notes.",
     "roles": "BACKEND · SYSTEM DESIGN · AI INTEGRATION",
     "schematicCaption": "Simplified view: the microservice topology I work on day to day — every node is a real service.",
     "workNote": "Each system is documented in the same format: problem, constraints, architecture, challenges, results.",
@@ -37,7 +37,7 @@
     "metricPending": "metrics pending"
   },
   "meta": {
-    "home": "Full-stack developer building an AI nail platform and a multi-tenant HRIS at Rissiu Aesthetics, and independently running two systems in production at NKUST.",
+    "home": "Full-stack developer building an AI nail platform and a multi-tenant HRIS at Manience Inc., and independently running two systems in production at NKUST.",
     "work":"Deep teardowns of five real systems: multi-tenant SaaS, an AI commerce platform, a mobile app and campus operations systems.",
     "architecture": "Interactive views of microservice boundaries, API request lifecycles and deployment flow.",
     "ai": "How AI agents assist architecture review, code review, security and performance checks, and documentation.",
@@ -52,7 +52,7 @@
   },
   "about": {
     "title": "About",
-    "p1": "I'm binbin — still a student, and since June 2025 a backend developer at Rissiu Aesthetics Co., Ltd., where I build the AI nail platform and the dozens of Django microservices behind it.",
+    "p1": "I'm binbin — still a student, and since June 2025 a backend developer at Manience Inc., where I build the AI nail platform and the dozens of Django microservices behind it.",
     "p2": "I care less about titles than about system boundaries, data flow, and the trade-offs behind every technical decision. This site documents what I've actually built, in the format of an engineering specification.",
     "experienceLabel": "EXPERIENCE"
   }

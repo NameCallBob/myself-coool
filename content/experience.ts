@@ -15,7 +15,7 @@ export const EXPERIENCE: Experience[] = [
   {
     org: {
       zh: '日秀美學股份有限公司',
-      en: 'Rissiu Aesthetics Co., Ltd.', // ⚠ 待確認公司英文名
+      en: 'Manience Inc.',
     },
     role: { zh: '全端開發', en: 'Full-Stack Developer' },
     period: '2025.06 — PRESENT',
@@ -26,9 +26,9 @@ export const EXPERIENCE: Experience[] = [
   },
   {
     org: {
-      zh: '國立高雄科技大學',
-      en: 'National Kaohsiung University of Science and Technology',
-    }, // ⚠ 待確認:科系(智慧商務系?)與預計畢業年
+      zh: '國立高雄科技大學 智慧商務系',
+      en: 'NKUST — Dept. of Intelligent Commerce',
+    },
     role: { zh: '在學學生', en: 'Undergraduate student' },
     period: '— PRESENT',
     summary: {
