@@ -1309,4 +1309,149 @@ export const PROJECTS: Project[] = [
     stack: ['AI AGENTS', 'SPEC-DRIVEN', 'VERIFICATION'],
     featured: false,
   },
+  {
+    slug: 'ecobao',
+    domain: 'fullstack',
+    visibility: 'public',
+    title: {
+      zh: '環飽 EcoBǎo 剩食訂購平台',
+      en: 'EcoBǎo Food-Surplus Marketplace',
+    },
+    oneLiner: {
+      zh: '媒合店家餘食與消費者的剩食訂購平台,消費者與店家雙端;近期重構為純前端 demo 並統一設計系統,作為公開作品集。',
+      en: 'A marketplace matching shops’ surplus food with buyers — consumer and merchant portals. Recently refactored into a standalone front-end demo with a unified design system, opened up as a public portfolio piece.',
+    },
+    scope: { zh: '剩食平台 · 現代化重構', en: 'Food-surplus platform · modernization' },
+    stack: ['REACT', 'VITE', 'TAILWIND', 'REACT NATIVE', 'DJANGO', 'DRF'],
+    keyMetric: { value: '4→1', label: { zh: 'UI 樣式庫收斂', en: 'UI libraries consolidated' } },
+    links: {
+      live: 'https://namecallbob.github.io/ecobaoFront/',
+      repo: 'https://github.com/NameCallBob/ecobaoFront',
+    },
+    featured: false,
+    screenshots: [
+      {
+        src: '/images/work/ecobao/home.webp',
+        alt: {
+          zh: '環飽首頁:惜食主標、搜尋列與平台減碳影響力數字',
+          en: 'EcoBǎo home: food-saving hero, search bar and platform impact stats',
+        },
+        caption: { zh: '消費者首頁(Eco-Fresh 設計系統)', en: 'Consumer home (Eco-Fresh design system)' },
+      },
+      {
+        src: '/images/work/ecobao/menu.webp',
+        alt: {
+          zh: '逛剩食頁:分類篩選、排序與剩食福袋商品卡(原價/優惠價/取貨倒數)',
+          en: 'Browse page: category filters, sorting and surplus-bag product cards with original/deal price and pickup countdown',
+        },
+        caption: { zh: '逛剩食(篩選與剩食福袋卡片)', en: 'Browse surplus (filters and surprise-bag cards)' },
+      },
+      {
+        src: '/images/work/ecobao/store.webp',
+        alt: {
+          zh: '店家頁:封面、評分與剩食商品分頁',
+          en: 'Store page: cover, rating and surplus-items tabs',
+        },
+        caption: { zh: '店家頁(評分與商品分頁)', en: 'Store page (rating and item tabs)' },
+      },
+      {
+        src: '/images/work/ecobao/dashboard.webp',
+        alt: {
+          zh: '店家後台營運總覽:營收/訂單 KPI、近 7 日圖表與剩食售出佔比',
+          en: 'Merchant dashboard: revenue/order KPIs, 7-day charts and surplus-sold share',
+        },
+        caption: { zh: '店家後台儀表板(recharts 圖表)', en: 'Merchant dashboard (recharts)' },
+      },
+    ],
+    caseStudy: {
+      problem: [
+        {
+          zh: '環飽 EcoBǎo 是一個以「剩食」為題的訂購媒合平台——店家把當日未售完但仍新鮮的餐點,以即期優惠或驚喜福袋的形式折扣出售,消費者於指定時段到店自取,藉此減少food waste。專案分為三個 codebase:React 網頁前端、React Native(Expo)行動 App 與 Django REST 後端,提供消費者與店家兩端介面。這輪工作的目標,是把這個學生時期的專題「翻新成能公開展示的作品集」。',
+          en: 'EcoBǎo is an ordering-and-matching marketplace built around food surplus — shops sell same-day unsold-but-fresh meals at a discount as “deals” or “surprise bags,” and buyers pick them up in a set window, cutting food waste. It spans three codebases: a React web frontend, a React Native (Expo) app and a Django REST backend, serving consumer and merchant sides. This round of work was about turning that student-era project into something presentable as a public portfolio piece.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '網頁前端原本綁死後端:透過 axios 打一組 ngrok 後端網址,一旦後端不在就整站空白,無法獨立展示。要當作品集 demo,必須讓它能脫離後端、部署到 GitHub Pages 靜態託管。',
+          en: 'The web frontend was hard-wired to the backend: it hit an ngrok URL via axios, so the whole site went blank without a live server — impossible to demo standalone. To become a portfolio demo it had to run without any backend and deploy to static GitHub Pages hosting.',
+        },
+        {
+          zh: '既有前端同時混用 MUI、Ant Design、Bootstrap 與 styled-components 四套樣式系統,視覺不一致、bundle 也肥。',
+          en: 'The existing frontend mixed four styling systems at once — MUI, Ant Design, Bootstrap and styled-components — producing inconsistent visuals and a heavy bundle.',
+        },
+        {
+          zh: '三個 repo 都要公開,後端原本把 SECRET_KEY、資料庫帳密與郵件設定寫死在程式碼裡,直接開源等於外洩設定。',
+          en: 'All three repos were going public, but the backend hardcoded its SECRET_KEY, database credentials and mail settings in source — open-sourcing as-is would leak configuration.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '前端從 Create React App 遷移到 Vite,並移除四套 UI 庫、收斂到單一 Tailwind 設計系統。設計語言以 UI/UX 評估重建為「Eco-Fresh(清新永續)」:翠綠主色 + 食物暖橙點綴、Noto Sans/Serif TC 中文字體,token 以 CSS 變數驅動、Web 與 App 共用,並支援深色模式與 prefers-reduced-motion。',
+          en: 'The web app was migrated from Create React App to Vite, the four UI libraries removed, and everything consolidated onto a single Tailwind design system. The visual language was rebuilt from a UX assessment into “Eco-Fresh”: emerald primary with a warm-amber food accent, Noto Sans/Serif TC for Chinese, tokens driven by CSS variables and shared across web and app, with dark mode and prefers-reduced-motion support.',
+        },
+        {
+          zh: '為了脫離後端,建立一層純前端 mock API + seed 資料(店家、剩食商品、活動、評價、訂單、會員),以模擬延遲與 localStorage 持久化重現購物車、下單與取貨碼流程;整站改用 HashRouter 以相容 GitHub Pages,並以 GitHub Actions 自動建置部署。',
+          en: 'To cut the backend dependency, a pure front-end mock API and seed dataset (stores, surplus items, campaigns, reviews, orders, members) was added — simulated latency plus localStorage persistence reproduce cart, checkout and pickup-code flows. Routing moved to HashRouter for GitHub Pages compatibility, with GitHub Actions building and deploying automatically.',
+        },
+        {
+          zh: '後端(Django 4 + DRF)把 SECRET_KEY、資料庫、郵件與 API 金鑰等機敏設定全數抽離為環境變數並附 .env.example;補上 requirements 與完整 README,移除測試殘檔與未使用模組,並將誤入版控的 __pycache__ 與資產取消追蹤。行動端(Expo / React Native)則導入共用設計 token 與 UI 原子元件、統一導覽與樣式。',
+          en: 'The backend (Django 4 + DRF) had all sensitive settings — SECRET_KEY, database, mail and API keys — extracted into environment variables with an .env.example; requirements and a full README were added, test leftovers and unused modules removed, and accidentally-tracked __pycache__ and assets untracked. The Expo / React Native app adopted the shared design tokens and UI atoms, unifying navigation and styling.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '本輪現代化重構(前端 Vite 遷移與 Eco-Fresh 設計系統、純前端 mock/seed 與 GitHub Pages 部署、後端機敏設定抽離與文件、App 設計語言套用)由我主導完成;原始平台為在學期間的團隊專題與競賽作品。',
+          en: 'This modernization round — the web Vite migration and Eco-Fresh design system, the pure front-end mock/seed and GitHub Pages deployment, the backend secret-extraction and docs, and applying the shared design language to the app — was led and completed by me; the original platform was a team capstone and competition project from my studies.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '前端整站綁死後端,後端一離線就空白,無法當獨立 demo。',
+            en: 'The frontend was welded to the backend and went blank offline — no way to demo it on its own.',
+          },
+          s: {
+            zh: '在資料層與畫面之間插入一層 mock API,對外簽名與真實後端一致,底層改讀前端 seed 並以 localStorage 持久化;購物車、結帳、取貨碼、店家後台儀表板都能在無後端下完整跑完,直接靜態部署。',
+            en: 'Inserted a mock API layer between data and views with the same signatures as the real backend, but reading front-end seed and persisting through localStorage; cart, checkout, pickup codes and the merchant dashboard all run end-to-end with no backend, deployable as static files.',
+          },
+        },
+        {
+          c: {
+            zh: '四套 UI 樣式庫並存,視覺破碎、維護成本高。',
+            en: 'Four coexisting UI libraries left the visuals fragmented and expensive to maintain.',
+          },
+          s: {
+            zh: '先以 UI/UX 評估定出 Eco-Fresh 設計 token,再自建一套 Tailwind 元件庫(按鈕、卡片、標籤、對話框、分頁、評分、骨架⋯)逐頁替換,最終移除 MUI/Antd/Bootstrap/styled-components,收斂為單一設計系統。',
+            en: 'Started from a UX assessment to define the Eco-Fresh tokens, then built a Tailwind component kit (buttons, cards, badges, dialogs, tabs, rating, skeletons…) and replaced pages one by one — ultimately dropping MUI/Antd/Bootstrap/styled-components down to a single design system.',
+          },
+        },
+        {
+          c: {
+            zh: '後端要公開,但機敏設定散落在原始碼中。',
+            en: 'The backend was going public, but sensitive settings were scattered through the source.',
+          },
+          s: {
+            zh: '把 SECRET_KEY、資料庫、郵件與金鑰全部抽成環境變數並提供 .env.example 範本,補上 .gitignore、requirements 與 README,並將原本誤入版控的快取與資產取消追蹤——讓 repo 能安全開源。',
+            en: 'Extracted SECRET_KEY, database, mail and keys into environment variables with an .env.example template, added .gitignore, requirements and a README, and untracked cache and assets that had been committed by mistake — so the repo can be open-sourced safely.',
+          },
+        },
+      ],
+      facts: [
+        { value: '3', label: { zh: 'Web · App · 後端 repo', en: 'web · app · backend repos' } },
+        { value: '2', label: { zh: '消費者 / 店家雙端', en: 'consumer + merchant portals' } },
+        { value: '4→1', label: { zh: 'UI 樣式庫收斂', en: 'UI libraries consolidated' } },
+        { value: 'SDGs 2·12', label: { zh: '對應永續目標', en: 'mapped SDG targets' } },
+      ],
+      lessons: [
+        {
+          zh: '把舊專案變成能公開展示的作品集,最關鍵的往往不是重畫畫面,而是先讓它「能獨立運作」並「機敏資訊乾淨」——解耦後端與抽離設定,比視覺翻新更早要處理。',
+          en: 'Turning an old project into a shippable portfolio piece is less about redrawing screens than making it run standalone with clean secrets — decoupling the backend and extracting configuration come before any visual refresh.',
+        },
+        {
+          zh: '設計 token 先行,web 與 app 才能共享同一套視覺語言;一致性來自系統,而不是逐頁手刻。',
+          en: 'Design tokens first: only then can web and app share one visual language — consistency comes from the system, not from hand-styling each page.',
+        },
+      ],
+    },
+  },
 ];
