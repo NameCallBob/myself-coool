@@ -1454,4 +1454,125 @@ export const PROJECTS: Project[] = [
       ],
     },
   },
+  {
+    slug: 'four-times-for-cook',
+    domain: 'ai',
+    visibility: 'public',
+    title: {
+      zh: '四時煮食時 — AI 食療推薦與健康管理平台',
+      en: 'Four Times for Cook — AI Recipe & Health Platform',
+    },
+    oneLiner: {
+      zh: '2024 年科工館「教育部 113 年度 AI 健康應用計畫」的作品:BERT 實體標記食譜推薦、健康追蹤與剩食訂購;近期以 AI 輔助完成資安稽核與全面重構,開源上架為作品集。',
+      en: 'Built for the 2024 National Science and Technology Museum × MOE “AI Health Application” program — BERT-tagged recipe recommendation, health tracking and food-surplus ordering; recently hardened and rebuilt with AI assistance, open-sourced as a portfolio piece.',
+    },
+    scope: { zh: 'AI 健康應用計畫 · 自建 → AI 輔助重構', en: 'AI health program · self-built → AI-assisted rebuild' },
+    stack: ['DJANGO', 'DRF', 'BERT', 'PYTORCH', 'REACT', 'VITE', 'TAILWIND'],
+    keyMetric: { value: '175', label: { zh: '稽核發現修復', en: 'findings remediated' } },
+    links: {
+      live: 'https://namecallbob.github.io/4timesforcook_frontend/',
+      repo: 'https://github.com/NameCallBob/4timesforcook_frontend',
+    },
+    featured: true,
+    caseStudy: {
+      problem: [
+        {
+          zh: '四時煮食時是 2024 年參與科工館「教育部 113 年度 AI 健康應用計畫」的專題:把個人化食譜推薦、日常健康管理(卡路里/飲水/運動追蹤)、營養知識專區與「剩食訂購」結合成一個「吃得健康、不浪費食物」的平台。推薦引擎的核心是一個 BERT 實體標記(NER)模型——把使用者的自然語言需求拆成食材、營養、慢性病、過敏原等 12 類實體,再對食譜資料庫做知識查詢。兩年後,目標是把這個學生時期的專題翻新成能公開展示、且資安過關的作品集。',
+          en: 'Four Times for Cook was my 2024 project for the National Science and Technology Museum × Ministry of Education “AI Health Application” program: a platform folding personalized recipe recommendation, daily health tracking (calories / water / exercise), a nutrition knowledge base and food-surplus ordering into one “eat well, waste less” product. The recommendation engine centers on a BERT named-entity model that parses a user’s natural-language request into 12 entity classes — ingredient, nutrition, chronic disease, allergen and more — then runs a knowledge query over the recipe database. Two years on, the goal was to turn that student project into a public, security-clean portfolio piece.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '三個公開 repo(Django REST 後端、React 前端、PyTorch BERT 模型)。誠實揭露分工:原始專案(2024)由本人於計畫期間開發;近期這輪資安稽核與全面重構為 AI(Claude)輔助完成,每一項修復皆對應到可查證的 commit,數字不灌水。',
+          en: 'Three public repos — a Django REST backend, a React frontend and a PyTorch BERT model. Attribution kept honest: the original project (2024) is my own work from the program; the recent security audit and full rebuild were done with AI (Claude) assistance, every fix tied to a verifiable commit, no numbers inflated.',
+        },
+        {
+          zh: '展示環境沒有 MySQL、沒有 GPU、也沒有原始訓練資料,demo 仍必須完整可跑。',
+          en: 'The showcase environment has no MySQL, no GPU and no original training data, yet the demo still has to run in full.',
+        },
+        {
+          zh: '前端全部重寫後,仍要與既有 Django API 契約一字不差地對齊。',
+          en: 'After a full frontend rewrite, it still had to line up exactly with the existing Django API contract.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '一次跨三個 repo 的稽核以多代理平行進行,產出 175 項經對抗式驗證的發現(4 項 Critical),再依 P0 資安 → P1 正確性 → P2 架構的順序修復,落地為 54 個原子 commit、26 個回歸測試(後端 13、前端 8、模型 5)全數綠燈。',
+          en: 'A single audit across the three repos ran as parallel agents, producing 175 adversarially-verified findings (4 critical), remediated in a P0-security → P1-correctness → P2-architecture order and landed as 54 atomic commits with 26 regression tests (13 backend, 8 frontend, 5 model) all green.',
+        },
+        {
+          zh: '後端 Django 5 + DRF + SimpleJWT,四個領域 app(會員、食譜、紀錄、健康管理);BERT 為 bert-base-cased token classification、12 類 BIO 標籤,產出的 state_dict 供後端推論。前端從停止維護的 Create React App 全面重寫為 Vite + TypeScript + Tailwind + shadcn,綠色食療設計系統、11 個頁面、記憶體內權杖與集中式 API service 層。',
+          en: 'The backend is Django 5 + DRF + SimpleJWT across four domain apps (member, recipe, record, health); the BERT model is a bert-base-cased token classifier with 12 BIO labels whose state_dict feeds backend inference. The frontend was fully rewritten from the unmaintained Create React App to Vite + TypeScript + Tailwind + shadcn — a green “food-as-medicine” design system, 11 pages, in-memory tokens and a centralized API service layer.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '2024 年於計畫期間獨立開發原始三件式(後端 API、前端、BERT 模型)。2026 年這輪的資安稽核、後端硬化、前端重構與模型修復為 AI(Claude)輔助完成,分三個 repo 推進,commit 歷史與測試結果皆可查證。',
+          en: 'Independently built the original three pieces (backend API, frontend, BERT model) during the 2024 program. The 2026 security audit, backend hardening, frontend rebuild and model fixes were done with AI (Claude) assistance across the three repos, with verifiable commit history and test results.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '後端有兩個可直接利用的高風險漏洞:任何登入者能透過 ModelViewset 讀取、修改或刪除全部會員(IDOR),且忘記密碼只憑 email + 生日就能重設任意帳號密碼。',
+            en: 'The backend had two directly exploitable flaws: any logged-in user could read, edit or delete every member through a ModelViewset (IDOR), and password reset changed any account’s password given only an email and birthdate.',
+          },
+          s: {
+            zh: '把會員端點收斂為僅限本人的自助動作、移除自動 CRUD;忘記密碼改為簽章式一次性權杖流程並加上限流與不洩漏帳號存在與否;全域權限預設由「同時掛 IsAuthenticated 與 AllowAny(等於全開)」收斂為單一 IsAuthenticated。這些修復都寫成回歸測試(13 個,全綠)。',
+            en: 'Member endpoints were narrowed to owner-only self-service with the auto CRUD removed; password reset became a signed single-use-token flow with throttling and no account-existence leak; the global permission default — which had listed both IsAuthenticated and AllowAny, i.e. fully open — was collapsed to a single IsAuthenticated. Every fix was captured as a regression test (13, all green).',
+          },
+        },
+        {
+          c: {
+            zh: '食譜是平台主功能,卻每一次回應都 500——序列化器對一張從未被填入的屬性表呼叫 .get(),必然拋 DoesNotExist。',
+            en: 'Recipes are the platform’s core feature, yet every response 500’d — the serializer called .get() on an attributes table that was never populated, so it always raised DoesNotExist.',
+          },
+          s: {
+            zh: '把 .get() 改為 .filter().first() 並在無資料時回傳空屬性,連同 week_record、會員更新、健康目標計算等一連串必炸端點一併修好,讓核心流程真正能回資料。',
+            en: 'Changed .get() to .filter().first() returning empty attributes when absent, and fixed a chain of always-crashing endpoints alongside it — weekly records, profile update, health-target computation — so the core flows actually return data.',
+          },
+        },
+        {
+          c: {
+            zh: 'BERT 訓練腳本的 argmax 取在序列軸而非標籤軸,訓練直接崩潰;準確率又被除以恆為 2 的長度、且測試集同時被當驗證集(資料洩漏)——看似在訓練,數字卻毫無意義。',
+            en: 'The BERT trainer’s argmax reduced the sequence axis instead of the label axis, crashing training outright; accuracy was divided by a length that is always 2, and the test set doubled as the validation set (leakage) — it looked like it was training while the numbers meant nothing.',
+          },
+          s: {
+            zh: '修正 argmax 軸、拆出互斥的 train/val/test、以有效 token 正確計算準確率、換用 AdamW + 排程器、加上 seqeval 的實體級 F1 與固定亂數種子,並統一 state_dict 存/載契約。附一組小樣本 fixture,讓 python train.py 能在 CPU 上真正跑完一個 epoch 並存回可載入的模型。',
+            en: 'Fixed the argmax axis, split disjoint train/val/test sets, computed accuracy over valid tokens, switched to AdamW with a scheduler, added seqeval entity-level F1 and a fixed seed, and unified the state_dict save/load contract. A tiny sample fixture lets python train.py actually complete one epoch on CPU and save a reloadable model.',
+          },
+        },
+        {
+          c: {
+            zh: '前端 API base 硬編碼成一條早已失效的 ngrok 通道,任何人 clone 下來畫面全是錯誤;而作品集又需要在完全沒有後端的 GitHub Pages 上完整展示。',
+            en: 'The frontend’s API base was hard-coded to a long-dead ngrok tunnel, so anyone cloning it saw nothing but errors — and the portfolio still had to demo in full on GitHub Pages with no backend at all.',
+          },
+          s: {
+            zh: '重寫時內建「Demo 模式 / API 模式」切換:Demo 模式以 MSW 攔截每一支 API,回傳一整套繁中種子資料(食譜、營養、健康、剩食),讓網站在 GitHub Pages 上無需後端即可完整運作;前端 service 層對後端 18 個端點逐一比對,契約 18/18 對齊。',
+            en: 'The rewrite bakes in a Demo/API toggle: Demo mode intercepts every API call with MSW and returns a full set of Traditional-Chinese seed data (recipes, nutrition, health, surplus) so the site runs completely on GitHub Pages with no backend; the frontend service layer was checked against all 18 backend endpoints — 18/18 aligned.',
+          },
+        },
+      ],
+      facts: [
+        { value: '175', label: { zh: '稽核發現(4 Critical)', en: 'findings (4 critical)' } },
+        { value: '54', label: { zh: '原子 commit', en: 'atomic commits' } },
+        { value: '26', label: { zh: '回歸測試全綠', en: 'regression tests, all green' } },
+        { value: '3', label: { zh: 'repo:API · 前端 · 模型', en: 'repos: API · web · model' } },
+      ],
+      lessons: [
+        {
+          zh: '指標算錯比沒有指標更危險:BERT 的 argmax 取錯軸,讓訓練看起來在跑、印出的準確率卻毫無意義。模型類的「綠燈」一定要回頭確認算的是不是對的東西,而不是只看它有沒有印出數字。',
+          en: 'A wrong metric is more dangerous than no metric: the BERT argmax on the wrong axis made training look alive while the printed accuracy was meaningless. A model’s “green” must be checked for measuring the right thing, not just for printing a number.',
+        },
+        {
+          zh: '要讓舊專案變成能公開展示的作品集,先決條件是它「能在沒有後端的情況下獨立跑起來」:一層 seed/mock 模式比任何視覺翻新都更早該處理,否則 demo 連載入都失敗。',
+          en: 'Turning an old project into a public portfolio piece hinges first on running standalone with no backend: a seed/mock layer comes before any visual refresh — without it the demo fails to even load.',
+        },
+        {
+          zh: '重寫前端時,最該先鎖住的是與後端的 API 契約:先把 18 個端點逐一對齊,再重畫畫面,串接才不會在重構後悄悄斷掉。',
+          en: 'When rewriting a frontend, the API contract with the backend is what to lock first: aligning all 18 endpoints before redrawing screens keeps the integration from silently breaking after the refactor.',
+        },
+      ],
+    },
+  },
 ];

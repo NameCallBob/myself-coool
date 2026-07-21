@@ -48,4 +48,16 @@ export const EXPERIENCE: Experience[] = [
       en: 'Took part in the MOEA DIGI⁺Talent program and, with the EcoBǎo food-surplus marketplace project, presented the results on behalf of the Commerce Development Research Institute (CDRI).',
     },
   },
+  {
+    org: {
+      zh: '國立科學工藝博物館 × 教育部 113 年度 AI 健康應用計畫',
+      en: 'National Science and Technology Museum × MOE 2024 AI Health Application Program',
+    },
+    role: { zh: '參與學生 · 全端 + AI 模型開發', en: 'Participating student · full-stack + AI model' },
+    period: '2024',
+    summary: {
+      zh: '以「四時煮食時」食療推薦與健康管理平台參與科工館與教育部的 AI 健康應用計畫,獨立開發 Django 後端、React 前端與 BERT 實體標記推薦模型。',
+      en: 'Took part in the museum × MOE AI Health Application program with “Four Times for Cook”, a food-therapy recommendation and health-management platform — independently building the Django backend, React frontend and a BERT entity-tagging recommendation model.',
+    },
+  },
 ];
