@@ -1309,4 +1309,270 @@ export const PROJECTS: Project[] = [
     stack: ['AI AGENTS', 'SPEC-DRIVEN', 'VERIFICATION'],
     featured: false,
   },
+  {
+    slug: 'ecobao',
+    domain: 'fullstack',
+    visibility: 'public',
+    title: {
+      zh: '環飽 EcoBǎo 剩食訂購平台',
+      en: 'EcoBǎo Food-Surplus Marketplace',
+    },
+    oneLiner: {
+      zh: '媒合店家餘食與消費者的剩食訂購平台,消費者與店家雙端;近期重構為純前端 demo 並統一設計系統,作為公開作品集。',
+      en: 'A marketplace matching shops’ surplus food with buyers — consumer and merchant portals. Recently refactored into a standalone front-end demo with a unified design system, opened up as a public portfolio piece.',
+    },
+    scope: { zh: '剩食平台 · 現代化重構', en: 'Food-surplus platform · modernization' },
+    stack: ['REACT', 'VITE', 'TAILWIND', 'REACT NATIVE', 'DJANGO', 'DRF'],
+    keyMetric: { value: '4→1', label: { zh: 'UI 樣式庫收斂', en: 'UI libraries consolidated' } },
+    links: {
+      live: 'https://namecallbob.github.io/ecobaoFront/',
+      repo: 'https://github.com/NameCallBob/ecobaoFront',
+    },
+    featured: false,
+    screenshots: [
+      {
+        src: '/images/work/ecobao/home.webp',
+        alt: {
+          zh: '環飽首頁:惜食主標、搜尋列與平台減碳影響力數字',
+          en: 'EcoBǎo home: food-saving hero, search bar and platform impact stats',
+        },
+        caption: { zh: '消費者首頁(Eco-Fresh 設計系統)', en: 'Consumer home (Eco-Fresh design system)' },
+      },
+      {
+        src: '/images/work/ecobao/menu.webp',
+        alt: {
+          zh: '逛剩食頁:分類篩選、排序與剩食福袋商品卡(原價/優惠價/取貨倒數)',
+          en: 'Browse page: category filters, sorting and surplus-bag product cards with original/deal price and pickup countdown',
+        },
+        caption: { zh: '逛剩食(篩選與剩食福袋卡片)', en: 'Browse surplus (filters and surprise-bag cards)' },
+      },
+      {
+        src: '/images/work/ecobao/store.webp',
+        alt: {
+          zh: '店家頁:封面、評分與剩食商品分頁',
+          en: 'Store page: cover, rating and surplus-items tabs',
+        },
+        caption: { zh: '店家頁(評分與商品分頁)', en: 'Store page (rating and item tabs)' },
+      },
+      {
+        src: '/images/work/ecobao/dashboard.webp',
+        alt: {
+          zh: '店家後台營運總覽:營收/訂單 KPI、近 7 日圖表與剩食售出佔比',
+          en: 'Merchant dashboard: revenue/order KPIs, 7-day charts and surplus-sold share',
+        },
+        caption: { zh: '店家後台儀表板(recharts 圖表)', en: 'Merchant dashboard (recharts)' },
+      },
+    ],
+    caseStudy: {
+      problem: [
+        {
+          zh: '環飽 EcoBǎo 是一個以「剩食」為題的訂購媒合平台——店家把當日未售完但仍新鮮的餐點,以即期優惠或驚喜福袋的形式折扣出售,消費者於指定時段到店自取,藉此減少food waste。專案分為三個 codebase:React 網頁前端、React Native(Expo)行動 App 與 Django REST 後端,提供消費者與店家兩端介面。這輪工作的目標,是把這個學生時期的專題「翻新成能公開展示的作品集」。',
+          en: 'EcoBǎo is an ordering-and-matching marketplace built around food surplus — shops sell same-day unsold-but-fresh meals at a discount as “deals” or “surprise bags,” and buyers pick them up in a set window, cutting food waste. It spans three codebases: a React web frontend, a React Native (Expo) app and a Django REST backend, serving consumer and merchant sides. This round of work was about turning that student-era project into something presentable as a public portfolio piece.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '網頁前端原本綁死後端:透過 axios 打一組 ngrok 後端網址,一旦後端不在就整站空白,無法獨立展示。要當作品集 demo,必須讓它能脫離後端、部署到 GitHub Pages 靜態託管。',
+          en: 'The web frontend was hard-wired to the backend: it hit an ngrok URL via axios, so the whole site went blank without a live server — impossible to demo standalone. To become a portfolio demo it had to run without any backend and deploy to static GitHub Pages hosting.',
+        },
+        {
+          zh: '既有前端同時混用 MUI、Ant Design、Bootstrap 與 styled-components 四套樣式系統,視覺不一致、bundle 也肥。',
+          en: 'The existing frontend mixed four styling systems at once — MUI, Ant Design, Bootstrap and styled-components — producing inconsistent visuals and a heavy bundle.',
+        },
+        {
+          zh: '三個 repo 都要公開,後端原本把 SECRET_KEY、資料庫帳密與郵件設定寫死在程式碼裡,直接開源等於外洩設定。',
+          en: 'All three repos were going public, but the backend hardcoded its SECRET_KEY, database credentials and mail settings in source — open-sourcing as-is would leak configuration.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '前端從 Create React App 遷移到 Vite,並移除四套 UI 庫、收斂到單一 Tailwind 設計系統。設計語言以 UI/UX 評估重建為「Eco-Fresh(清新永續)」:翠綠主色 + 食物暖橙點綴、Noto Sans/Serif TC 中文字體,token 以 CSS 變數驅動、Web 與 App 共用,並支援深色模式與 prefers-reduced-motion。',
+          en: 'The web app was migrated from Create React App to Vite, the four UI libraries removed, and everything consolidated onto a single Tailwind design system. The visual language was rebuilt from a UX assessment into “Eco-Fresh”: emerald primary with a warm-amber food accent, Noto Sans/Serif TC for Chinese, tokens driven by CSS variables and shared across web and app, with dark mode and prefers-reduced-motion support.',
+        },
+        {
+          zh: '為了脫離後端,建立一層純前端 mock API + seed 資料(店家、剩食商品、活動、評價、訂單、會員),以模擬延遲與 localStorage 持久化重現購物車、下單與取貨碼流程;整站改用 HashRouter 以相容 GitHub Pages,並以 GitHub Actions 自動建置部署。',
+          en: 'To cut the backend dependency, a pure front-end mock API and seed dataset (stores, surplus items, campaigns, reviews, orders, members) was added — simulated latency plus localStorage persistence reproduce cart, checkout and pickup-code flows. Routing moved to HashRouter for GitHub Pages compatibility, with GitHub Actions building and deploying automatically.',
+        },
+        {
+          zh: '後端(Django 4 + DRF)把 SECRET_KEY、資料庫、郵件與 API 金鑰等機敏設定全數抽離為環境變數並附 .env.example;補上 requirements 與完整 README,移除測試殘檔與未使用模組,並將誤入版控的 __pycache__ 與資產取消追蹤。行動端(Expo / React Native)則導入共用設計 token 與 UI 原子元件、統一導覽與樣式。',
+          en: 'The backend (Django 4 + DRF) had all sensitive settings — SECRET_KEY, database, mail and API keys — extracted into environment variables with an .env.example; requirements and a full README were added, test leftovers and unused modules removed, and accidentally-tracked __pycache__ and assets untracked. The Expo / React Native app adopted the shared design tokens and UI atoms, unifying navigation and styling.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '本輪現代化重構(前端 Vite 遷移與 Eco-Fresh 設計系統、純前端 mock/seed 與 GitHub Pages 部署、後端機敏設定抽離與文件、App 設計語言套用)由我主導完成;原始平台為在學期間的團隊專題與競賽作品。',
+          en: 'This modernization round — the web Vite migration and Eco-Fresh design system, the pure front-end mock/seed and GitHub Pages deployment, the backend secret-extraction and docs, and applying the shared design language to the app — was led and completed by me; the original platform was a team capstone and competition project from my studies.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '前端整站綁死後端,後端一離線就空白,無法當獨立 demo。',
+            en: 'The frontend was welded to the backend and went blank offline — no way to demo it on its own.',
+          },
+          s: {
+            zh: '在資料層與畫面之間插入一層 mock API,對外簽名與真實後端一致,底層改讀前端 seed 並以 localStorage 持久化;購物車、結帳、取貨碼、店家後台儀表板都能在無後端下完整跑完,直接靜態部署。',
+            en: 'Inserted a mock API layer between data and views with the same signatures as the real backend, but reading front-end seed and persisting through localStorage; cart, checkout, pickup codes and the merchant dashboard all run end-to-end with no backend, deployable as static files.',
+          },
+        },
+        {
+          c: {
+            zh: '四套 UI 樣式庫並存,視覺破碎、維護成本高。',
+            en: 'Four coexisting UI libraries left the visuals fragmented and expensive to maintain.',
+          },
+          s: {
+            zh: '先以 UI/UX 評估定出 Eco-Fresh 設計 token,再自建一套 Tailwind 元件庫(按鈕、卡片、標籤、對話框、分頁、評分、骨架⋯)逐頁替換,最終移除 MUI/Antd/Bootstrap/styled-components,收斂為單一設計系統。',
+            en: 'Started from a UX assessment to define the Eco-Fresh tokens, then built a Tailwind component kit (buttons, cards, badges, dialogs, tabs, rating, skeletons…) and replaced pages one by one — ultimately dropping MUI/Antd/Bootstrap/styled-components down to a single design system.',
+          },
+        },
+        {
+          c: {
+            zh: '後端要公開,但機敏設定散落在原始碼中。',
+            en: 'The backend was going public, but sensitive settings were scattered through the source.',
+          },
+          s: {
+            zh: '把 SECRET_KEY、資料庫、郵件與金鑰全部抽成環境變數並提供 .env.example 範本,補上 .gitignore、requirements 與 README,並將原本誤入版控的快取與資產取消追蹤——讓 repo 能安全開源。',
+            en: 'Extracted SECRET_KEY, database, mail and keys into environment variables with an .env.example template, added .gitignore, requirements and a README, and untracked cache and assets that had been committed by mistake — so the repo can be open-sourced safely.',
+          },
+        },
+      ],
+      facts: [
+        { value: '3', label: { zh: 'Web · App · 後端 repo', en: 'web · app · backend repos' } },
+        { value: '2', label: { zh: '消費者 / 店家雙端', en: 'consumer + merchant portals' } },
+        { value: '4→1', label: { zh: 'UI 樣式庫收斂', en: 'UI libraries consolidated' } },
+        { value: 'SDGs 2·12', label: { zh: '對應永續目標', en: 'mapped SDG targets' } },
+      ],
+      lessons: [
+        {
+          zh: '把舊專案變成能公開展示的作品集,最關鍵的往往不是重畫畫面,而是先讓它「能獨立運作」並「機敏資訊乾淨」——解耦後端與抽離設定,比視覺翻新更早要處理。',
+          en: 'Turning an old project into a shippable portfolio piece is less about redrawing screens than making it run standalone with clean secrets — decoupling the backend and extracting configuration come before any visual refresh.',
+        },
+        {
+          zh: '設計 token 先行,web 與 app 才能共享同一套視覺語言;一致性來自系統,而不是逐頁手刻。',
+          en: 'Design tokens first: only then can web and app share one visual language — consistency comes from the system, not from hand-styling each page.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'four-times-for-cook',
+    domain: 'ai',
+    visibility: 'public',
+    title: {
+      zh: '四時煮食時 — AI 食療推薦與健康管理平台',
+      en: 'Four Times for Cook — AI Recipe & Health Platform',
+    },
+    oneLiner: {
+      zh: '2024 年科工館「教育部 113 年度 AI 健康應用計畫」的作品:BERT 實體標記食譜推薦、健康追蹤與剩食訂購;近期以 AI 輔助完成資安稽核與全面重構,開源上架為作品集。',
+      en: 'Built for the 2024 National Science and Technology Museum × MOE “AI Health Application” program — BERT-tagged recipe recommendation, health tracking and food-surplus ordering; recently hardened and rebuilt with AI assistance, open-sourced as a portfolio piece.',
+    },
+    scope: { zh: 'AI 健康應用計畫 · 自建 → AI 輔助重構', en: 'AI health program · self-built → AI-assisted rebuild' },
+    stack: ['DJANGO', 'DRF', 'BERT', 'PYTORCH', 'REACT', 'VITE', 'TAILWIND'],
+    keyMetric: { value: '175', label: { zh: '稽核發現修復', en: 'findings remediated' } },
+    links: {
+      live: 'https://namecallbob.github.io/4timesforcook_frontend/',
+      repo: 'https://github.com/NameCallBob/4timesforcook_frontend',
+    },
+    featured: true,
+    caseStudy: {
+      problem: [
+        {
+          zh: '四時煮食時是 2024 年參與科工館「教育部 113 年度 AI 健康應用計畫」的專題:把個人化食譜推薦、日常健康管理(卡路里/飲水/運動追蹤)、營養知識專區與「剩食訂購」結合成一個「吃得健康、不浪費食物」的平台。推薦引擎的核心是一個 BERT 實體標記(NER)模型——把使用者的自然語言需求拆成食材、營養、慢性病、過敏原等 12 類實體,再對食譜資料庫做知識查詢。兩年後,目標是把這個學生時期的專題翻新成能公開展示、且資安過關的作品集。',
+          en: 'Four Times for Cook was my 2024 project for the National Science and Technology Museum × Ministry of Education “AI Health Application” program: a platform folding personalized recipe recommendation, daily health tracking (calories / water / exercise), a nutrition knowledge base and food-surplus ordering into one “eat well, waste less” product. The recommendation engine centers on a BERT named-entity model that parses a user’s natural-language request into 12 entity classes — ingredient, nutrition, chronic disease, allergen and more — then runs a knowledge query over the recipe database. Two years on, the goal was to turn that student project into a public, security-clean portfolio piece.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '三個公開 repo(Django REST 後端、React 前端、PyTorch BERT 模型)。誠實揭露分工:原始專案(2024)由本人於計畫期間開發;近期這輪資安稽核與全面重構為 AI(Claude)輔助完成,每一項修復皆對應到可查證的 commit,數字不灌水。',
+          en: 'Three public repos — a Django REST backend, a React frontend and a PyTorch BERT model. Attribution kept honest: the original project (2024) is my own work from the program; the recent security audit and full rebuild were done with AI (Claude) assistance, every fix tied to a verifiable commit, no numbers inflated.',
+        },
+        {
+          zh: '展示環境沒有 MySQL、沒有 GPU、也沒有原始訓練資料,demo 仍必須完整可跑。',
+          en: 'The showcase environment has no MySQL, no GPU and no original training data, yet the demo still has to run in full.',
+        },
+        {
+          zh: '前端全部重寫後,仍要與既有 Django API 契約一字不差地對齊。',
+          en: 'After a full frontend rewrite, it still had to line up exactly with the existing Django API contract.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '一次跨三個 repo 的稽核以多代理平行進行,產出 175 項經對抗式驗證的發現(4 項 Critical),再依 P0 資安 → P1 正確性 → P2 架構的順序修復,落地為 54 個原子 commit、26 個回歸測試(後端 13、前端 8、模型 5)全數綠燈。',
+          en: 'A single audit across the three repos ran as parallel agents, producing 175 adversarially-verified findings (4 critical), remediated in a P0-security → P1-correctness → P2-architecture order and landed as 54 atomic commits with 26 regression tests (13 backend, 8 frontend, 5 model) all green.',
+        },
+        {
+          zh: '後端 Django 5 + DRF + SimpleJWT,四個領域 app(會員、食譜、紀錄、健康管理);BERT 為 bert-base-cased token classification、12 類 BIO 標籤,產出的 state_dict 供後端推論。前端從停止維護的 Create React App 全面重寫為 Vite + TypeScript + Tailwind + shadcn,綠色食療設計系統、11 個頁面、記憶體內權杖與集中式 API service 層。',
+          en: 'The backend is Django 5 + DRF + SimpleJWT across four domain apps (member, recipe, record, health); the BERT model is a bert-base-cased token classifier with 12 BIO labels whose state_dict feeds backend inference. The frontend was fully rewritten from the unmaintained Create React App to Vite + TypeScript + Tailwind + shadcn — a green “food-as-medicine” design system, 11 pages, in-memory tokens and a centralized API service layer.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '2024 年於計畫期間獨立開發原始三件式(後端 API、前端、BERT 模型)。2026 年這輪的資安稽核、後端硬化、前端重構與模型修復為 AI(Claude)輔助完成,分三個 repo 推進,commit 歷史與測試結果皆可查證。',
+          en: 'Independently built the original three pieces (backend API, frontend, BERT model) during the 2024 program. The 2026 security audit, backend hardening, frontend rebuild and model fixes were done with AI (Claude) assistance across the three repos, with verifiable commit history and test results.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '後端有兩個可直接利用的高風險漏洞:任何登入者能透過 ModelViewset 讀取、修改或刪除全部會員(IDOR),且忘記密碼只憑 email + 生日就能重設任意帳號密碼。',
+            en: 'The backend had two directly exploitable flaws: any logged-in user could read, edit or delete every member through a ModelViewset (IDOR), and password reset changed any account’s password given only an email and birthdate.',
+          },
+          s: {
+            zh: '把會員端點收斂為僅限本人的自助動作、移除自動 CRUD;忘記密碼改為簽章式一次性權杖流程並加上限流與不洩漏帳號存在與否;全域權限預設由「同時掛 IsAuthenticated 與 AllowAny(等於全開)」收斂為單一 IsAuthenticated。這些修復都寫成回歸測試(13 個,全綠)。',
+            en: 'Member endpoints were narrowed to owner-only self-service with the auto CRUD removed; password reset became a signed single-use-token flow with throttling and no account-existence leak; the global permission default — which had listed both IsAuthenticated and AllowAny, i.e. fully open — was collapsed to a single IsAuthenticated. Every fix was captured as a regression test (13, all green).',
+          },
+        },
+        {
+          c: {
+            zh: '食譜是平台主功能,卻每一次回應都 500——序列化器對一張從未被填入的屬性表呼叫 .get(),必然拋 DoesNotExist。',
+            en: 'Recipes are the platform’s core feature, yet every response 500’d — the serializer called .get() on an attributes table that was never populated, so it always raised DoesNotExist.',
+          },
+          s: {
+            zh: '把 .get() 改為 .filter().first() 並在無資料時回傳空屬性,連同 week_record、會員更新、健康目標計算等一連串必炸端點一併修好,讓核心流程真正能回資料。',
+            en: 'Changed .get() to .filter().first() returning empty attributes when absent, and fixed a chain of always-crashing endpoints alongside it — weekly records, profile update, health-target computation — so the core flows actually return data.',
+          },
+        },
+        {
+          c: {
+            zh: 'BERT 訓練腳本的 argmax 取在序列軸而非標籤軸,訓練直接崩潰;準確率又被除以恆為 2 的長度、且測試集同時被當驗證集(資料洩漏)——看似在訓練,數字卻毫無意義。',
+            en: 'The BERT trainer’s argmax reduced the sequence axis instead of the label axis, crashing training outright; accuracy was divided by a length that is always 2, and the test set doubled as the validation set (leakage) — it looked like it was training while the numbers meant nothing.',
+          },
+          s: {
+            zh: '修正 argmax 軸、拆出互斥的 train/val/test、以有效 token 正確計算準確率、換用 AdamW + 排程器、加上 seqeval 的實體級 F1 與固定亂數種子,並統一 state_dict 存/載契約。附一組小樣本 fixture,讓 python train.py 能在 CPU 上真正跑完一個 epoch 並存回可載入的模型。',
+            en: 'Fixed the argmax axis, split disjoint train/val/test sets, computed accuracy over valid tokens, switched to AdamW with a scheduler, added seqeval entity-level F1 and a fixed seed, and unified the state_dict save/load contract. A tiny sample fixture lets python train.py actually complete one epoch on CPU and save a reloadable model.',
+          },
+        },
+        {
+          c: {
+            zh: '前端 API base 硬編碼成一條早已失效的 ngrok 通道,任何人 clone 下來畫面全是錯誤;而作品集又需要在完全沒有後端的 GitHub Pages 上完整展示。',
+            en: 'The frontend’s API base was hard-coded to a long-dead ngrok tunnel, so anyone cloning it saw nothing but errors — and the portfolio still had to demo in full on GitHub Pages with no backend at all.',
+          },
+          s: {
+            zh: '重寫時內建「Demo 模式 / API 模式」切換:Demo 模式以 MSW 攔截每一支 API,回傳一整套繁中種子資料(食譜、營養、健康、剩食),讓網站在 GitHub Pages 上無需後端即可完整運作;前端 service 層對後端 18 個端點逐一比對,契約 18/18 對齊。',
+            en: 'The rewrite bakes in a Demo/API toggle: Demo mode intercepts every API call with MSW and returns a full set of Traditional-Chinese seed data (recipes, nutrition, health, surplus) so the site runs completely on GitHub Pages with no backend; the frontend service layer was checked against all 18 backend endpoints — 18/18 aligned.',
+          },
+        },
+      ],
+      facts: [
+        { value: '175', label: { zh: '稽核發現(4 Critical)', en: 'findings (4 critical)' } },
+        { value: '54', label: { zh: '原子 commit', en: 'atomic commits' } },
+        { value: '26', label: { zh: '回歸測試全綠', en: 'regression tests, all green' } },
+        { value: '3', label: { zh: 'repo:API · 前端 · 模型', en: 'repos: API · web · model' } },
+      ],
+      lessons: [
+        {
+          zh: '指標算錯比沒有指標更危險:BERT 的 argmax 取錯軸,讓訓練看起來在跑、印出的準確率卻毫無意義。模型類的「綠燈」一定要回頭確認算的是不是對的東西,而不是只看它有沒有印出數字。',
+          en: 'A wrong metric is more dangerous than no metric: the BERT argmax on the wrong axis made training look alive while the printed accuracy was meaningless. A model’s “green” must be checked for measuring the right thing, not just for printing a number.',
+        },
+        {
+          zh: '要讓舊專案變成能公開展示的作品集,先決條件是它「能在沒有後端的情況下獨立跑起來」:一層 seed/mock 模式比任何視覺翻新都更早該處理,否則 demo 連載入都失敗。',
+          en: 'Turning an old project into a public portfolio piece hinges first on running standalone with no backend: a seed/mock layer comes before any visual refresh — without it the demo fails to even load.',
+        },
+        {
+          zh: '重寫前端時,最該先鎖住的是與後端的 API 契約:先把 18 個端點逐一對齊,再重畫畫面,串接才不會在重構後悄悄斷掉。',
+          en: 'When rewriting a frontend, the API contract with the backend is what to lock first: aligning all 18 endpoints before redrawing screens keeps the integration from silently breaking after the refactor.',
+        },
+      ],
+    },
+  },
 ];
