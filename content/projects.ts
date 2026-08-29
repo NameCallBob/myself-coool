@@ -22,6 +22,9 @@ export type CaseStudy = {
 
 export type Screenshot = { src: string; alt: Localized; caption: Localized };
 
+/** Architecture / flow diagram derived from the real codebase (SVG, Mermaid-authored) */
+export type Diagram = { src: string; alt: Localized; caption: Localized };
+
 export type Project = {
   slug: string;
   title: Localized;
@@ -38,6 +41,8 @@ export type Project = {
   caseStudy?: CaseStudy;
   /** Screenshots — always mock/synthetic data, never real PII */
   screenshots?: Screenshot[];
+  /** Architecture diagrams — for backend/ML work that has no UI worth showing */
+  diagrams?: Diagram[];
 };
 
 export const PROJECTS: Project[] = [
@@ -80,12 +85,12 @@ export const PROJECTS: Project[] = [
       ],
       architecture: [
         {
-          zh: '模組化單體:Django 4.2 + DRF 依領域切成 36 個功能 app(出勤、排班、薪資、簽核、招募、資產、勞健保⋯),約 215 個資料模型、188 個資源路由,展開後在驗收中實測了 728 個端點。刻意不拆微服務——薪資與簽核這類跨模組流程在單一交易邊界裡簡單得多。',
-          en: 'A modular monolith: Django 4.2 + DRF split into 36 domain apps (attendance, scheduling, payroll, approvals, recruiting, assets, labor insurance…), with ~215 models and 188 registered resource routes — 728 concrete endpoints exercised during acceptance. Deliberately not microservices: payroll and approval flows are far simpler inside one transaction boundary.',
+          zh: '模組化單體:Django 4.2+ 與 DRF 依領域切成 36 個功能 app(出勤、排班、薪資、簽核、招募、資產、勞健保⋯),241 個資料模型、188 個資源路由,展開後在驗收中實測了 728 個端點。刻意不拆微服務——薪資與簽核這類跨模組流程在單一交易邊界裡簡單得多。',
+          en: 'A modular monolith: Django 4.2+ and DRF split into 36 domain apps (attendance, scheduling, payroll, approvals, recruiting, assets, labor insurance…), with 241 models and 188 registered resource routes — 728 concrete endpoints exercised during acceptance. Deliberately not microservices: payroll and approval flows are far simpler inside one transaction boundary.',
         },
         {
-          zh: '多租戶採 shared-schema、row-level 隔離:middleware 解析租戶,304 個類別繼承租戶感知基底。非同步層以 Celery + Beat 處理班表產生、出勤歸檔與法規/假日同步;Redis 作快取與 Channel;資料庫可依環境切換 PostgreSQL 或 MySQL;CI 用 GitHub Actions + pre-commit,並附 Prometheus / Grafana / Loki 可觀測性編排。',
-          en: 'Multi-tenancy is shared-schema with row-level isolation: middleware resolves the tenant and 304 classes inherit the tenant-aware base. Async work runs on Celery + Beat — shift generation, attendance archiving, holiday/regulation sync; Redis backs cache and channels; the database switches between PostgreSQL and MySQL per environment. CI runs on GitHub Actions with pre-commit, plus a Prometheus / Grafana / Loki observability stack.',
+          zh: '多租戶採 shared-schema、row-level 隔離:middleware 解析租戶,241 個模型中有 186 個帶租戶欄位、繼承租戶感知基底。非同步層以 Celery + Beat 處理班表產生、出勤歸檔與法規/假日同步;Redis 作快取與 Channel;資料庫可依環境切換 PostgreSQL 或 MySQL;CI 用 GitHub Actions + pre-commit,並附 Prometheus / Grafana / Loki 可觀測性編排。',
+          en: 'Multi-tenancy is shared-schema with row-level isolation: middleware resolves the tenant and 186 of the 241 models carry a tenant column by inheriting the tenant-aware base. Async work runs on Celery + Beat — shift generation, attendance archiving, holiday/regulation sync; Redis backs cache and channels; the database switches between PostgreSQL and MySQL per environment. CI runs on GitHub Actions with pre-commit, plus a Prometheus / Grafana / Loki observability stack.',
         },
       ],
       responsibilities: [
@@ -128,7 +133,7 @@ export const PROJECTS: Project[] = [
       ],
       facts: [
         { value: '36', label: { zh: '功能模組', en: 'domain modules' } },
-        { value: '215', label: { zh: '資料模型', en: 'data models' } },
+        { value: '241', label: { zh: '資料模型', en: 'data models' } },
         { value: '728', label: { zh: '端點實測', en: 'endpoints tested' } },
         { value: '87.5%', label: { zh: '驗收通過率', en: 'acceptance pass rate' } },
       ],
@@ -143,6 +148,131 @@ export const PROJECTS: Project[] = [
         },
       ],
     },
+    screenshots: [
+      {
+        src: '/images/work/hris-saas/payroll-management.webp',
+        alt: {
+          zh: '薪資管理頁:年份/月份/狀態篩選、人數與總薪資 KPI,以及本薪、加項、扣項、實發金額與已計算/已發放狀態的薪資表',
+          en: 'Payroll management: year, month and status filters, headcount and total-payroll KPIs, and a table of base pay, additions, deductions, net pay and calculated/paid status',
+        },
+        caption: {
+          zh: '薪資管理:試算、批次建立與匯出收在同一頁。畫面上每一個金額,在資料庫裡都是加密欄位——payroll_records 的 18 個金額欄位全數使用 EncryptedDecimalField。資料為合成種子資料。',
+          en: 'Payroll management — trial calculation, batch creation and export on one screen. Every amount shown is an encrypted column underneath: all 18 money fields on payroll_records use EncryptedDecimalField. Synthetic seed data.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/payroll-api-browsable.webp',
+        alt: {
+          zh: '同一個薪資模組的 DRF browsable API:11 個自訂 action 連結、viewset docstring 渲染出的 OWASP 安全註記,以及 {data, pagination} 信封格式的 JSON 回應',
+          en: 'The DRF browsable API for the same payroll module: eleven custom action links, OWASP security notes rendered from the viewset docstring, and a JSON response in the project’s {data, pagination} envelope',
+        },
+        caption: {
+          zh: '同一個薪資模組,從 API 這一側看。頁面上那兩段 OWASP A01/A02 註記是直接由 viewset 的 docstring 渲染出來的:租戶隔離與敏感欄位保護寫在程式碼裡,而不是另一份文件裡。',
+          en: 'The same payroll module seen from the API side. The two OWASP A01/A02 notes on the page render straight out of the viewset docstring — tenant isolation and sensitive-field handling are stated in the code itself, not in a separate document.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/recruitment-funnel.webp',
+        alt: {
+          zh: '招聘儀表板:開放職缺/待處理應徵者/本週面試/待發 Offer 四張 KPI 卡、逐階段標示轉換率的招聘漏斗,以及各職缺的錄取進度',
+          en: 'Recruitment dashboard: KPI cards for open roles, candidates to review, interviews this week and pending offers; a hiring funnel labelled with stage-to-stage conversion; and per-opening progress',
+        },
+        caption: {
+          zh: '招聘儀表板:漏斗逐階段標出轉換率,右側是各職缺的錄取進度。數字來自種子資料(3 個職缺、5 位應徵者),不是營運數據。',
+          en: 'Recruitment dashboard — the funnel labels conversion at each stage, with per-opening hiring progress alongside. The numbers come from seed data (three openings, five candidates), not from production.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/scheduling-calendar.webp',
+        alt: {
+          zh: '排班日曆月檢視:月/週/日/列表四種檢視切換、早班/午班/晚班/全天班的色彩圖例,以及自動排班與新增班次',
+          en: 'Scheduling calendar in month view: month/week/day/list view switcher, a colour legend for morning, afternoon, night and full-day shifts, and auto-schedule and add-shift actions',
+        },
+        caption: {
+          zh: '排班月檢視,班別以顏色標示。「自動排班」對應後端的 scheduling.generate_monthly_schedules——同一個任務也掛在 Celery Beat 上,每月 25 日產生下個月班表。',
+          en: 'Scheduling in month view, shifts colour-coded by type. The auto-schedule button maps to the backend’s scheduling.generate_monthly_schedules — the same task also sits on Celery Beat, generating next month’s roster on the 25th.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/mobile-scheduling-agenda.webp',
+        alt: {
+          zh: '390px 寬的排班畫面:改為逐日的日程列表版面,配長按拖放提示、底部分頁列與浮動新增按鈕',
+          en: 'The scheduling screen at 390px: a day-by-day agenda layout with a long-press drag hint, a bottom tab bar and a floating add button',
+        },
+        caption: {
+          zh: '同一個排班模組在 390px 寬。不是把月曆縮小,而是換成專屬的日程列表版面,導覽也從側邊欄改為底部分頁列。',
+          en: 'The same scheduling module at 390px. Not a shrunken month grid — a dedicated agenda layout, with navigation moving from the sidebar to a bottom tab bar.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/openapi-swagger.webp',
+        alt: {
+          zh: 'drf-spectacular 產生的 Swagger UI,v1 群組展開,列出 tenants 相關的 GET/POST/PUT/PATCH/DELETE 端點',
+          en: 'Swagger UI generated by drf-spectacular with the v1 group expanded, listing GET/POST/PUT/PATCH/DELETE endpoints under tenants',
+        },
+        caption: {
+          zh: 'drf-spectacular 由 188 條路由註冊自動產生的 OpenAPI 3.0 文件。截圖只是開頭一小段:整份 schema 有 1,222 條路徑、1,919 個操作,完整渲染高度約 21 萬像素。',
+          en: 'The OpenAPI 3.0 document drf-spectacular generates from 188 router registrations. The screenshot is only the opening slice: the full schema has 1,222 paths and 1,919 operations, and renders about 219,000px tall.',
+        },
+      },
+    ],
+    diagrams: [
+      {
+        src: '/images/work/hris-saas/diagram-tenant-isolation.svg',
+        alt: {
+          zh: '多租戶隔離四層圖:middleware 解析租戶、view 層 TenantFilterMixin 過濾、ORM 層刻意不做隱式 scope,以及四類已修復的歷史繞過路徑',
+          en: 'Four-stage tenant isolation: middleware resolves the tenant, the view layer filters via TenantFilterMixin, the ORM deliberately applies no implicit scope, and four classes of historical bypass are shown fixed',
+        },
+        caption: {
+          zh: '這張圖的重點不是「有做隔離」,而是隔離究竟落在哪一層。租戶由 middleware 依序從 header、子網域、使用者主租戶解析,再由 view 層的 TenantFilterMixin 過濾;ORM 刻意不做隱式 scope——TenantAwareManager 只過濾 is_deleted,repo 裡有一條測試專門斷言這件事。代價寫在圖的下半:200 個 viewset 中 155 個繼承過濾 mixin,另外 45 個仍是原生 DRF base、只能逐一手動加條件;而歷史上四類已修復的漏洞,無一例外都發生在 ORM 之上的 view 與 cache 程式碼裡。',
+          en: 'The point of this figure is not that isolation exists, but which layer it lives in. Middleware resolves the tenant — header, then subdomain, then the user’s primary tenant — and TenantFilterMixin filters at the view layer. The ORM deliberately carries no implicit scope: TenantAwareManager filters only is_deleted, and a test in the repo exists to assert exactly that. The cost is drawn along the bottom: 155 of 200 viewsets inherit the mixin, the other 45 still sit on raw DRF bases and are scoped by hand — and every one of the four fixed historical leaks happened above the ORM, in view or cache code.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/diagram-system-architecture.svg',
+        alt: {
+          zh: '執行期架構圖:gunicorn 與 ASGI 兩個入口、Django 請求管線、36 個 app 與非同步層,以及 PostgreSQL/Redis、LDAP/Keycloak 與可觀測性堆疊',
+          en: 'Runtime architecture: gunicorn and ASGI entrypoints, the Django request pipeline, 36 apps and the async tier, alongside PostgreSQL/Redis, LDAP/Keycloak and the observability stack',
+        },
+        caption: {
+          zh: '執行期全貌:HTTP 走 gunicorn、WebSocket 走 ASGI,同一條 middleware 管線收斂到 36 個 app、241 個模型(其中 186 個帶租戶欄位)、188 條路由。Redis 一個實例同時扮演快取、session、Celery broker 與 channel layer。右下角的 ELK 被標為 NOT WIRED——docker-compose 定義了這三個服務,但 LOGGING 裡沒有任何 handler 餵它,所以照實畫成虛線。',
+          en: 'The runtime as a whole: HTTP through gunicorn, WebSockets through ASGI, both converging on one middleware pipeline into 36 apps, 241 models (186 of them tenant-scoped) and 188 routes. A single Redis instance is simultaneously cache, session store, Celery broker and channel layer. Bottom right, ELK is marked NOT WIRED — docker-compose defines the three services, but no handler in LOGGING feeds them, so it is drawn dashed rather than quietly omitted.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/diagram-leave-request-flow.svg',
+        alt: {
+          zh: '請假送出與核准的序列圖:交易邊界、假期餘額列的 SELECT ... FOR UPDATE、審計日誌經 Celery 寫入與 WebSocket 推播',
+          en: 'Sequence diagram of leave submission and approval: the transaction boundary, SELECT … FOR UPDATE on the balance row, the audit log written through Celery, and the WebSocket push',
+        },
+        caption: {
+          zh: '請假從送出到核准的完整往返。真正值得看的是額度帳本:送出時鎖住餘額列(SELECT ... FOR UPDATE)把 pending_days 加上去,核准時在同一把鎖裡把 pending 轉成 used——取消則反向還原。審計日誌預設丟給 Celery 的 audit_logs 佇列,但 dispatch 失敗會退回同步寫入,不會靜默丟失。',
+          en: 'The full round trip of a leave request, from submission to approval. The part worth reading is the balance ledger: submission locks the balance row (SELECT … FOR UPDATE) and adds to pending_days; approval converts pending into used under that same lock, and cancellation reverses it. Audit entries go to Celery’s audit_logs queue by default — but a failed dispatch falls back to a synchronous write rather than disappearing.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/diagram-celery-topology.svg',
+        alt: {
+          zh: 'Celery 拓撲圖:37 條 beat 排程、task_routes 路由規則、7 個宣告的隊列與 worker,以及 9 條指向未註冊 task 的排程',
+          en: 'Celery topology: 37 beat entries, the task_routes rules, seven declared queues and the worker, plus the nine schedule entries naming unregistered tasks',
+        },
+        caption: {
+          zh: '非同步層的實際樣貌:37 條 beat 排程、task_routes 的前綴路由、7 個帶優先級的隊列。這張圖真正的價值在紅色那一區——37 條排程裡有 9 條指向不存在的 task:名稱與 @shared_task 的註冊名不符、模組根本沒建(apps/assets/tasks.py、apps/insurance/tasks.py)、或函式從未定義。另外 emails 隊列沒有任何生產者,crawlers 隊列被排程引用卻不在 task_queues 裡。已知未修,照原樣畫出來。',
+          en: 'What the async tier actually looks like: 37 beat entries, prefix-based task_routes, seven priority-tagged queues. The value of the figure is the red band — nine of those 37 entries point at a task that is not registered: the name does not match the @shared_task registration, the module was never created (apps/assets/tasks.py, apps/insurance/tasks.py), or the function is defined nowhere. Separately, the emails queue has no producer, and the crawlers queue is referenced by a schedule but never declared in task_queues. Known and unfixed, drawn as-is.',
+        },
+      },
+      {
+        src: '/images/work/hris-saas/diagram-core-erd.svg',
+        alt: {
+          zh: '18 張核心資料表的 ERD:租戶、成員、員工、組織、請假、出勤、薪資、簽核流程與審計日誌,欄位與資料表名皆為真名',
+          en: 'ERD of 18 core tables — tenants, memberships, employees, org units, leave, attendance, payroll, workflow and the audit log — with real table and column names throughout',
+        },
+        caption: {
+          zh: '18 張核心資料表,db_table 與欄位都是真名。圖裡藏著多租戶設計的兩個關鍵決定:accounts_user 上沒有 tenant_id——歸屬完全走 tenants_tenant_user 這張成員表,所以一個帳號可以屬於多個租戶;而 accounts_user.employee_id 是全域唯一,不是每租戶唯一。這兩點合起來,說明了為什麼隔離只能寫在查詢層,而不是靠資料表的唯一鍵擋下來。',
+          en: 'Eighteen core tables, with real db_table and column names throughout. Two decisions of the multi-tenant design are visible in it: accounts_user carries no tenant_id — membership lives entirely in the tenants_tenant_user table, so one account can belong to several tenants — and accounts_user.employee_id is globally unique rather than unique per tenant. Together they explain why isolation has to be written at the query layer instead of being caught by a table constraint.',
+        },
+      },
+    ],
   },
   {
     slug: 'ai-nail-platform',
@@ -502,32 +632,6 @@ export const PROJECTS: Project[] = [
     keyMetric: { value: '100+', label: { zh: 'API endpoints', en: 'API endpoints' } },
     links: { live: 'https://aaic.nkust.edu.tw' },
     featured: true,
-    screenshots: [
-      {
-        src: '/images/work/nkust-alumni/home.webp',
-        alt: {
-          zh: '系友會平台首頁:主視覺輪播、搜尋列與最新消息',
-          en: 'Alumni platform home: hero carousel, search bar and latest news',
-        },
-        caption: { zh: '首頁(輪播與最新消息)', en: 'Home (carousel and news)' },
-      },
-      {
-        src: '/images/work/nkust-alumni/search.webp',
-        alt: {
-          zh: '系友企業搜尋頁:關鍵字搜尋、行業別篩選與企業卡片',
-          en: 'Alumni company search: keyword search, industry filters and company cards',
-        },
-        caption: { zh: '系友企業搜尋(篩選與排序)', en: 'Company search (filters and sorting)' },
-      },
-      {
-        src: '/images/work/nkust-alumni/recruit.webp',
-        alt: {
-          zh: '系友企業職缺頁:表格/卡片雙檢視的徵才列表',
-          en: 'Alumni job board: table and card views of postings',
-        },
-        caption: { zh: '徵才職缺(表格/卡片雙檢視)', en: 'Job board (table/card views)' },
-      },
-    ],
     caseStudy: {
       problem: [
         {
@@ -614,6 +718,131 @@ export const PROJECTS: Project[] = [
         },
       ],
     },
+    screenshots: [
+      {
+        src: '/images/work/nkust-alumni/company-search.webp',
+        alt: {
+          zh: '系友企業搜尋頁:關鍵字搜尋列、行業別篩選標籤、結果筆數與網格/列表切換,下方為企業卡片',
+          en: 'Alumni company search: keyword bar, industry filter chips, result count and a grid/list toggle above the company cards',
+        },
+        caption: {
+          zh: '系友企業搜尋。行業別標籤由 company_industry 資料表長出來,不是寫死的清單;卡片影像是本次示範產生的合成圖,真實企業照片留在正式資料庫裡。',
+          en: 'Alumni company search. The industry chips come from the company_industry table rather than a hard-coded list; the card imagery is synthetic, generated for this demo run — real company photos stay in the production database.',
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/recruit-board.webp',
+        alt: {
+          zh: '系友企業職缺頁的表格檢視:職位、公司、發布時間與截止時間欄位,右上為表格/卡片檢視切換',
+          en: 'The public job board in table view — position, company, posted date and deadline columns, with a table/card view switch above',
+        },
+        caption: {
+          zh: '對外職缺列表。公開端點只讀 active=True 的資料;截止日期存進資料庫也顯示在畫面上,卻沒有任何查詢過濾它——過期職缺要靠人工下架,這是設計上的缺口。',
+          en: 'The public job board. Its endpoint reads only active=True rows; the deadline is stored and rendered, yet no queryset filters on it — an expired post stays visible until a human unpublishes it. A gap in the design, stated as such.',
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/mobile-recruit-board.webp',
+        alt: {
+          zh: '同一個職缺頁在 390px 寬手機上的樣子:表格改排為單欄卡片,導覽收合成漢堡選單',
+          en: 'The same job board at a 390px phone width: the table re-flows into single-column cards and the navigation collapses into a hamburger',
+        },
+        caption: {
+          zh: '同一頁在 390px 手機上,表格改排成單欄卡片。這是整頁截圖,所以比手機一屏長得多。',
+          en: 'The same page on a 390px phone, where the table becomes single-column cards. This is a full-page capture, so it runs far longer than one phone screen.',
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/admin-recruit-manage.webp',
+        alt: {
+          zh: '後台招募職位管理頁:職缺總數與篩選結果統計卡、發布者下拉篩選、跨公司的職缺表格與檢視/編輯/刪除操作',
+          en: 'The admin job-management page: total and filtered counts, a publisher filter, and a cross-company table of postings with view, edit and delete actions',
+        },
+        caption: {
+          zh: '後台職缺管理:一張表列出所有公司的職缺,可新增、編輯、下架與匯出。這條路徑由 IsAdminOrSuperUser 把關,和系友端「只能改自己公司職缺」的路徑是兩組獨立端點。',
+          en: "Admin job management: every company's postings in one table, with create, edit, unpublish and export. This path is gated by IsAdminOrSuperUser and lives on endpoints separate from the member path, where an alumnus can only touch their own company's posts.",
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/admin-outstanding-alumni.webp',
+        alt: {
+          zh: '傑出系友管理頁:順序編號、名稱、摘要、「展示於官網」開關、上下排序按鈕與編輯/刪除',
+          en: 'The distinguished-alumni admin page: sort number, name, summary, a "show on site" switch, up/down reordering and edit/delete controls',
+        },
+        caption: {
+          zh: '傑出系友管理。程式碼裡沒有提名或審核流程——管理員直接建立資料列,再用 is_featured 開關與 sort_order 決定官網呈現什麼、以什麼順序;批次排序走 bulk_update 包在單一交易裡,不是逐筆 save()。',
+          en: 'Distinguished-alumni management. There is no nomination or review workflow in the code — staff create the rows directly, then is_featured and sort_order decide what the public page shows and in what order. Batch reordering runs as one bulk_update inside a transaction rather than a save() per row.',
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/mobile-admin-outstanding-alumni.webp',
+        alt: {
+          zh: '同一個傑出系友管理頁在 390px 手機上:每一列拆成「欄位名對值」的卡片,開關、排序與編輯刪除按鈕全部保留',
+          en: 'The same distinguished-alumni admin page on a 390px phone: each row becomes a label-and-value card, keeping the switch, reordering and edit/delete controls',
+        },
+        caption: {
+          zh: '同一張後台表格在手機上改成逐欄位的卡片,所有操作都留著。響應式的功夫沒有只做在對外頁面,後台也一起做了。',
+          en: 'The same admin table on a phone, re-laid out field by field with every control kept. The responsive work was not limited to the public pages — the back office got it too.',
+        },
+      },
+    ],
+    diagrams: [
+      {
+        src: '/images/work/nkust-alumni/diagram-write-paths-and-visibility.svg',
+        alt: {
+          zh: '寫入路徑與公開可見性流程圖:匿名、系友、管理員三種角色各自能觸發的寫入端點、序列化器剝除的權限欄位,以及匿名讀者實際讀得到的查詢條件',
+          en: 'Write-paths and public-visibility flowchart: the endpoints each of the three caller roles can reach, the privileged fields the serializers strip, and the exact filters that decide what an anonymous reader sees',
+        },
+        caption: {
+          zh: '誰能寫什麼,以及公開端點真正讀得回什麼。整站的對外閘門其實只有幾個布林欄位:文章與職缺看 active,系友名錄看 is_show,傑出系友看 is_featured。右下角的註記是這張圖最值得看的部分——publish_at / expire_at / deadline 都存了也回傳了,卻沒有任何查詢用到它們。',
+          en: "Who may write what, and what the public endpoints actually return. The site's entire outward gate turns out to be a few booleans: active for articles and jobs, is_show for the directory, is_featured for distinguished alumni. The note bottom-right is the part worth reading — publish_at, expire_at and deadline are all stored and serialized, and no query uses any of them.",
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/diagram-request-lifecycle.svg',
+        alt: {
+          zh: '登入與已認證請求的時序圖:nginx、監控 middleware 的 IP 封鎖閘、Cookie JWT 認證與 CSRF 檢查、DRF view,以及走執行緒池的稽核寫入',
+          en: 'Sequence diagram of login and an authenticated call: nginx, the monitoring middleware IP block-gate, cookie-JWT authentication with its CSRF check, the DRF view, and the audit writes that go out on thread pools',
+        },
+        caption: {
+          zh: '一個請求從 nginx 進來、到稽核紀錄落地的完整時序。IP 封鎖在進 view 之前就擋下;cookie 路徑強制 CSRF,舊的 Bearer header 路徑則跳過。最下方那則註記是誠實的缺口:每個寫入者都傳 request_log=None,所以 query_logs、crud_logs 這些表指回 request_logs 的外鍵建了模型卻從未被填。',
+          en: 'One request from nginx through to its audit rows. The IP block-gate rejects before the view ever runs; the cookie path enforces CSRF while the legacy Bearer-header path skips it. The note at the bottom is an honest gap: every writer passes request_log=None, so the foreign key from query_logs and crud_logs back to request_logs is modelled and never populated.',
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/diagram-system-architecture.svg',
+        alt: {
+          zh: '部署與執行架構圖:nginx 反向代理到 gunicorn(3 workers)、依序排列的 middleware 鏈、DRF 的預設拒絕層與 11 個 Django app,以及 MySQL、Redis、GeoIP、輪替日誌與郵件外部相依',
+          en: 'Deployment and runtime architecture: nginx proxying to gunicorn (3 workers), the middleware chain in declaration order, the deny-by-default DRF layer and 11 Django apps, plus MySQL, Redis, GeoIP, rotating logs and the mail providers',
+        },
+        caption: {
+          zh: '單機部署的執行期全貌,middleware 依 settings.py 的實際順序排列。右下的註記寫的是這個系統的真相:沒有任何 broker——celery.py 是 0 位元組的空檔,非同步工作全部跑在 in-process 的 ThreadPoolExecutor(監控 4、稽核 2、文章圖片 5)與寄信用的 threading.Thread 上;whitenoise 躺在 requirements.txt 裡卻沒接進 MIDDLEWARE。',
+          en: 'The whole runtime of a single-server deployment, with the middleware in the order settings.py actually declares. The note bottom-right states the truth of the system: there is no broker — celery.py is a 0-byte file, and every async job runs on in-process ThreadPoolExecutors (4 for monitoring, 2 for the audit log, 5 for article images) plus a threading.Thread for mail. whitenoise sits in requirements.txt and was never wired into MIDDLEWARE.',
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/diagram-account-lifecycle.svg',
+        alt: {
+          zh: '系友帳號的狀態圖:三條開通路徑、登入與登出、密碼重設碼、停用與刪除,每個轉換都標上對應端點與權限',
+          en: 'Alumni account state diagram: three provisioning paths, login and logout, the password-reset code, deactivation and deletion, each transition labelled with its endpoint and permission',
+        },
+        caption: {
+          zh: '帳號從三條開通路徑(自助註冊、管理員單筆建立、Excel 批次匯入)一路到停用與刪除的狀態機。停用不只翻 is_active——它在 transaction.atomic + select_for_update 裡把該使用者的每一張 OutstandingToken 加進黑名單;而既有帳號的 is_staff / is_superuser 全站只剩一個端點改得動。這是資安整改之後留下的形狀。',
+          en: 'The account state machine, from three provisioning paths (self-registration, single admin create, Excel bulk import) through deactivation and deletion. Deactivating does more than flip is_active: inside transaction.atomic with select_for_update it blacklists every OutstandingToken the user holds. And on an existing account, exactly one endpoint may still change is_staff or is_superuser — the shape the security remediation left behind.',
+        },
+      },
+      {
+        src: '/images/work/nkust-alumni/diagram-domain-er.svg',
+        alt: {
+          zh: '核心領域 ER 圖:以真實 MySQL 表名繪製系友、公司、產品、職缺、文章與稽核紀錄之間的關聯、關鍵欄位與索引名稱',
+          en: 'Core domain ER diagram drawn with the real MySQL table names — alumni, companies, products, job posts, articles and the audit log, with their relations, key columns and index names',
+        },
+        caption: {
+          zh: '核心領域的 ER 圖,節點用的是真實的資料表名與索引名,不是模型類別名。順帶照實畫出一處歷史包袱:product 與 picture 兩個 app 各自有一個叫 ProductImage 的模型,資料表形狀還不一樣。監控相關的表除了 crud_logs 之外未收進圖中。',
+          en: 'The core domain, drawn with the real table and index names rather than model class names. It also draws one piece of history as-is: the product and picture apps each define a model called ProductImage, with differently shaped tables. Monitoring tables other than crud_logs are deliberately left out.',
+        },
+      },
+    ],
   },
   {
     slug: 'nkust-borrow',
@@ -629,41 +858,9 @@ export const PROJECTS: Project[] = [
     },
     scope: { zh: '已部署 · 獨立開發', en: 'Deployed · solo build' },
     stack: ['DJANGO', 'DRF', 'MYSQL', 'REACT', 'PLAYWRIGHT'],
-    keyMetric: { value: '1,112', label: { zh: '後端測試函式', en: 'backend tests' } },
+    keyMetric: { value: '1,181', label: { zh: '後端測試函式', en: 'backend tests' } },
     links: { live: 'https://equipment-borrowing.binbinbob.work' },
     featured: true,
-    screenshots: [
-      {
-        src: '/images/work/nkust-borrow/login.webp',
-        alt: {
-          zh: '設備借用管理系統登入頁',
-          en: 'Equipment borrowing system login page',
-        },
-        caption: { zh: '登入(自建 JWT 認證)', en: 'Login (self-built JWT auth)' },
-      },
-      {
-        src: '/images/work/nkust-borrow/borrow-return.webp',
-        alt: {
-          zh: '借還作業中心:借用/歸還/快速查詢分頁、今日借還統計與掃描條碼流程',
-          en: 'Borrow/return center: tabs for lending, returns and quick lookup, daily stats and barcode scanning',
-        },
-        caption: {
-          zh: '借還作業中心(掃碼借還)',
-          en: 'Borrow/return center (barcode flow)',
-        },
-      },
-      {
-        src: '/images/work/nkust-borrow/equipment-management.webp',
-        alt: {
-          zh: '設備管理中心:分類樹瀏覽、設備列表、批次匯入與批次列印條碼',
-          en: 'Equipment management: category tree, equipment list, batch import and batch barcode printing',
-        },
-        caption: {
-          zh: '設備管理中心(批次條碼)',
-          en: 'Equipment management (batch barcodes)',
-        },
-      },
-    ],
     caseStudy: {
       problem: [
         {
@@ -687,8 +884,8 @@ export const PROJECTS: Project[] = [
       ],
       architecture: [
         {
-          zh: 'Django 5 + DRF 模組化單體,依領域切成 13 個 app(borrowing、finance、audit、inventory、kits⋯),27 個資料模型、23 個資源路由加 86 個自訂 action;前端 React 19 + Ant Design,40 個頁面。JWT 放 HttpOnly cookie 並做 refresh rotation 與 blacklist;RBAC 以 Role/Capability 建模。',
-          en: 'A Django 5 + DRF modular monolith split into 13 domain apps (borrowing, finance, audit, inventory, kits…) — 27 models, 23 resource routes plus 86 custom actions — with a React 19 + Ant Design frontend of 40 pages. JWT lives in HttpOnly cookies with refresh rotation and blacklisting; RBAC is modeled as Roles and Capabilities.',
+          zh: 'Django 5 + DRF 模組化單體,依領域切成 13 個 app(borrowing、finance、audit、inventory、kits⋯),28 個資料模型、24 個資源路由加 87 個自訂 action;前端 React 19 + Ant Design,40 個頁面。JWT 放 HttpOnly cookie 並做 refresh rotation 與 blacklist;RBAC 以 Role/Capability 建模。',
+          en: 'A Django 5 + DRF modular monolith split into 13 domain apps (borrowing, finance, audit, inventory, kits…) — 28 models, 24 resource routes plus 87 custom actions — with a React 19 + Ant Design frontend of 40 pages. JWT lives in HttpOnly cookies with refresh rotation and blacklisting; RBAC is modeled as Roles and Capabilities.',
         },
         {
           zh: '稽核是獨立子系統:middleware 自動記錄操作(含敏感操作標記、耗時、回應狀態),另有欄位級的模型變更記錄。財務子系統做用餐基金:交易寫入時自動維護帳戶餘額,支援結算期間與現金核對,整套帳可從原始 Excel 一鍵匯入重建。',
@@ -736,7 +933,7 @@ export const PROJECTS: Project[] = [
       facts: [
         { value: '13', label: { zh: '領域模組', en: 'domain apps' } },
         { value: '86', label: { zh: '自訂 API actions', en: 'custom API actions' } },
-        { value: '1,112', label: { zh: '後端測試函式', en: 'backend test functions' } },
+        { value: '1,181', label: { zh: '後端測試函式', en: 'backend test functions' } },
         { value: '36', label: { zh: 'Playwright E2E', en: 'Playwright E2E specs' } },
       ],
       lessons: [
@@ -750,6 +947,142 @@ export const PROJECTS: Project[] = [
         },
       ],
     },
+    screenshots: [
+      {
+        src: '/images/work/nkust-borrow/borrow-desk.webp',
+        alt: {
+          zh: '借還作業中心的借用分頁:左側以學號搜尋帶出學生班級與電話,右側是預計歸還日期與備註,下方設備清單已加入三件影音設備,底部是確認借用按鈕',
+          en: 'The borrow tab of the lending desk: a student search on the left resolves class and phone, due date and note sit on the right, three AV items are already in the equipment cart, with the confirm button at the bottom',
+        },
+        caption: {
+          zh: '櫃檯借用流程一路操作到最後一步:搜尋學生自動帶出班級與電話,連續加入三件設備,只差按下「確認借用」——這一步刻意沒按,所以畫面上沒有任何已寫入的結果。頂端「逾期未還 13」是即時算出來的,不是資料庫欄位。',
+          en: 'The front-desk borrow flow driven to its last step: searching a student pulls in class and phone, three items go into the cart, and only 確認借用 remains. It was deliberately not clicked, so nothing on screen is a committed write. The "13 overdue" tile at the top is computed on the fly, not a stored column.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/dashboard.webp',
+        alt: {
+          zh: '儀表板:設備總數、借出中、可借用、學生總數、今日借出與今日歸還六個統計磚,近七天借還長條圖,借用率與可用率進度條,以及最近借用記錄表格',
+          en: 'Dashboard with six KPI tiles (total equipment, on loan, available, students, borrowed today, returned today), a seven-day borrow/return bar chart, utilisation and availability bars, and a recent-activity table',
+        },
+        caption: {
+          zh: '儀表板把六個統計磚、近七天趨勢圖、使用率條與最近借用記錄放在一頁。這次截圖跑在一次性 SQLite 上的合成種子資料(200 件設備、4,000 名學生皆由 Faker 產生),專案正式環境用的是 MySQL。',
+          en: 'The dashboard puts six KPI tiles, a seven-day trend chart, utilisation bars and recent activity on one page. This capture ran against synthetic seed data on a throwaway SQLite file — the 200 items and 4,000 students are Faker-generated; the project itself runs on MySQL.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/equipment-catalog.webp',
+        alt: {
+          zh: '設備管理中心:左側依類別與地點展開的分類樹、右側 200 筆設備表格,上方有新增設備、批次匯入、匯出清單與批次列印條碼按鈕;設備編號欄位顯示為空白',
+          en: 'Equipment management: a category-and-location tree on the left, a 200-row equipment table on the right with add, batch import, export and batch barcode-print actions above it; the equipment-code column renders blank',
+        },
+        caption: {
+          zh: '設備管理中心:左側分類樹同時依類別與地點切分,右側是 200 筆清單加批次匯入、匯出與批次列印條碼。「設備編號」欄是空的——這是拍攝當下發現的真實 bug:前端 column 宣告 dataIndex 為 code,API 實際序列化的欄位叫 serial_number。資料在回應裡,只是讀錯 key;沒有為了讓截圖好看去改它。',
+          en: 'Equipment management: the tree on the left slices the catalogue by category and by location, while the right side carries 200 rows plus batch import, export and batch barcode printing. The 設備編號 column is blank — a real bug caught during capture: the column declares dataIndex `code` while the API serialises the field as `serial_number`. The data is in the response; the column reads the wrong key. It was left alone rather than patched to flatter a screenshot.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/borrow-history.webp',
+        alt: {
+          zh: '借用紀錄查詢頁:關鍵字、日期區間與狀態三個篩選欄位,匯出 CSV 按鈕,以及 135 筆借用單的分頁表格,部分列帶有延期動作',
+          en: 'Borrow-record search: keyword, date-range and status filters, a CSV export button, and a paginated table of 135 borrow tickets, some rows carrying an extend action',
+        },
+        caption: {
+          zh: '借用紀錄查詢:關鍵字、日期區間、狀態三段篩選加 CSV 匯出,135 筆分頁列出。可延期的單子才會出現「延期」——後端把單次延長限制在 1 到 30 天,超出範圍直接擋在 API。',
+          en: 'Borrow-record search: keyword, date-range and status filters plus CSV export over a paginated 135-row table. Only eligible tickets show the extend action — the backend caps a single extension at 1 to 30 days and rejects anything outside that range at the API.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/utilisation-report.webp',
+        alt: {
+          zh: '設備使用率分析頁:總設備數、借用中設備、累計借用次數與平均借用天數四個統計磚,下方是依借用次數排名的設備明細表,含序號、分類、地點、狀態與最後借用時間',
+          en: 'Equipment utilisation report: four KPI tiles (total items, on loan, cumulative borrows, average borrow days) above a table of equipment ranked by borrow count, with serial number, category, location, status and last-borrowed time',
+        },
+        caption: {
+          zh: '使用率分析把 200 件設備依累計借用次數排名,每列帶平均借用天數與最後借用時間,用來找出誰是熱門品項、誰在架上生灰。順帶一提:序號在這一頁正常顯示——同一份 API 資料,只是這裡的 column 設定沒有踩到設備管理頁那個讀錯 key 的問題。',
+          en: 'The utilisation report ranks all 200 items by cumulative borrow count, each row carrying average borrow days and last-borrowed time — enough to tell the hot items from the shelf-warmers. Worth noting: the serial number renders correctly here. Same API payload; this page’s column config simply does not hit the wrong-key bug the equipment table does.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/tablet-borrow-desk.webp',
+        alt: {
+          zh: '同一個借還作業中心在平板寬度下的樣子:側欄收成漢堡選單,設備清單從表格改排成雙欄卡片,每張卡片列出設備編號、名稱、類別與存放地點',
+          en: 'The same lending desk at tablet width: the sidebar collapses into a hamburger menu and the equipment cart switches from a table to two columns of cards listing code, name, category and location',
+        },
+        caption: {
+          zh: '同一個借用畫面在 834px 平板寬度:側欄收成漢堡選單,設備清單從表格改排成雙欄卡片,欄位變成標籤/值的直列。這不是把表格橫向捲動了事,而是換一種資訊排法。',
+          en: 'The same borrow screen at an 834px tablet width: the sidebar collapses to a hamburger and the equipment cart drops its table for two columns of label/value cards. Not a table shoved into a horizontal scroller — a different layout for the same data.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/mobile-dashboard.webp',
+        alt: {
+          zh: '390px 手機寬度的儀表板:六個統計磚排成雙欄、長條圖的日期軸標籤轉為直排、使用率條與最近借用記錄依序往下堆疊',
+          en: 'The dashboard at 390px phone width: six KPI tiles reflow into two columns, the bar chart rotates its date labels vertically, and utilisation bars and recent activity stack below',
+        },
+        caption: {
+          zh: '390px 手機寬度的同一張儀表板:統計磚改成雙欄、圖表的日期軸標籤轉直排、其餘區塊依序堆疊。桌機、平板、手機三種寬度都是同一支 Playwright 腳本對著跑起來的 app 實拍,不是縮圖模擬。',
+          en: 'The same dashboard at a 390px phone width: KPI tiles reflow to two columns, the chart rotates its date labels, and the remaining blocks stack in order. All three widths — desktop, tablet, phone — come from one Playwright run against the live app, not from a resized mockup.',
+        },
+      },
+    ],
+    diagrams: [
+      {
+        src: '/images/work/nkust-borrow/diagram-borrow-lifecycle.svg',
+        alt: {
+          zh: '狀態圖:借用單(6 種狀態)、借用明細行(4 種)與設備(4 種)三組狀態機,每條轉移標註觸發它的 API 端點',
+          en: 'State diagram of three machines — borrow ticket (6 states), line item (4) and equipment (4) — with every transition labelled by the API endpoint that fires it',
+        },
+        caption: {
+          zh: '一張借用單同時驅動三組狀態機:單頭 6 種狀態、明細行 4 種、設備 4 種,圖上每條轉移都標了實際觸發它的端點。兩件事只有畫成圖才看得見:「逾期」根本不是儲存欄位,而是由 status 與 due_at 即時推導(靠 borrow_status_due_idx 撐住查詢);而 lost / damaged 兩個明細狀態雖然定義了、篩選器也讀得到,卻沒有任何正式路徑會寫入它們。',
+          en: 'One borrow ticket drives three state machines at once — six ticket states, four line-item states, four equipment states — with each transition labelled by the endpoint that fires it. Two things only become visible once it is drawn: overdue is not a stored field at all but derived from status plus due_at (served by the borrow_status_due_idx index), and the lost / damaged line states, though defined and readable by the filters, have no production path that ever writes them.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/diagram-approve-request-path.svg',
+        alt: {
+          zh: '序列圖:核准借用單的請求從 React SPA 經 nginx、gunicorn、稽核與安全 middleware、DRF 認證授權,到 view 內的資料庫交易與三種稽核寫入',
+          en: 'Sequence diagram of an approve request travelling from the React SPA through nginx, gunicorn, audit and security middleware, DRF auth, into the view transaction and three separate audit writes',
+        },
+        caption: {
+          zh: 'POST /borrow-tickets/{id}/approve/ 從 nginx 到 MySQL 的完整往返——全系統最有意思的一條寫入路徑。核准時每個明細行都先 SELECT … FOR UPDATE 鎖住設備列,這正是兩位管理員同時核准同一件設備不會雙重借出的原因。同一次核准會被三套彼此獨立的機制各記一筆:ORM signal 寫 ModelChangeLog(涵蓋 11 個列管模型)、middleware 寫 AuditLog、view 明寫領域層的 BorrowStatusLog。',
+          en: 'The full round trip of POST /borrow-tickets/{id}/approve/, nginx to MySQL — the most interesting write path in the system. Approval takes a SELECT … FOR UPDATE row lock per line item, and that lock is exactly what stops two admins double-issuing the same unit. A single approval then gets recorded three times by three independent mechanisms: ModelChangeLog from ORM signals (11 tracked models), AuditLog from middleware, and a domain-level BorrowStatusLog written explicitly by the view.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/diagram-authorization-layers.svg',
+        alt: {
+          zh: '流程圖:授權的四個層次——middleware 鏈、依序嘗試的三種認證方式、DRF 權限類別、view 內的逐列範圍限縮——並逐條列出每個路由實際落在哪一層',
+          en: 'Flowchart of four authorization layers — the middleware chain, three authentication backends tried in order, DRF permission classes, and per-row scoping inside the view — with a route-by-route map of which layer each endpoint lands in',
+        },
+        caption: {
+          zh: '授權其實是四層疊起來的:middleware 鏈、依序嘗試的三種認證方式、DRF 權限類別,再加上 view 內的逐列範圍限縮(例如非管理員只看得到自己開的單)。右側逐條列出每個路由實際落在哪一層。圖上也標出 RBAC 停在哪裡:Role/Capability 有建模、有種子資料、會回傳給前端做按鈕灰化,但伺服器端真正讀 capability 的只有備份模組;其餘實質上是 is_staff 說了算。這是設計現況,不是圖畫錯了。',
+          en: 'Authorization is four layers stacked: the middleware chain, three authentication backends tried in order, DRF permission classes, and per-row scoping inside the view (a non-admin sees only tickets they created). The right-hand column maps route by route which layer each endpoint actually lands in. The figure also marks where RBAC stops: Roles and Capabilities are modelled, seeded and returned to the SPA so it can grey out buttons, but the only server-side code that reads a capability is the backups module — everything else effectively gates on is_staff. That is the current design, not a drafting error.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/diagram-runtime-architecture.svg',
+        alt: {
+          zh: '架構圖:Cloudflare 到 nginx、gunicorn 三個 worker、Django 十三個領域 app、MySQL 與兩組快取,並標示沒有 Celery、Redis 或排程器',
+          en: 'Architecture diagram from Cloudflare through nginx, three gunicorn workers, thirteen Django domain apps, MySQL and two cache aliases — explicitly marking the absence of Celery, Redis or any scheduler',
+        },
+        caption: {
+          zh: '單台 VPS 上真正跑起來的形狀:Cloudflare → nginx → gunicorn 三個 sync worker → MySQL 8,十三個領域 app 共用同一個行程。這張圖刻意把「不存在的東西」也畫進去:沒有 Celery、沒有 Redis、沒有排程器,所以逾期通知信、Excel 匯出、PDF 條碼標籤與 demo 重置全都同步跑在 web worker 裡,而唯一跨 worker 共享的狀態是速率限制用的 DatabaseCache——限制條件長成什麼樣,架構就會長成什麼樣。',
+          en: 'What actually runs on a single VPS: Cloudflare → nginx → three gunicorn sync workers → MySQL 8, with thirteen domain apps sharing one process. The figure deliberately draws the absences too: no Celery, no Redis, no scheduler — so overdue mail, Excel export, PDF barcode labels and the demo reseed all run synchronously inside the web worker, and the rate-limit DatabaseCache is the only state shared between workers. The shape of the constraint is the shape of the architecture.',
+        },
+      },
+      {
+        src: '/images/work/nkust-borrow/diagram-domain-schema.svg',
+        alt: {
+          zh: 'ERD:借用單、明細行、賠償、設備、分類、地點、學生與帳號權限等核心資料表,標註真實的 MySQL 表名、欄位型別與外鍵刪除行為',
+          en: 'Entity-relationship diagram of the core tables — tickets, line items, compensation, equipment, categories, locations, students and accounts — annotated with real MySQL table names, column types and foreign-key delete behaviour',
+        },
+        caption: {
+          zh: '核心領域 schema,用的是真實 MySQL 表名與欄位型別(repo 裡沒有任何 db_table 覆寫,所以圖上的名字就是資料庫裡的名字)。兩個設計決定從圖上看得最清楚:明細行的 equipment_id 允許為 NULL,好讓椅子、鑰匙這類沒有建檔的臨時品項也能掛在同一張單上,再用兩條 partial unique constraint 分別擋掉重複設備與重複臨時品名;而 master data 一律以 PROTECT 相連,借過的設備刪不掉。',
+          en: 'The core domain schema, drawn with real MySQL table names and column types — the repo overrides no db_table anywhere, so the names in the figure are the names in the database. Two design decisions read most clearly here: a line item’s equipment_id is nullable so unregistered ad-hoc items like chairs and keys can ride on the same ticket, guarded by two partial unique constraints against duplicate equipment and duplicate ad-hoc names; and master data is wired with PROTECT, so a piece of equipment someone has borrowed cannot be deleted out from under its history.',
+        },
+      },
+    ],
   },
   {
     slug: 'microservices-platform',
@@ -1329,40 +1662,6 @@ export const PROJECTS: Project[] = [
       repo: 'https://github.com/NameCallBob/ecobaoFront',
     },
     featured: false,
-    screenshots: [
-      {
-        src: '/images/work/ecobao/home.webp',
-        alt: {
-          zh: '環飽首頁:惜食主標、搜尋列與平台減碳影響力數字',
-          en: 'EcoBǎo home: food-saving hero, search bar and platform impact stats',
-        },
-        caption: { zh: '消費者首頁(Eco-Fresh 設計系統)', en: 'Consumer home (Eco-Fresh design system)' },
-      },
-      {
-        src: '/images/work/ecobao/menu.webp',
-        alt: {
-          zh: '逛剩食頁:分類篩選、排序與剩食福袋商品卡(原價/優惠價/取貨倒數)',
-          en: 'Browse page: category filters, sorting and surplus-bag product cards with original/deal price and pickup countdown',
-        },
-        caption: { zh: '逛剩食(篩選與剩食福袋卡片)', en: 'Browse surplus (filters and surprise-bag cards)' },
-      },
-      {
-        src: '/images/work/ecobao/store.webp',
-        alt: {
-          zh: '店家頁:封面、評分與剩食商品分頁',
-          en: 'Store page: cover, rating and surplus-items tabs',
-        },
-        caption: { zh: '店家頁(評分與商品分頁)', en: 'Store page (rating and item tabs)' },
-      },
-      {
-        src: '/images/work/ecobao/dashboard.webp',
-        alt: {
-          zh: '店家後台營運總覽:營收/訂單 KPI、近 7 日圖表與剩食售出佔比',
-          en: 'Merchant dashboard: revenue/order KPIs, 7-day charts and surplus-sold share',
-        },
-        caption: { zh: '店家後台儀表板(recharts 圖表)', en: 'Merchant dashboard (recharts)' },
-      },
-    ],
     caseStudy: {
       problem: [
         {
@@ -1453,6 +1752,142 @@ export const PROJECTS: Project[] = [
         },
       ],
     },
+    screenshots: [
+      {
+        src: '/images/work/ecobao/shopper-home.webp',
+        alt: {
+          zh: '環飽消費者首頁全頁:惜食主視覺與搜尋列、平台影響力計數、食物分類磚、今日精選剩食折扣卡、三步驟說明與高評價店家',
+          en: 'EcoBǎo shopper home, full page — food-saving hero and search, impact counters, category tiles, discounted surplus cards, a three-step explainer and top-rated stores',
+        },
+        caption: {
+          zh: '消費者首頁全頁。頂端三個影響力數字不是營運數據,而是 getImpactStats() 從 8 家種子店家即時換算出來的(每份餐點 2.5 公斤 CO₂);少數圖磚落回品牌漸層,是 Unsplash 沒在時限內回應時 SmartImage 的預設行為,不是截圖失誤。',
+          en: 'The shopper landing page end to end. The three impact counters are not operating data — getImpactStats() derives them live from the eight seeded stores at 2.5 kg CO₂ per meal. The few flat-green tiles are SmartImage falling back to the brand placeholder when an Unsplash image does not arrive in time; a real behaviour, not a capture glitch.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/dashboard.webp',
+        alt: {
+          zh: '店家後台營運總覽:今日訂單/營收/已拯救餐點/評分四張 KPI 卡、近 7 日營收長條圖、驚喜福袋佔比甜甜圈、熱銷商品橫條、近期回饋與待處理訂單',
+          en: 'Merchant back-office overview: four KPI cards (today’s orders, revenue, meals rescued, rating), a 7-day revenue bar chart, a surprise-bag share donut, a top-products bar list, recent reviews and pending orders',
+        },
+        caption: {
+          zh: '店家後台總覽——平台的另一面。KPI、近 7 日長條圖與熱銷排行都由同一份 deterministic 生成的訂單資料推導,所以數字彼此對得上;右上角那幾個 +12% / +8% 的趨勢徽章則是寫死的示意值,沒有比較基準。圖表由 recharts 繪製;畫面其餘部分全是自建的 Tailwind 元件,MUI / Ant Design / Bootstrap / styled-components 都已不在相依清單裡。',
+          en: 'The merchant overview — the platform’s other face. The KPIs, the 7-day bars and the top-product ranking are all derived from one deterministically generated order fixture, so the numbers reconcile with each other; the +12% / +8% trend badges, by contrast, are hard-coded illustrative values with nothing behind them. The charts are recharts; everything else on the screen is a self-built Tailwind component, with MUI, Ant Design, Bootstrap and styled-components all gone from the dependency list.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/browse-surplus.webp',
+        alt: {
+          zh: '逛剩食頁:左欄分類與「只看驚喜福袋」篩選、排序下拉,右側 20 張剩食商品卡,標示原價、折扣價、剩餘份數與取貨時段',
+          en: 'Browse page: category filters and a surprise-bag-only toggle on the left, a sort dropdown, and 20 surplus-item cards showing original price, deal price, portions left and pickup window',
+        },
+        caption: {
+          zh: '逛剩食:20 筆種子商品在分類篩選、「只看驚喜福袋」與排序之下的完整列表。每張卡片同時給原價、折扣價、剩餘份數與取貨時段——對剩食來說時間壓力就是核心資訊,所以放在卡面而不是詳情頁。',
+          en: 'Browse: all 20 seeded listings under category filters, a surprise-bag-only toggle and sorting. Every card carries original price, deal price, portions left and the pickup window — for surplus food the time pressure *is* the core information, so it sits on the card rather than the detail page.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/checkout.webp',
+        alt: {
+          zh: '結帳頁:取貨人資訊表單(姓名、電話、Email 已帶入)、取貨時段選擇、現場付款/貨到付款單選,右側訂單摘要三項商品合計 NT$287',
+          en: 'Checkout: a pickup-contact form prefilled with name, phone and email, a pickup-window select, pay-at-pickup / pay-on-delivery radios, and an order summary of three items totalling NT$287',
+        },
+        caption: {
+          zh: '結帳頁。三項商品與 NT$287 小計不是擺拍——截圖腳本在店家頁真的按了三次「加入購物車」,狀態經 localStorage 一路帶到這裡;取貨人資訊由 demo 帳號自動帶入。整條購物流程沒有後端,src/lib/api.js 這層 372 行的假 API 把固定 fixture 包成有延遲的非同步介面。',
+          en: 'Checkout. The three line items and the NT$287 subtotal are not staged: the capture script really clicked add-to-cart three times on the store page, and the state carried here through localStorage. The pickup contact is prefilled from the demo account. No backend takes part — the 372-line mock API in src/lib/api.js wraps fixed fixtures in a delayed async façade.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/mobile-orders.webp',
+        alt: {
+          zh: '390px 寬的「我的訂單」頁:進行中(2)/ 已完成(3)分頁、兩張訂單卡含取貨碼與金額,下方為深綠色頁尾',
+          en: '“My orders” at 390px wide: in-progress (2) and completed (3) tabs, two order cards carrying pickup codes and totals, above the dark-green footer',
+        },
+        caption: {
+          zh: '同一份訂單頁在 390px 下的樣子。整個專案只有一份 src/index.css——行動版沒有第二套樣式表,是同一組 Tailwind token 直接重排。取貨碼是這條流程的實體交付物:到店報碼取餐,線上到線下的交接就在這裡。',
+          en: 'The same orders page at 390px. The whole project has exactly one stylesheet, src/index.css — there is no second mobile sheet, just the same Tailwind tokens reflowing. The pickup code is this flow’s physical deliverable: you read it out at the counter, and that is where online hands off to offline.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/app-store-detail.webp',
+        alt: {
+          zh: 'Expo React Native 行動端店家畫面:即期 5 折標籤、4.8(326)評分、今日取餐時段,以及橫向捲動的精選惜食折扣卡',
+          en: 'Store screen in the Expo React Native app: a 50%-off badge, a 4.8 (326) rating, today’s pickup window, and a horizontally scrolling rail of discounted surplus items',
+        },
+        caption: {
+          zh: 'Expo(React Native)行動端的店家畫面。兩點如實註記:這是 expo export --platform web 的網頁渲染,不是 iOS/Android 裝置截圖;而該 repo 目前所有店家共用同一張市場照、所有商品共用同一張漢堡圖——佔位素材沒有為了拍照被換掉。',
+          en: 'The store screen in the Expo (React Native) app. Two things stated plainly: this is a web render from `expo export --platform web`, not an iOS or Android device capture — and in that repo every store still shares one market photo and every product one stock burger image. The placeholders were not swapped out for the shot.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/api-store-list.webp',
+        alt: {
+          zh: 'DRF 可瀏覽 API 的 GET /store_sch/ 回應:HTTP 200,五家種子店家的 JSON,含 upid、type、city / area、address 與 lng / lat 座標',
+          en: 'The DRF browsable API showing GET /store_sch/: HTTP 200 and JSON for five seeded stores with upid, type, city/area, address and lng/lat coordinates',
+        },
+        caption: {
+          zh: 'DRF 可瀏覽 API:帶著真的 JWT 打 GET /store_sch/,拿回 5 家種子店家,含註冊時由 Google Geocoding 寫入的 lng / lat。這個專案只認 JWT、沒有 session 登入,沒帶 token 的瀏覽器直接吃 401。後端其餘幾乎全是 POST-only 的 @action,截圖照不出來——那是下面五張圖的工作。',
+          en: 'The DRF browsable API: GET /store_sch/ carrying a real JWT returns the five seeded stores, lng/lat included — written by Google Geocoding at registration. The project authenticates by JWT only, with no session login, so a token-less browser simply gets a 401. Almost everything else in this backend is a POST-only @action that no screenshot can reach; that is what the five diagrams below are for.',
+        },
+      },
+    ],
+    diagrams: [
+      {
+        src: '/images/work/ecobao/diagram-order-state-machine.svg',
+        alt: {
+          zh: '訂單狀態機:未接單 → 已接單 → 未取餐 → 已完成,另有取消與硬刪除的終止路徑,每條轉移標註對應的 POST 端點與 order/views.py 行號',
+          en: 'Order state machine: pending → accepted → ready-for-pickup → completed, with cancel and hard-delete terminal paths; every transition labelled with its POST endpoint and the line in order/views.py',
+        },
+        caption: {
+          zh: '訂單生命週期——REST 介面藏起來的那一半。order_order.status 是沒有 choices 的 CharField(50),五個狀態全是中文字串字面值;圖上的箭頭是意圖,不是約束:除了 /order/delete/,每個 action 都以 Order.objects.get(oid=...) 直接覆寫狀態,不檢查呼叫者是不是這張訂單的主人,任何狀態都能跳到任何狀態。complete_time 也從頭到尾沒有任何程式寫入。',
+          en: 'The order lifecycle — the half the REST surface hides. order_order.status is a CharField(50) with no choices, and all five states are Chinese string literals. The arrows are intent, not enforcement: every action except /order/delete/ does a bare Order.objects.get(oid=…) and overwrites the status without checking the caller owns the order, so any state can jump to any state. complete_time is never written by any code path either.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/diagram-checkout-sequence.svg',
+        alt: {
+          zh: 'POST /order/add/ 的序列圖:JWT 解析使用者後,在 transaction.atomic 內查購物車、加總、產生 oid、寫入訂單與明細與付款、刪除購物車列,並標出從未被呼叫的寄信分支',
+          en: 'Sequence diagram of POST /order/add/: JWT resolves the user, then inside transaction.atomic the cart is read, totals summed, an oid generated, order/line/payment rows inserted and cart rows deleted — with the never-called mail branch marked dead',
+        },
+        caption: {
+          zh: '系統裡最重要的一次寫入 POST /order/add/,逐步對照 order/views.py:186–274。整段包在 transaction.atomic 裡,但有三件事不是交易能救的:oid 取自即時 COUNT(*)(兩筆併發結帳會撞號)、庫存只在 /cart/add/ 檢查過而結帳時從未扣減、信用卡號與安全碼原文寫進 order_orderpayment。右邊通往 notice.app.Email 的線是斷的:__mail() 沒有任何呼叫者,郵件通知在這個 codebase 裡從來沒有真的接上。',
+          en: 'The system’s most important write, POST /order/add/, walked step by step against order/views.py:186–274. The body sits inside transaction.atomic, but three things no transaction can save it from: oid comes from a live COUNT(*) (two concurrent checkouts collide on the same id), stock is validated back at /cart/add/ and then never decremented here, and the card number and CVC land verbatim in order_orderpayment. The branch to notice.app.Email on the right is dead — nothing calls __mail(), so e-mail notification was never actually wired up in this codebase.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/diagram-api-permission-map.svg',
+        alt: {
+          zh: 'API 權限分層圖:SimpleRouter 的 13 個註冊與 4 條顯式路由,依 AllowAny 匿名層、IsAuthenticated 會員層、view 內手寫的店家守衛層、Django admin 層分組,虛線標出會漏的節點',
+          en: 'API permission map: SimpleRouter’s 13 registrations and four explicit paths grouped into an AllowAny anonymous tier, an IsAuthenticated member tier, a store-owner tier guarded inside the view body, and the Django admin — with leaking nodes dashed',
+        },
+        caption: {
+          zh: '整個 API 表面依「實際上誰擋得住」分層,而不是依模組分層。第三層最值得看:店家身分不是用 permission class 擋的,而是在 view 裡手寫 Store.objects.filter(upid_id=request.user.uid).count() == 1;虛線節點是它自己會漏的地方——商品 upload/change 宣告成 IsAuthenticated | AllowAny,那個 OR 讓匿名呼叫者一樣過關。',
+          en: 'The whole API surface sorted by what actually guards each route, not by which module it lives in. Tier three is the one to read: store-owner identity is not enforced by a permission class at all but hand-written inside the view body as Store.objects.filter(upid_id=request.user.uid).count() == 1. The dashed nodes are where it leaks — goods upload/change is declared IsAuthenticated | AllowAny, and that OR waves anonymous callers straight through.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/diagram-domain-er.svg',
+        alt: {
+          zh: '核心領域 ER 圖:會員、店家、營業時間、商品、評價、購物車、訂單、訂單明細、付款與取消等資料表的實際欄位名與主鍵外鍵關係',
+          en: 'Core domain ER: member, store, opening hours, goods, review, cart, order, order line, payment and cancellation tables with their real column names and PK/FK relationships',
+        },
+        caption: {
+          zh: '核心領域 ER。表名與欄位名取自實際跑起來的 demo.sqlite3(PRAGMA table_info / foreign_key_list),再與 models 和 migrations 交叉比對,所以畫的是資料庫真的有的欄位,不是宣告過的欄位。幾個設計代價一眼看得到:store.upid_id 同時是 PK 和 FK(一個會員只能開一家店)、price 與 quantity 都存成字串、order_ordercheck 有表也有 migration,卻沒有任何程式讀寫它。',
+          en: 'The core domain ER. Table and column names were read out of the running demo.sqlite3 (PRAGMA table_info / foreign_key_list) and cross-checked against models and migrations, so the figure shows the columns the database actually has rather than the ones merely declared. The design’s costs are visible at a glance: store.upid_id is both PK and FK (one store per member), price and quantity are stored as text, and order_ordercheck has a table and a migration but no code that ever reads or writes it.',
+        },
+      },
+      {
+        src: '/images/work/ecobao/diagram-system-architecture.svg',
+        alt: {
+          zh: 'Django 4.1 + DRF 系統架構圖:入口點、middleware 鏈、urls 路由、DRF 認證與權限預設、四個業務 app、Google Geocoding 與 geopy 外部呼叫、MySQL / SQLite 切換,以及以虛線標示的未接線元件',
+          en: 'Django 4.1 + DRF architecture: entry points, the middleware chain, URL routing, DRF authentication and permission defaults, four business apps, outbound Google Geocoding and in-process geopy, the MySQL/SQLite swap, and the inert components drawn dashed',
+        },
+        caption: {
+          zh: 'Django 4.1 + DRF 的實際接線:middleware 順序、SimpleRouter 的 13 個註冊、JWT 預設(HS256、USER_ID_FIELD=uid、access token 60 分鐘)、Geocoding 與 in-process 的 geopy 距離計算,以及 MySQL / SQLite 由 settings 模組決定。虛線的四個節點是「宣告了但沒作用」:asgi.py 沒有任何 async consumer、CsrfViewMiddleware 被註解掉、notice/ 郵件模組不在 INSTALLED_APPS 裡。這個 repo 沒有 Celery、沒有佇列也沒有排程——所有工作都在請求執行緒裡同步跑完。',
+          en: 'How Django 4.1 + DRF is actually wired: middleware order, SimpleRouter’s 13 registrations, the JWT defaults (HS256, USER_ID_FIELD=uid, a 60-minute access token), the outbound Geocoding call and in-process geopy distance work, and MySQL versus SQLite chosen by settings module. The four dashed nodes are declared but inert — asgi.py has no async consumers, CsrfViewMiddleware is commented out, and the notice/ mail module is not in INSTALLED_APPS. There is no Celery, no queue and no scheduler anywhere in this repo: every unit of work runs synchronously inside the request thread.',
+        },
+      },
+    ],
   },
   {
     slug: 'four-times-for-cook',
@@ -1571,6 +2006,671 @@ export const PROJECTS: Project[] = [
         {
           zh: '重寫前端時,最該先鎖住的是與後端的 API 契約:先把 18 個端點逐一對齊,再重畫畫面,串接才不會在重構後悄悄斷掉。',
           en: 'When rewriting a frontend, the API contract with the backend is what to lock first: aligning all 18 endpoints before redrawing screens keeps the integration from silently breaking after the refactor.',
+        },
+      ],
+    },
+    screenshots: [
+      {
+        src: '/images/work/four-times-for-cook/health-dashboard.webp',
+        alt: {
+          zh: '健康總覽頁:飲水/熱量/運動三個進度環、連續達標卡、今日目標完成度徑向圖、可切換指標的近 7 日趨勢圖、本週紀錄表與個人化建議',
+          en: 'Health dashboard: water / calorie / exercise progress rings, a streak card, a daily goal radial, a 7-day trend chart with metric tabs, the weekly log table and personalised suggestions',
+        },
+        caption: {
+          zh: '登入後的健康總覽。三個環顯示的是「還差多少」而不是已完成量,7 日趨勢可切換指標並疊上目標線;整頁資料由 repo 內建的 demo 模式(MSW 攔截 23 支 API)供應,不需要任何後端。',
+          en: 'The health dashboard behind login. The rings count down what is still missing rather than what is done, and the 7-day chart switches metric with the goal line overlaid. The whole page is fed by the repo’s built-in demo mode — MSW intercepting all 23 API routes — with no backend running.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/recipe-search.webp',
+        alt: {
+          zh: '食譜搜尋頁:自然語言輸入框、時段/料理/健康條件三組共 20 個篩選標籤,以及 8 張食譜卡片',
+          en: 'Recipe search: a natural-language input, 20 filter chips in three groups (time of day / cooking method / health goal) and eight recipe cards',
+        },
+        caption: {
+          zh: '食譜搜尋。輸入框接的是整條 BERT 管線的入口——正式模式下這句中文會被翻成英文、切成 12 類實體再組成 ORM 查詢;左側 20 個標籤則對應後端 frontendQuery.json 的分類。預設列出種子資料 12 筆食譜中的前 8 筆。',
+          en: 'Recipe search. The text box is the front door of the whole BERT pipeline: in API mode that Chinese sentence is translated, split into 12 entity classes and turned into an ORM query. The 20 chips on the left mirror the backend’s frontendQuery.json categories; the default list shows 8 of the 12 seeded recipes.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/recipe-detail.webp',
+        alt: {
+          zh: '食譜詳情頁:主圖、標籤、時間/步驟/食材數摘要、食材清單、編號步驟、三大營養素甜甜圈圖與完整營養標示',
+          en: 'Recipe detail: hero image, tags, a time/steps/ingredients summary, ingredient list, numbered steps, a macronutrient donut and a full nutrition panel',
+        },
+        caption: {
+          zh: '食譜詳情——食材、編號步驟與營養標示。頁首那張沙漠夜景不是挑錯圖:種子資料用 picsum.photos 依 id 取隨機照片,所以「蒜香檸檬烤雞胸」配到了一片沙漠。這是程式真實渲染的結果,我沒有為了截圖去換掉它。',
+          en: 'Recipe detail — ingredients, numbered steps and the nutrition panel. The desert at night is not a mis-picked image: the seed pulls `picsum.photos/seed/<id>`, an arbitrary photo per id, so a garlic-lemon roast chicken gets a desert. That is what the code actually renders, and I did not swap it out for the screenshot.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/surplus-marketplace.webp',
+        alt: {
+          zh: '剩食專區:四格影響力數字、店家搜尋與距離排序、類別分頁,以及 8 筆帶折扣標籤、取餐時段與距離的即期品項卡片',
+          en: 'Food-surplus marketplace: a four-stat impact strip, store search with distance sorting, category tabs and eight discounted listings with pickup windows and distances',
+        },
+        caption: {
+          zh: '剩食專區。頂端四格中,可預約品項、合作店家與平均折扣都是即時由清單算出的,只有「可減少浪費」是品項數乘上一個固定常數(320 克/件)——估算式的展示文案,不是量測值。另一件該講清楚的:Django 後端至今沒有任何 /Surplus/ 端點,這一整頁只活在 demo 模式的 mock 層裡。',
+          en: 'The surplus marketplace. Of the four stats on top, item count, partner stores and average discount are computed live from the listing set; only “waste avoided” is item-count times a fixed constant (320 g per item) — a display estimate, not a measurement. Worth stating plainly: the Django backend has no /Surplus/ endpoint at all, so this entire page currently lives only in the demo-mode mock layer.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/landing.webp',
+        alt: {
+          zh: '首頁全頁:漸層主視覺、三大核心功能卡、當令食譜與知識專區橫排,以及影響力數字與 Recharts 面積圖',
+          en: 'Full-page landing: gradient hero, three feature cards, seasonal recipe and knowledge rails, plus an impact stat block with a Recharts area chart',
+        },
+        caption: {
+          zh: '首頁全頁,也是綠色食療設計系統最完整的一次展開。底部那四個數字(12,000+ 會員、8.2 噸)是寫死在 Landing.tsx 的展示文案,不是統計;旁邊的面積圖同樣讀種子資料——會特別做 prefers-reduced-motion 處理,是因為全頁截圖會讓 Recharts 重掛動畫。',
+          en: 'The full landing page, and the widest view of the green “food is medicine” design system. The four figures at the bottom (12,000+ members, 8.2 tonnes) are display copy hard-coded in Landing.tsx, not statistics; the area chart beside them reads seed data too. It honours prefers-reduced-motion — which is what made a full-page capture possible, since resizing otherwise restarts the Recharts animation.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/mobile-health-dashboard.webp',
+        alt: {
+          zh: '健康總覽頁的 390px 行動版:三個進度環改為直向堆疊、快速記錄按鈕撐滿寬度,連續達標與目標完成度卡片接續在下方',
+          en: 'The health dashboard at 390px: progress rings stacked vertically, full-width quick-log buttons, with the streak and goal-completion cards following below',
+        },
+        caption: {
+          zh: '同一張健康總覽在 390px 寬。桌機版並排的三個環改為直向堆疊、快速記錄按鈕撐滿寬度,原本在右欄的連續達標與目標完成度卡片接到主欄下方——排版重排而不是等比縮小。',
+          en: 'The same dashboard at 390px. The three rings that sit side by side on desktop stack vertically, the quick-log buttons go full width, and the right-column streak and goal cards fall into the main column — a reflow, not a scaled-down desktop layout.',
+        },
+      },
+    ],
+    diagrams: [
+      {
+        src: '/images/work/four-times-for-cook/diagram-recipe-query-pipeline.svg',
+        alt: {
+          zh: 'POST /Recipe/get/ 的流程圖:翻譯、BERT 標記、B-/I- 併段、篩選標籤合流、組成兩個 Q 物件並以 rid 相交,含兩條寫死的 fallback 路徑',
+          en: 'Flowchart of POST /Recipe/get/: translation, BERT tagging, B-/I- span merging, chip merging, two Q objects intersected on rid, and two hard-coded fallback paths',
+        },
+        caption: {
+          zh: '一句中文如何變成 ORM 查詢:先由 GoogleTranslator 翻成英文(一次對外 HTTP),再交給 BERT 切出 12 類實體,B-/I- 併成片語後與篩選標籤合流,最後組成兩個 Q 物件——實體側查 recipe_recipe_ob、屬性側查 recipe_recipe_at,以 rid 相交後取前 3 筆。圖上兩個紅框是這張圖最該看的地方:標不出任何實體、或查詢結果為空時,程式回傳寫死的三個食譜 id。',
+          en: 'How one Chinese sentence becomes an ORM query: GoogleTranslator turns it into English (one outbound HTTP call), BERT splits out 12 entity classes, B-/I- spans are merged and joined with the filter chips, and two Q objects are built — the entity side against recipe_recipe_ob, the attribute side against recipe_recipe_at — intersected on rid, top three taken. The two red boxes are the part worth reading: when nothing is tagged, or nothing matches, the code returns three hard-coded recipe ids.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-bert-label-scheme.svg',
+        alt: {
+          zh: '12 類 BIO 標籤與五層規則串接的流程圖,包含詞典片語比對、單字詞典與靜態關鍵字表,以及整列被丟棄的條件',
+          en: 'Flowchart of the 12-label BIO scheme and the five-rule cascade — gazetteer phrase matching, single-word vocabularies and static keyword lists — plus the row-drop condition',
+        },
+        caption: {
+          zh: '12 個標籤是怎麼被標上去的。五層規則依序覆寫:數字 → 食材詞典片語 → 食譜標籤詞典片語 → 單字詞典 → 靜態關鍵字表,後面的規則蓋掉前面的。只有 ING 與 TAG 有 I- 延續標籤,num 完全不帶前綴——這正是推論端必須特判它的原因。標到最後整列只剩 O 與 num 的訓練資料會直接丟掉。',
+          en: 'How the 12 labels get assigned. Five rules run in order and later ones overwrite earlier ones: numerics → ingredient-gazetteer phrases → recipe-tag phrases → single-word vocabularies → static keyword lists. Only ING and TAG have an I- continuation and `num` carries no prefix at all — which is exactly why the inference side special-cases it. A training row that ends up as nothing but O and num is discarded.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-bert-subword-alignment.svg',
+        alt: {
+          zh: '字詞級 BIO 標籤對齊 WordPiece 的流程圖,以實跑範例顯示 -100 遮罩如何套用在續接片段與特殊 token 上',
+          en: 'Flowchart of word-level BIO tags aligned to WordPiece tokens, with a real worked example showing the -100 mask on continuation pieces and special tokens',
+        },
+        caption: {
+          zh: '整個模型最容易寫錯的一步,用實跑的例子畫出來:fixture 第 2 行「i am allergic to peanuts and milk」中,peanuts 被切成 p / ##eanut / ##s,只有第一個片段拿到 B-ALG,其餘連同 [CLS]/[SEP]/[PAD] 一律填 -100,讓 CrossEntropy 完全略過——所以子詞與 padding 既不貢獻 loss,也不進準確率的分母。推論時同一套走訪改成輸出遮罩,過濾 logits 後保證「一個字一個標籤」。',
+          en: 'The single easiest step to get wrong, drawn from a real run: in fixture line 2, “i am allergic to peanuts and milk”, *peanuts* becomes p / ##eanut / ##s — only the first piece receives B-ALG, and every continuation piece plus [CLS]/[SEP]/[PAD] is set to -100 so CrossEntropy skips it. Sub-words and padding therefore contribute neither loss nor an accuracy denominator. At inference the same walk emits a mask instead, filtering the logits down to exactly one tag per input word.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-bert-ml-pipeline.svg',
+        alt: {
+          zh: 'BERT 專案的五階段管線圖:語料前處理、已入版控的 fallback 資料、微調、產出權重與推論、以及跨 repo 的下游消費端',
+          en: 'Five-stage pipeline of the BERT repo: corpus prep, committed fallbacks, fine-tuning, the weight artifact and inference, and the cross-repo downstream consumer',
+        },
+        caption: {
+          zh: '模型從語料到下游的全貌,也順帶說明這個 repo 為什麼 clone 下來就能跑。左段的 Kaggle Food.com CSV 與 zjy1.xlsx 都在 .gitignore 裡,所以中段那兩個 fallback 才是實際入口:40 行手寫的 train.jsonl 是預設資料集,沒有權重時 demo.py 就直接拿它就地微調。右端跨出本 repo——DB_search 的契約在這裡只有一份 import 不到 Django 的參考副本。',
+          en: 'The model from corpus to consumer — and why the repo runs straight out of a clone. The Kaggle Food.com CSVs and zjy1.xlsx on the left are both gitignored, so the two committed fallbacks in the middle are the real entry point: a 40-line hand-written train.jsonl is the default dataset, and with no weights on disk demo.py fine-tunes on it in memory. The right-hand stage leaves this repo entirely — the DB_search contract exists here only as a reference copy that cannot import Django.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-bert-inference-flow.svg',
+        alt: {
+          zh: 'python demo.py 跑一題的時序圖:載入權重或就地微調的分支、tokenize、對齊遮罩、logits argmax、抽出 typed spans,以及交給另一個 repo 的邊界',
+          en: 'Sequence diagram of one question through python demo.py: the load-weights-or-fine-tune branch, tokenization, the alignment mask, logits argmax, typed-span extraction and the hand-off boundary to the other repo',
+        },
+        caption: {
+          zh: '一題問句從 CLI 到食譜 id 的完整時序。上半段的 alt 分支是這個專案最實用的設計:有權重就 torch.load state_dict,沒有就退回用 40 行 fixture 就地微調 25 個 epoch,讓沒有任何前置作業的人也能看到東西。下半段被標成 BOUNDARY——spans 交給另一個 repo 的 Django 後端,那段在本 repo 裡跑不起來,圖上如實畫成跨界。',
+          en: 'One question from the CLI to recipe ids. The alt branch at the top is the most practical decision in the repo: load a state_dict if weights exist, otherwise fall back to fine-tuning the 40-line fixture for 25 epochs in memory, so someone with zero setup still sees output. The lower half is marked BOUNDARY — the typed spans go to the Django backend in a different repo, and that stretch genuinely cannot run here, so it is drawn as a crossing rather than glossed over.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-system-architecture.svg',
+        alt: {
+          zh: '後端系統架構圖:middleware 鏈、DRF 全域預設(JWT、權限、限流)、六組路由 viewset、規則引擎與查詢服務層、SQLite/MySQL 切換,以及虛線標示的選用 ML 模組',
+          en: 'Backend architecture: the middleware chain, DRF global defaults (JWT, permissions, throttles), six routed viewsets, the rules-engine and query service layer, the SQLite/MySQL switch, and dashed optional ML modules',
+        },
+        caption: {
+          zh: 'Django 後端的全貌:middleware 鏈、DRF 全域預設(JWT HS256、預設 IsAuthenticated、匿名 30/min、密碼重設 5/hr)、六組路由 viewset,以及規則引擎與 DB_query 的服務層。右下角刻意畫成虛線的是選用模組——BERT 推論與 Kaggle 匯入都靠 requirements-ml.txt 額外安裝,而且權重目錄 recipe/BertModel/trained/ 在 repo 裡根本不存在。實際跑起來的資料庫裡,三張食譜表都是 0 列。',
+          en: 'The Django backend end to end: the middleware chain, DRF global defaults (JWT HS256, IsAuthenticated by default, 30/min anonymous, 5/hour on password reset), six routed viewsets, and the rules-engine plus DB_query service layer. The dashed boxes bottom-right are deliberate — BERT inference and the Kaggle import both need the separate requirements-ml.txt, and the weights directory recipe/BertModel/trained/ does not exist in the repo at all. In a freshly migrated database, all three recipe tables hold zero rows.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-domain-er.svg',
+        alt: {
+          zh: '核心領域 ER 圖,使用真實表名與欄位名:會員四張一對一表、每日事件表與彙總表、題庫作答表,以及食譜三張表之間沒有外鍵的關係',
+          en: 'Core domain ER diagram with real table and column names: the four one-to-one member tables, daily event and aggregate tables, the quiz tables, and the FK-less relationships between the three recipe tables',
+        },
+        caption: {
+          zh: '真實的表名與欄位名——是從 sqlite 的 PRAGMA 讀出來的,不是照 models.py 抄。三件只有攤開 schema 才看得到的事:recipe_recipe_ob 與 recipe_recipe_at 之間沒有任何外鍵,靠 Python 以 rid 相接;Member_healthtarget 的外鍵指向 Member_member 而不是認證用的 Member_memberp;email 的唯一性只在序列化器把關,資料庫層沒有約束。',
+          en: 'Real table and column names — read out of sqlite via PRAGMA, not transcribed from models.py. Three things only an expanded schema shows: recipe_recipe_ob and recipe_recipe_at have no foreign key between them and are joined in Python on rid; Member_healthtarget points at Member_member rather than the auth model Member_memberp; and email uniqueness is enforced only in the serializer, with no database constraint behind it.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-health-target-derivation.svg',
+        alt: {
+          zh: 'BMI 推導每日目標的流程圖:註冊交易與延遲補算兩個入口、純 Python 規則引擎的三種分派、BMI 區間表,以及寫入 HealthTarget 的計算式',
+          en: 'Flowchart deriving daily targets from BMI: the registration transaction and the lazy-backfill entry point, the pure-Python rules engine’s three dispatches, the BMI interval table, and the HealthTarget write',
+        },
+        caption: {
+          zh: 'BMI 怎麼變成每日的飲水/熱量/運動目標。兩個入口:註冊時在單一 transaction.atomic 內連建四張表,或首次呼叫 /HManage/Personal/ 時延遲補算。規則引擎是一張純 Python 的 BMI 區間表——用來取代在 Python 3.10+ 已經 import 不了的 experta——回傳的是 dict 複本,呼叫端動不到規則表本身。圖上也標了那個 /100 修正:身高沒先換算成公尺前,每個人的 BMI 都趨近 0。',
+          en: 'How BMI becomes daily water / calorie / exercise targets. Two entry points: registration builds four tables inside one transaction.atomic, or the first call to /HManage/Personal/ backfills lazily. The rules engine is a plain-Python BMI interval table — written to replace experta, which no longer imports on Python 3.10+ — and it returns a copy of the dict so callers cannot mutate the rule table. The diagram also marks the /100 fix: before height was converted from cm to metres, every BMI came out near zero.',
+        },
+      },
+      {
+        src: '/images/work/four-times-for-cook/diagram-daily-record-loop.svg',
+        alt: {
+          zh: '每日健康紀錄的時序圖:一次 JWT 驗證後的寫入(含缺鍵 400 分支與強度加權),以及一次彙總讀取(當日時區窗、目標補算、週狀態碼)',
+          en: 'Sequence diagram of the daily health loop: one JWT-authenticated write (with the missing-key 400 branch and intensity weighting) and one aggregate read (today’s timezone window, target backfill, weekly status codes)',
+        },
+        caption: {
+          zh: '一次寫入加一次彙總讀取的時序。JWT 以 account 宣告解析使用者,運動分鐘依強度乘 2/5/7 的權重累進當日彙總列;讀取端以 Asia/Taipei 的當日區間過濾而不是裸 UTC,並在還沒有目標時就地呼叫 BMI 規則補算一份。週狀態 0–3 的判定條件(整週無紀錄、當日無紀錄、落在寬限值內、熱量另外再 ±200)也一併標在圖上。',
+          en: 'One write and one aggregate read, in order. JWT resolves the user from the `account` claim; exercise minutes accumulate into the day’s aggregate row weighted 2/5/7 by intensity. The read side filters on today’s Asia/Taipei window rather than naive UTC, and backfills a target on the spot by calling the BMI rules if none exists. The 0–3 weekly status codes are spelled out too: nothing all week, nothing that day, inside the slack thresholds, and calories additionally within ±200.',
+        },
+      },
+    ],
+  },
+  {
+    slug: 'helmet-detect',
+    domain: 'fullstack',
+    visibility: 'public',
+    title: {
+      zh: 'HelmetDetect 工地安全帽偵測平台',
+      en: 'HelmetDetect — Construction-Site Helmet Detection',
+    },
+    oneLiner: {
+      zh: 'PHP Lumen API、獨立的 Python YOLO 推論服務與 React 儀表板組成的工地安全帽偵測平台;另做了一套不需後端的展示模式,部署在 GitHub Pages。',
+      en: 'A construction-site helmet-detection platform — a PHP Lumen API, a separate Python YOLO inference service and a React dashboard, plus a backend-free demo mode deployed to GitHub Pages.',
+    },
+    scope: { zh: '個人專案 · 2024 原型 → 2026 重構', en: 'Personal project · 2024 prototype → 2026 rebuild' },
+    stack: ['LUMEN', 'FLASK', 'YOLO', 'MYSQL', 'REACT', 'VITE', 'TAILWIND'],
+    keyMetric: {
+      value: '3',
+      label: { zh: '服務(Lumen · Flask · React)', en: 'services (Lumen · Flask · React)' },
+    },
+    links: {
+      live: 'https://namecallbob.github.io/Assist_project_HelmetDetect/',
+      repo: 'https://github.com/NameCallBob/Assist_project_HelmetDetect',
+    },
+    featured: false,
+    screenshots: [
+      {
+        src: '/images/work/helmet-detect/safety-dashboard.webp',
+        alt: {
+          zh: '工安總覽:總偵測次數、違規/合規場景與偵測到人員的 KPI 卡、合規率環圈圖、高風險地點長條圖,以及最近偵測的標註縮圖',
+          en: 'Safety overview: KPI tiles for total detections, violating and compliant scenes and people detected, a compliance donut, a high-risk-location bar chart and annotated recent-detection thumbnails',
+        },
+        caption: {
+          zh: '工安總覽——合規率 50% 是由 10 筆種子紀錄即時算出的,不是寫死的數字;右上角的「展示模式」標籤是應用自己掛的,提醒背後沒有後端。',
+          en: 'Safety overview — the 50% compliance rate is computed live from the ten seeded records, not hard-coded; the “demo mode” pill top-right is the app labelling itself, because nothing is behind it.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/detect-result.webp',
+        alt: {
+          zh: '安全帽偵測頁:左側是標註完成的畫面與逐人信心值,右側為上傳區與四個範例場景,底部有偵測完成提示',
+          en: 'Helmet detection page: the annotated frame with per-person confidence on the left, an upload zone and four sample scenes on the right, and a completion toast at the bottom',
+        },
+        caption: {
+          zh: '偵測結果——綠框 HELMET、紅框 NO-HELMET,附逐人信心值。這些框來自 seed 的固定座標:YOLO 服務沒有啟動,上傳區也直接寫著「展示模式會以模擬結果呈現」。',
+          en: 'Detection result — green HELMET boxes, red NO-HELMET boxes, per-person confidence. The boxes come from fixed seed coordinates: the YOLO service is not running, and the upload zone says so in plain words.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/detection-history.webp',
+        alt: {
+          zh: '偵測紀錄頁:9 張帶標註縮圖的卡片網格,上方有關鍵字搜尋與全部/違規/合規篩選',
+          en: 'Detection history: a grid of nine cards with annotated thumbnails, above them a keyword search and all/violation/compliant filters',
+        },
+        caption: {
+          zh: '偵測紀錄——關鍵字搜尋加違規/合規篩選。左上 08/29 那筆不是種子資料,是截圖當下真的按下「執行偵測」後寫進 localStorage 的紀錄。',
+          en: 'Detection history — keyword search plus violation/compliance filters. The 08/29 card at top-left is not seed data: it is the record produced by actually clicking “run detection” during capture, persisted to localStorage.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/detection-detail.webp',
+        alt: {
+          zh: '偵測詳情頁:放大的標註畫面、檔名與地點資訊卡、逐人辨識結果列,以及確認違規/誤判的複核面板',
+          en: 'Detection detail: an enlarged annotated frame, a file/location info card, per-person result rows and a review panel with confirm-violation and false-positive actions',
+        },
+        caption: {
+          zh: '偵測詳情——逐人結果與複核面板。「確認違規/誤判」對應後端 comment.confirm 欄位;該資料表與 CommentController 都存在,但 routes/web.php 沒有替它註冊任何路由。',
+          en: 'Detection detail — per-person results and the review panel. Confirm/false-positive maps to the backend’s comment.confirm column; the table and CommentController both exist, but routes/web.php registers no route for them.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/admin-review-table.webp',
+        alt: {
+          zh: '偵測管理頁:巡檢員人數、違規總數、合規率與待複核的 KPI 卡,下方是跨巡檢員的偵測表格與狀態標籤',
+          en: 'Admin console: KPI tiles for inspectors, total violations, compliance rate and pending reviews, above a cross-inspector detection table with status badges',
+        },
+        caption: {
+          zh: '管理端的跨巡檢員表格,可依違規/待複核過濾。只有 2 名巡檢員,是種子資料的全部,不是被截斷。',
+          en: 'The admin’s cross-inspector table, filterable by violation and pending-review. Two inspectors is the entire seeded roster — not a truncated view.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/mobile-dashboard.webp',
+        alt: {
+          zh: '390px 寬的行動版工安總覽:KPI 卡改為兩欄、圖表整寬堆疊,畫面底部固定底部導覽列',
+          en: 'The safety overview at 390px: KPI tiles in two columns, charts stacked full width, and a fixed bottom navigation bar',
+        },
+        caption: {
+          zh: '同一頁在 390px:KPI 收成兩欄、圖表整寬堆疊,側欄在 Tailwind md 斷點以下換成固定底部 tab 導覽——同一份元件,兩種資訊密度。',
+          en: 'The same page at 390px: KPIs fold to two columns, charts stack full width, and below Tailwind’s md breakpoint the sidebar becomes a fixed bottom tab bar — one component tree, two information densities.',
+        },
+      },
+    ],
+    diagrams: [
+      {
+        src: '/images/work/helmet-detect/diagram-detection-pipeline.svg',
+        alt: {
+          zh: 'POST /picture/upload 的循序圖:SPA、中介層、PictureController、儲存層、MySQL、Flask 與 YOLO 之間的同步呼叫順序',
+          en: 'Sequence diagram of POST /picture/upload across the SPA, middleware, PictureController, storage, MySQL, Flask and YOLO',
+        },
+        caption: {
+          zh: '整個系統最重要的一次呼叫:一個 POST 同步走完 RBAC 查表 → 存檔 → 寫入 picture → HTTP 打進 Flask → YOLO 推論 → 寫入 result。這條路徑上沒有任何佇列(QUEUE_CONNECTION=sync),請求會一路阻塞到推論回來;而且判定違規之後不會通知任何人。',
+          en: 'The system’s single most important call: one POST walks RBAC lookup → file store → picture insert → an HTTP hop into Flask → YOLO inference → result insert, all synchronously. There is no queue anywhere on that path (QUEUE_CONNECTION=sync), so the request blocks until inference returns — and a confirmed violation notifies nobody.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/diagram-system-architecture.svg',
+        alt: {
+          zh: '後端服務與分層架構圖:React SPA、Lumen 的前控制器/中介層/路由/控制器/Eloquent、MySQL,以及獨立的 Flask + YOLO 服務與 SMTP',
+          en: 'Service and layer architecture: the React SPA, Lumen’s front controller, middleware, routes, controllers and Eloquent, MySQL, plus the separate Flask + YOLO service and SMTP',
+        },
+        caption: {
+          zh: '三個執行體與它們之間的協定:React SPA → Lumen(全域 Cors/Auth 中介層、13 條路由註冊)→ 127.0.0.1:5000 的 Flask/YOLO。圖裡特地留了一格「已定義但未註冊路由」:ResultController、CommentController、UserController、ExampleController 都在檔案系統裡,routes/web.php 一條都沒接。',
+          en: 'Three runtimes and the protocols between them: React SPA → Lumen (global CORS/auth middleware, 13 route registrations) → Flask/YOLO on 127.0.0.1:5000. One box is reserved for defined-but-unrouted controllers — ResultController, CommentController, UserController and ExampleController all exist on disk, and routes/web.php wires up none of them.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/diagram-auth-rbac.svg',
+        alt: {
+          zh: 'JWT 認證與 role→action 授權流程圖:CORS 短路、全域中介層放行、有無 check.permission 的兩類路由、角色權限查表與各種 401/403 分支',
+          en: 'JWT authentication and role→action authorization flow: the CORS short circuit, the global pass-through, guarded versus unguarded routes, the role-permission lookup and every 401/403 branch',
+        },
+        caption: {
+          zh: '授權的實際形狀:只有 5 條 /picture/* 掛了 check.permission。另外 7 條裡,3 條在 controller 內自行重查身分,4 條完全不查——login、register,以及兩條密碼重設路由。這張圖畫的是這個不對稱,而不是一道齊整的門。',
+          en: 'What authorization actually looks like: only the five /picture/* routes carry check.permission. Of the other seven, three re-check identity inside the controller and four check nothing at all — login, register, and both password-reset routes. The figure draws that asymmetry rather than a tidy single gate.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/diagram-schema-er.svg',
+        alt: {
+          zh: 'MySQL 結構 ER 圖:users、picture、result、comment 四張業務表與 role、user_role、action、role_action 四張權限表及其外鍵關係',
+          en: 'MySQL ER diagram: the four business tables users, picture, result and comment, the four RBAC tables role, user_role, action and role_action, and their foreign keys',
+        },
+        caption: {
+          zh: '兩支 migration 建出的 8 張表——業務側 users/picture/result/comment,權限側 role/user_role/action/role_action,所有外鍵都是 ON DELETE CASCADE。值得注意的是 result.result_file_name 只有違規時才有值:合規的照片不會留下標註檔,這個「只存壞消息」的設計直接寫在欄位上。',
+          en: 'The eight tables the two migrations create — users/picture/result/comment on the business side, role/user_role/action/role_action for RBAC, every foreign key ON DELETE CASCADE. Worth noticing: result.result_file_name is populated only on a violation, so a compliant photo leaves no annotated file. The “store only bad news” decision is visible in the column itself.',
+        },
+      },
+      {
+        src: '/images/work/helmet-detect/diagram-password-reset.svg',
+        alt: {
+          zh: '忘記密碼流程的循序圖:發送驗證碼、寫入 users 表的驗證碼與到期時間、透過 SMTP 寄信,以及重設密碼的查詢與到期判斷',
+          en: 'Password-reset sequence: issuing the code, writing the code and expiry onto the users row, sending it over SMTP, and the reset lookup with its expiry check',
+        },
+        caption: {
+          zh: '這是整個後端唯一一條對外送信的路徑——沒有任何違規通知走這裡。圖同時標出兩個從原始碼判讀出的行為(本機沒有 PHP runtime,Lumen 從未實際啟動):查無此人時 HTTP 仍回 200、狀態碼藏在 body 裡;重設時只用 6 碼驗證碼跨全表比對,沒有再綁回發起的使用者。',
+          en: 'The only outbound mail path in the entire backend — no violation alert travels this way or any other. The figure also marks two behaviours read off the source (the Lumen app was never booted here — no PHP runtime): an unknown user still gets HTTP 200 with the status buried in the body, and the reset step matches the six-character code across all users without binding it back to whoever requested it.',
+        },
+      },
+    ],
+    caseStudy: {
+      problem: [
+        {
+          zh: '工地未戴安全帽的稽查,原本靠人巡、拍照、事後回報。這個系統把它變成一條可查的流程:巡檢員上傳工地影像,YOLO 模型逐人標記 helmet / nohelmet,結果落成紀錄,再由工安管理員複核違規或標為誤判,並在總覽上匯出合規率與高風險地點。專案分兩個時期:2024 年 6 月是一支能跑通「上傳 → 推論」的 PHP + Flask 原型(對外靠 ngrok、後來換 serveo 打洞);2026 年的工作是把它重整成 backend/ 與 frontend/ 的完整專案,補上 React 儀表板,並讓它能在沒有後端的情況下公開展示。',
+          en: 'Checking that workers wear helmets on site used to mean walking the site, taking photos and filing a report afterwards. This system turns that into a traceable flow: an inspector uploads a site image, a YOLO model marks each person helmet / nohelmet, the outcome becomes a record, and a safety manager confirms the violation or flags it as a false positive — with compliance rate and high-risk locations rolled up on an overview. The project has two eras: a June 2024 PHP + Flask prototype that could run upload → inference (exposed through an ngrok, later serveo, tunnel), and 2026 work that restructured it into a proper backend/ + frontend/ project, added the React dashboard, and made it demonstrable with no backend at all.',
+        },
+      ],
+      constraints: [
+        {
+          zh: 'YOLO 權重檔沒有進版控——.gitignore 直接排除 *.pt,所以 clone 下來的 repo,Flask 服務在 import 時就會因為找不到 helmet.pt 而炸掉。任何公開的展示都不能依賴推論。',
+          en: 'The YOLO weights are not in version control — .gitignore excludes *.pt outright — so on a fresh clone the Flask service dies at import time looking for helmet.pt. No public demo can depend on inference running.',
+        },
+        {
+          zh: '後端沒有非同步層。QUEUE_CONNECTION=sync、Console\\Kernel 的 schedule() 是空的、ExampleJob 仍是未動過的骨架,全庫 grep 不到任何 dispatch()、Queue:: 或 Notification 呼叫。偵測是一次阻塞的請求內呼叫,判定違規之後不會有信、推播或 webhook——這是既有事實,不是待辦。',
+          en: 'There is no async tier. QUEUE_CONNECTION=sync, Console\\Kernel’s schedule() body is empty, ExampleJob is an untouched skeleton, and a repo-wide grep finds no dispatch(), Queue:: or Notification call anywhere. Detection is a blocking in-request call, and a violation produces no mail, push or webhook — a stated fact, not a to-do.',
+        },
+        {
+          zh: '要公開開源,但憑證曾被提交進版控:MailController 寫死 Gmail SMTP 帳號與應用程式密碼,app.py 寫死本機 MySQL 連線資訊。兩者現已改讀環境變數,且公開前已改寫 git 歷史清除既有值,因此已無法從本 repo 復原。',
+          en: 'It had to be open-sourced, yet credentials had been committed: a Gmail SMTP account and app password hardcoded in MailController, and local MySQL connection details in app.py. Both are now read from the environment, and the git history was rewritten before publication to purge the committed values — so they are no longer recoverable from this repo.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '三個獨立執行的東西。PHP Lumen 10 的 API 是入口:routes/web.php 共 13 條註冊(1 條根路由 + 12 個 API 端點),全域串 CorsMiddleware 與 AuthMiddleware,另以 check.permission 這個 route middleware 別名做逐端點授權。推論不在 PHP 裡:PictureController 把上傳的位元組以 multipart 打到 127.0.0.1:5000 的 Flask 服務,由 Ultralytics YOLO 讀 helmet.pt 推論,只在偵測到 nohelmet 時才把標註圖寫進 storage,並回傳 { message, detection, filename }。前端是 React 18 + Vite 6 + Tailwind v4,7 個頁面。',
+          en: 'Three things that run independently. A PHP Lumen 10 API is the entry point: routes/web.php holds 13 registrations (1 root route plus 12 API endpoints), with CorsMiddleware and AuthMiddleware in the global stack and a check.permission route-middleware alias doing per-endpoint authorization. Inference does not live in PHP: PictureController posts the upload bytes as multipart to a Flask service on 127.0.0.1:5000, where Ultralytics YOLO loads helmet.pt, writes an annotated image to storage only when nohelmet is found, and returns { message, detection, filename }. The frontend is React 18 + Vite 6 + Tailwind v4 across seven pages.',
+        },
+        {
+          zh: 'MySQL 由兩支 migration 建出 8 張表:業務側 users / picture / result / comment,權限側 role / user_role / action / role_action,外鍵全部 ON DELETE CASCADE。授權是 role→action 查表:種子有 5 個 action,user 角色拿 4 個,admin 多一個 picture.manage.all。前端的關鍵是單一資料轉接層(src/lib/api.js,237 行):同一組函式有 demo 與 live 兩個分支,由 VITE_API_MODE 決定——demo 讀 10 筆種子紀錄與 4 個範例場景、新的偵測寫進 localStorage;live 打 Lumen 端點,再把 picture[]+results[] 正規化成同一種扁平紀錄。GitHub Actions 先跑 vitest,再以 VITE_API_MODE=demo 建置並發到 Pages。',
+          en: 'Two migrations create eight MySQL tables: users / picture / result / comment on the business side, role / user_role / action / role_action for RBAC, every foreign key ON DELETE CASCADE. Authorization is a role→action lookup: five seeded actions, four granted to the user role and a fifth (picture.manage.all) added for admin. The frontend’s keystone is a single data adapter (src/lib/api.js, 237 lines) where every operation has a demo and a live branch selected by VITE_API_MODE — demo reads ten seeded records and four sample scenes and writes new runs to localStorage; live calls the Lumen endpoints and normalizes picture[]+results[] into the same flat record shape. GitHub Actions runs vitest, then builds with VITE_API_MODE=demo and publishes to Pages.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '全部由我完成,git 全歷史 27 個 commit(跨我自己的兩組身分)。2024/06 的 5 個 commit 是 Lumen + Flask/YOLO 原型;2026/07–08 的 22 個 commit 是這輪工作:目錄重整、React 儀表板與 demo/live 轉接層、34 個 vitest 測試、GitHub Pages CI,以及一串後端的正確性與資安修復。PHP 環境不在我目前的機器上,所以後端這輪是靜態閱讀原始碼後改的,沒有實際啟動驗證——這點如實記錄。',
+          en: 'All of it is mine: 27 commits across the full git history (under two of my own identities). Five commits in June 2024 are the Lumen + Flask/YOLO prototype; 22 commits in July–August 2026 are this round — the directory restructure, the React dashboard and its demo/live adapter, 34 vitest tests, GitHub Pages CI, and a run of backend correctness and security fixes. PHP is not installed on my current machine, so those backend changes were made by reading the source rather than by booting the service — recorded as-is.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: 'Picture / Result / Comment 三個 Eloquent 模型沿用了複數表名的預設,但 migration 建的是單數表;而且程式讀寫 picture.file_name,schema 裡的欄位卻叫 url。也就是說,那三個模型的每一次查詢都必定失敗。',
+            en: 'The Picture / Result / Comment Eloquent models kept Laravel’s plural-table default while the migration creates singular tables — and the code read and wrote picture.file_name against a column actually named url. Every query through those three models was guaranteed to fail.',
+          },
+          s: {
+            zh: '在每個模型上明確釘死 $table,並把 schema 對齊程式實際讀寫的欄位:picture.url 改名為 file_name、補上 result.result_file_name。這類錯誤靜態看程式碼看不出來,是從「哪一行讀哪一個欄位」逐條比對 migration 才浮現的。',
+            en: 'Pinned $table explicitly on each model and aligned the schema with the columns the code actually touches: renamed picture.url to file_name and added result.result_file_name. Nothing about this is visible from reading a model in isolation — it surfaced only from checking every read and write line against the migration.',
+          },
+        },
+        {
+          c: {
+            zh: '上傳流程有兩個會在真實流量下爆掉的地方:upload() 先呼叫 store() 把暫存檔搬走,之後才用 getRealPath() 讀位元組;而 Flask 的回應直接以 $res[\'detection\'] 取用,推論服務一旦掛掉或回傳別的東西,使用者拿到的是 undefined index。',
+            en: 'The upload path had two failure modes waiting for real traffic: upload() called store(), which moves the temp file, and only afterwards read the bytes via getRealPath(); and the Flask response was indexed straight as $res[\'detection\'], so a detector that was down or answered differently surfaced to the user as an undefined index.',
+          },
+          s: {
+            zh: '把讀取位元組與原始檔名提前到 store() 之前,並在原地留下註解說明為什麼順序不能換;Flask 回應改成先檢查 ->ok() 再檢查 detection 欄位存在,兩種失敗各自回 502。同時把 checkAction() 從隱含回傳改成明確回傳布林,並修掉 401 訊息把 "token invalid" 寫成 "token is valid" 的錯字。',
+            en: 'Moved reading the bytes and the original filename ahead of store(), with an in-place comment on why the order cannot be swapped; the Flask response is now checked with ->ok() and then for the presence of the detection key, each failure returning its own 502. In the same pass checkAction() went from an implicit return to a real boolean, and the 401 message that read “token is valid” was corrected to “token invalid”.',
+          },
+        },
+        {
+          c: {
+            zh: '準備公開時的檢查翻出一批不該外流的東西:/user/info 直接把 User 模型序列化回去、密碼雜湊跟著出去;忘記密碼流程寫的是 reset_code / reset_expires_at 這兩個 migration 根本沒建的欄位,所以整條流程不可能成功;updateUser() 會把 account 覆寫成電話號碼,登入識別直接被改掉;MailController 有寫死的 Gmail 帳密,app.py 有寫死的 MySQL 連線資訊。',
+            en: 'The pre-publication pass turned up a batch of things that should never leave the machine: /user/info serialized the User model straight back, password hash included; the reset flow wrote reset_code / reset_expires_at, columns no migration creates, so it could never have worked; updateUser() overwrote account with the phone number, silently changing the login identifier; MailController held hardcoded Gmail credentials and app.py hardcoded MySQL connection details.',
+          },
+          s: {
+            zh: '在 User 模型上設 $hidden 擋掉 password 與重設欄位、改用真正存在的 password_reset_code / password_reset_expires_at、刪掉那行覆寫 account 的賦值;SMTP 與 MySQL 連線資訊全部改讀環境變數並附 .env.example(只有佔位值),app.py 的 finally 區塊也補上連線從未建立時的保護。另外把 UserSeeder 補成能真的登入的樣子——原本只產 faker 使用者、account 是隨機電話,README 宣稱的「種子示範帳號」在當時並不成立。',
+            en: 'Added $hidden on the User model for the password and reset fields, switched to the columns that actually exist (password_reset_code / password_reset_expires_at), and deleted the line overwriting account; SMTP and MySQL settings now come from environment variables with a placeholder-only .env.example, and app.py’s finally block was guarded against a connection that never opened. UserSeeder was also fixed so someone can actually sign in — it previously created only faker users whose account was a random phone number, meaning the README’s “seeded demo users” claim was not true at the time.',
+          },
+        },
+        {
+          c: {
+            zh: '要讓這個專案能公開展示,但推論根本跑不起來:權重檔不在 repo 裡,Flask 服務也需要一台會裝 Python 與 Ultralytics 的機器。最省事的做法是在瀏覽器裡假裝有模型。',
+            en: 'The project needed to be publicly demonstrable while inference simply could not run: the weights are not in the repo and the Flask service needs a machine with Python and Ultralytics. The easy move would have been to fake a model in the browser.',
+          },
+          s: {
+            zh: '選擇不假裝。資料轉接層加一個 demo 分支,讀的是 seed 裡寫死的正規化座標,並在畫面上把這件事講清楚:標題列掛「展示模式」標籤、上傳區直接寫「展示模式會以模擬結果呈現」。場景圖也不用照片——SceneImage.jsx 以 CSS 漸層畫出工地感的底,再把框疊上去,所以畫面上不會出現任何冒充成真實推論結果的東西。真正被測試涵蓋的是這一層:34 個 vitest 案例把 demo 分支釘住,包含「合規的場景不得捏造出標註圖檔名」與「新紀錄的 id 不得和種子撞號」。',
+            en: 'Chose not to fake it. The data adapter gained a demo branch that resolves fixed normalized coordinates out of the seed, and the UI says so out loud: a “demo mode” pill in the header and “demo mode shows simulated results” on the upload zone. The scenes are not photographs either — SceneImage.jsx paints a worksite-ish CSS gradient and overlays the boxes, so nothing on screen impersonates a real inference result. That layer is what the tests actually cover: 34 vitest cases pin the demo branch down, including “a compliant scene must not fabricate an annotated filename” and “new ids must never collide with the seed”.',
+          },
+        },
+      ],
+      facts: [
+        { value: '3', label: { zh: '服務(Lumen · Flask · React)', en: 'services (Lumen · Flask · React)' } },
+        { value: '12', label: { zh: 'API 端點(另 1 條根路由)', en: 'API endpoints (plus 1 root route)' } },
+        { value: '8', label: { zh: 'MySQL 資料表', en: 'MySQL tables' } },
+        { value: '34', label: { zh: '前端測試(vitest 實跑通過)', en: 'frontend tests (vitest, all passing)' } },
+      ],
+      lessons: [
+        {
+          zh: '「偵測到違規」和「有人會知道」是兩件事。這套系統把安全帽違規完整記錄、可查、可複核,但整個後端沒有任何佇列、排程或通知——唯一一條對外送信的路徑是忘記密碼。它是一個稽核紀錄工具,不是即時告警系統;把這條界線講清楚,比暗示它會叫人有用得多。',
+          en: '“A violation was detected” and “somebody will know” are two different claims. This system records helmet violations completely, queryably and reviewably — but the backend has no queue, no scheduler and no notification of any kind; its only outbound mail path is password reset. It is an inspection-record tool, not a realtime alerting system, and saying where that line sits is more useful than implying it will page someone.',
+        },
+        {
+          zh: 'README 不是證據。這個 repo 的 README 寫著有種子示範帳號,而 UserSeeder 只產隨機電話當帳號的 faker 使用者,誰都登不進去;模型的表名、欄位名同樣和 migration 對不上。這輪所有修復的依據都是「哪一行讀哪一個欄位」,而不是文件怎麼說——文件說得通的系統,不代表跑得起來。',
+          en: 'A README is not evidence. This one advertised seeded demo accounts while UserSeeder produced only faker users whose account was a random phone number, so nobody could sign in; the models’ table and column names likewise disagreed with the migration. Every fix this round came from tracing which line reads which column, not from what the docs claimed — a system that reads correctly is not the same as a system that runs.',
+        },
+        {
+          zh: '沒有模型也要能展示,但不能假裝有模型。做法是把假的部分做成產品的一個明確模式:demo 分支、畫面上的「展示模式」標籤、CSS 漸層而非照片的場景圖,再用測試把這個分支的行為釘住。誠實標示不會讓 demo 變弱——它讓看的人知道哪些是真的做出來的:UI、資料流、複核流程與響應式版型全是真的,只有推論不是。',
+          en: 'Demoing without a model is fine; pretending to have one is not. The answer was to make the simulated part an explicit product mode — a demo branch, a “demo mode” badge on screen, CSS-gradient scenes instead of photographs — and then pin that branch’s behaviour with tests. Labelling it honestly does not weaken the demo; it tells the viewer exactly what was really built: the UI, the data flow, the review workflow and the responsive layout are all real. Only the inference is not.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'food-selector',
+    domain: 'fullstack',
+    visibility: 'public',
+    title: {
+      zh: '耐人尋味 FoodSelector 美食選擇器',
+      en: 'FoodSelector — Food Picker',
+    },
+    oneLiner: {
+      zh: 'Lumen(PHP)JWT API 加 React + Vite 前端的美食探索站:先把課堂後端的權限繞過、失效的帳號鎖與壞掉的路由修好,再補上一個不需要 PHP 與資料庫就能完整操作的前端。',
+      en: 'A food-discovery site on a Lumen (PHP) JWT API with a React + Vite frontend: first repair the coursework backend’s auth bypass, dead account lock and broken routes, then add a frontend that runs end-to-end with no PHP and no database.',
+    },
+    scope: { zh: '課堂後端 → 全端重構 · 獨立開發', en: 'Coursework backend → full-stack rebuild · solo' },
+    stack: ['PHP', 'LUMEN', 'JWT', 'MYSQL', 'REACT', 'VITE', 'TAILWIND'],
+    keyMetric: { value: '25', label: { zh: '後端路由(12 條需權限)', en: 'backend routes (12 permission-guarded)' } },
+    links: { repo: 'https://github.com/NameCallBob/FoodSelector' },
+    featured: false,
+    screenshots: [
+      {
+        src: '/images/work/food-selector/home.webp',
+        alt: {
+          zh: '首頁:「今天吃什麼?交給命運決定」主視覺、8 個美食分類、今日推薦店家與人氣必吃',
+          en: 'Home page: “what to eat today — let fate decide” hero, eight food categories, featured stores and popular dishes',
+        },
+        caption: {
+          zh: '首頁 — 頂端的展示模式橫幅由 IS_DEMO 控制;這一整頁的分類、店家與菜色都由前端種子檔供應,沒有任何後端在跑',
+          en: 'Home — the demo-mode banner is driven by IS_DEMO; every category, store and dish on this page comes from the front-end seed, with no backend running',
+        },
+      },
+      {
+        src: '/images/work/food-selector/store-detail.webp',
+        alt: {
+          zh: '店家頁:封面、評分、介紹、地址營業時間電話、標籤、完整菜單與食客評論',
+          en: 'Store page: cover, rating, intro, address/hours/phone, tags, full menu and diner reviews',
+        },
+        caption: {
+          zh: '店家頁 — 介紹、營業資訊與菜單同頁呈現;評論區在 demo 模式讀種子,live 模式則回傳空陣列,因為後端沒有任何路由指向 CommentController',
+          en: 'Store page — intro, opening info and menu on one screen; reviews read the seed in demo mode and degrade to an empty array in live mode, because no route in the backend points at CommentController',
+        },
+      },
+      {
+        src: '/images/work/food-selector/browse-filters.webp',
+        alt: {
+          zh: '探索頁套用「燒肉」分類篩選:搜尋列、分類 chip、價格區間,以及菜色 3／店家 1 的計數',
+          en: 'Browse page with the “yakiniku” category filter applied: search box, category chips, price range and a 3-dishes / 1-store result count',
+        },
+        caption: {
+          zh: '探索頁套用分類篩選 — 關鍵字、分類、價格上下限對應後端 /search/ 的查詢參數;上方「菜色 3 / 店家 1」是同一組條件下的即時計數',
+          en: 'Browse with a category filter — keyword, category and price bounds map onto the backend’s /search/ query parameters; the “3 dishes / 1 store” chips are live counts for the same filter set',
+        },
+      },
+      {
+        src: '/images/work/food-selector/random-pick-result.webp',
+        alt: {
+          zh: '隨機挑選頁在轉盤停下後的結果卡:「就決定是你了!」與被抽中的店家資訊',
+          en: 'The random picker after the reel stops: a “this is the one!” result card with the picked store',
+        },
+        caption: {
+          zh: '「幫我決定」轉完後的結果 — 挑選就是從候選池均勻取一筆,沒有個人化也沒有加權;偵測到 prefers-reduced-motion 時會跳過 1.6 秒的轉盤動畫直接給結果',
+          en: 'The picker after a real spin — one uniformly random draw from the candidate pool, no personalization and no weighting; under prefers-reduced-motion it skips the 1.6-second reel and reveals the result directly',
+        },
+      },
+      {
+        src: '/images/work/food-selector/favorites.webp',
+        alt: {
+          zh: '口袋名單頁:6 筆已收藏菜色的卡片網格,頁首導覽列帶收藏數量徽章',
+          en: 'Favorites page: a grid of six saved dishes, with a count badge on the header nav',
+        },
+        caption: {
+          zh: '口袋名單 — 收藏只寫在瀏覽器的 localStorage(fs_favorites);後端雖然有 collect.create / read / delete 三條權限路由,前端至今一次都沒呼叫過',
+          en: 'Favorites — saved items live only in the browser’s localStorage (fs_favorites); the backend does expose collect.create / read / delete behind permissions, but the frontend has never called them',
+        },
+      },
+      {
+        src: '/images/work/food-selector/mobile-browse.webp',
+        alt: {
+          zh: '390px 手機版探索頁:分類 chip 換行、價格區間獨立一列、雙欄卡片與底部固定四格導覽列',
+          en: 'Browse page at 390px: wrapped category chips, price range on its own row, a two-column card grid and a fixed four-tab bottom bar',
+        },
+        caption: {
+          zh: '手機版探索頁(390px)— 分類 chip 換行、價格區間獨立成列,並改用 md:hidden 的底部固定導覽;與桌機共用同一組頁面元件,只靠斷點切換',
+          en: 'Browse at 390px — chips wrap, the price range gets its own row and navigation switches to a fixed md:hidden bottom bar; the same page components serve both widths, differing only by breakpoint',
+        },
+      },
+    ],
+    diagrams: [
+      {
+        src: '/images/work/food-selector/diagram-auth-sequence.svg',
+        alt: {
+          zh: 'POST /login 與 GET /collect/ 的時序圖,涵蓋帳號鎖檢查、JWT 簽發與逐路由權限檢查',
+          en: 'Sequence diagram of POST /login and GET /collect/, covering the lock check, JWT issuance and the per-route permission check',
+        },
+        caption: {
+          zh: '登入與授權時序 — 左半是 login:先查 locks、再 attempt(),失敗遞增計數、成功清空;右半是受保護路由通過 check.permission:collect.read 的全程。圖上刻意留著一個事實:中介層解過的 token,controller 又獨立解了第二次。',
+          en: 'Login and authorization sequence — the left half is login: check locks, then attempt(), increment on failure and clear on success; the right half traces a guarded route through check.permission:collect.read. The figure deliberately keeps one fact visible: the controller decodes the same bearer token a second time, independently of the middleware.',
+        },
+      },
+      {
+        src: '/images/work/food-selector/diagram-route-rbac.svg',
+        alt: {
+          zh: '請求管線與完整路由表:公開路由、buyer 與 seller 兩組受權限保護的路由,以及 401/403 的分岔',
+          en: 'Request pipeline and full route table: public routes, the buyer and seller permission-guarded groups, and the 401/403 branches',
+        },
+        caption: {
+          zh: '請求管線與路由表 — 25 條路由中 13 條公開、12 條掛 check.permission:<action>;buyer / seller 的分組不是我畫上去的,兩個角色名與權限切分直接取自 RoleSeeder,每個權限字串都能在 PermissionsSeeder 找到對應列。',
+          en: 'Request pipeline and route table — 13 of the 25 routes are public and 12 carry check.permission:<action>; the buyer/seller grouping is not an editorial choice: both role names and the permission split come straight from RoleSeeder, and every permission string has a matching row in PermissionsSeeder.',
+        },
+      },
+      {
+        src: '/images/work/food-selector/diagram-lock-state.svg',
+        alt: {
+          zh: 'locks 資料表的帳號鎖定狀態機:未建列、未鎖定、已鎖定三個狀態與其轉移條件',
+          en: 'Account-lock state machine over the locks table: no row yet, unlocked and locked, with the transitions between them',
+        },
+        caption: {
+          zh: '帳號鎖定狀態機 — 兩個容易被說錯的細節都畫在圖上:checklock() 跑在 attempt() 之前,計數必須已經是 5,所以鎖其實在第 6 次嘗試才跳;而離開鎖定的唯一出口是用兩題安全問題重設密碼——沒有管理員解鎖、沒有 TTL、沒有排程任務。',
+          en: 'Account-lock state machine — the two details most easily misstated are drawn in: checklock() runs before attempt(), so the counter must already sit at 5, meaning the lock trips on the sixth try; and the only exit from Locked is a security-question password reset — no admin unlock, no TTL, no scheduled job.',
+        },
+      },
+      {
+        src: '/images/work/food-selector/diagram-discovery.svg',
+        alt: {
+          zh: '探索、隨機挑選與人氣統計的資料路徑,含買家端公開路由與賣家端受權限路由',
+          en: 'Data paths for discovery, random picking and popularity stats, split into public buyer routes and guarded seller routes',
+        },
+        caption: {
+          zh: '探索與挑選路徑 — 這張圖最有價值的是右下角的註記:所謂「推薦」就是 inRandomOrder()->limit(4),沒有使用者歷史、沒有加權、沒有 ML、沒有快取;而 look / collect 累積出來的人氣資料只回流到兩條賣家路由,從來沒有進入買家的挑選路徑。',
+          en: 'Discovery and picking paths — the most valuable part is the note bottom-right: the “recommendation” is inRandomOrder()->limit(4) — no user history, no weighting, no ML, no cache. And the popularity data that look/collect accumulate flows back only into two seller-facing routes; it never reaches the buyer’s picker.',
+        },
+      },
+      {
+        src: '/images/work/food-selector/diagram-erd.svg',
+        alt: {
+          zh: '14 張資料表的 ERD:帳號(private/member/store)、RBAC 四表、商品與店家、locks、look 與 collect',
+          en: 'ERD of 14 tables: accounts (private/member/store), the four RBAC tables, products and stores, locks, look and collect',
+        },
+        caption: {
+          zh: '資料模型(14 張表,全部來自 5 個 migration)— 除了 private / member / store 三分的帳號結構與 roles×permissions 的 RBAC 四表,圖上也標出幾件實情:member.safe_ans1/2 是明文存放、user_roles 沒有唯一約束而中介層只讀第一列、comment 表有欄位也有 controller,卻沒有任何路由指得到它。',
+          en: 'The data model (14 tables, all from five migrations) — beyond the three-way private/member/store account split and the four RBAC tables, the figure annotates a few realities: member.safe_ans1/2 are stored in plaintext, user_roles has no unique constraint while the middleware reads only the first row, and the comment table has columns and a controller but no route that reaches it.',
+        },
+      },
+    ],
+    caseStudy: {
+      problem: [
+        {
+          zh: '「等一下」「隨便」「都可以」是聚餐時最沒效率的三句話。這個專案把餐廳資料拉到菜色層級(單品、價格、分類、人氣),讓人可以搜尋、篩選,再用一顆「幫我決定」的按鈕直接抽一家或一道。後端是 2024 年的課堂專案——一套 Lumen(PHP)的 JWT API;2026 年這一輪的工作是把它重新整理成能拿出來看的作品:先修掉後端確實壞掉的部分,再補上原本完全不存在的前端。',
+          en: '“Hang on”, “whatever”, “anything’s fine” — the three least useful sentences at any group meal. This project pushes restaurant data down to dish level (item, price, category, popularity) so it can be searched and filtered, then adds a single “decide for me” button that draws a store or a dish. The backend is a 2024 coursework project — a Lumen (PHP) JWT API; this 2026 round was about making it presentable: fix what was genuinely broken in the backend, then build the frontend that never existed.',
+        },
+        {
+          zh: '先把話說清楚:這個「幫我決定」不是推薦系統。整個挑選邏輯是一個 22 行的 RandomController,兩個方法各自 inRandomOrder()->limit(4)——翻成 SQL 就是 ORDER BY RAND() LIMIT 4。沒有個人化、沒有加權、沒有 ML。有趣的工程不在那裡,而在 JWT 認證與帳號鎖、逐路由的 RBAC,以及讓同一份前端能同時對種子資料與真實 API 運作的 adapter。',
+          en: 'To be clear up front: “decide for me” is not a recommender. The entire picking logic is a 22-line RandomController whose two methods each call inRandomOrder()->limit(4) — ORDER BY RAND() LIMIT 4 in SQL. No personalization, no weighting, no ML. The engineering worth talking about is elsewhere: JWT auth with account locking, per-route RBAC, and the adapter that lets one frontend run against either seed data or the real API.',
+        },
+      ],
+      constraints: [
+        {
+          zh: '後端是既有的課堂程式碼:這一輪只修「確定壞掉」的地方(權限繞過、失效的鎖、註解掉的路由、seeder 建不出角色),不重寫架構,也不追加新功能。',
+          en: 'The backend is existing coursework code: this round only repaired what was demonstrably broken — the auth bypass, the dead lock, commented-out routes, a seeder that created no roles — without rewriting the architecture or adding features.',
+        },
+        {
+          zh: '本機沒有 PHP 與 Composer,後端從頭到尾沒有啟動過。所有後端結論都追溯到原始碼行號;新寫的 PHPUnit 路由測試是「寫好了」而不是「跑過了」,這點如實記錄,不冒充驗證結果。',
+          en: 'No PHP or Composer on this machine — the backend was never booted. Every backend claim traces to a source line; the new PHPUnit route tests are written, not run, and that is stated as-is rather than passed off as a verified result.',
+        },
+        {
+          zh: '前端要能靜態部署(GitHub Actions → GitHub Pages)並在完全沒有後端的情況下完整操作,所以資料層必須可切換,而不是硬接 API 網址。',
+          en: 'The frontend has to deploy statically (GitHub Actions → GitHub Pages) and be fully usable with no backend at all, so the data layer had to be switchable rather than hard-wired to an API host.',
+        },
+      ],
+      architecture: [
+        {
+          zh: '後端:PHP 8.1 / Lumen 10 + Eloquent + tymon/jwt-auth 2,MySQL。routes/web.php 註冊 25 條路由——13 條公開(登入、忘記密碼、分類、店家、商品、搜尋、兩條隨機、照片),12 條掛 check.permission:<action>。RBAC 用 roles / permissions / role_permissions / user_roles 四張表建模,12 個權限字串切成 buyer(收藏三動作)與 seller(店家資訊與商品 CRUD 九動作)。資料層是 5 個 migration 建出的 14 張表。AuthMiddleware 同時是全域中介層(沒帶權限參數就直接放行)與 check.permission 別名的實作。',
+          en: 'Backend: PHP 8.1 / Lumen 10 with Eloquent and tymon/jwt-auth 2 on MySQL. routes/web.php registers 25 routes — 13 public (login, forgot-password, categories, stores, products, search, the two pickers, photos) and 12 behind check.permission:<action>. RBAC is modeled across four tables (roles, permissions, role_permissions, user_roles), with 12 permission strings split into buyer (three favourite actions) and seller (nine store-info and product-CRUD actions). Persistence is 14 tables from five migrations. AuthMiddleware doubles as the global middleware (pass through when no permission argument is given) and as the implementation behind the check.permission alias.',
+        },
+        {
+          zh: '前端:React 18 + Vite 6 + Tailwind v4,自製的 shadcn 風格元件,24 個 .js/.jsx 檔約 2,300 行、7 條路由(首頁、探索、店家、隨機、口袋名單、登入、404)。核心是一層 data adapter:12 個匯出函式,依 VITE_API_MODE 走 demo(讀本地種子)或 live(fetch Lumen API),兩條分支回傳完全相同的資料形狀。種子檔提供 8 個分類、8 家店、26 道菜、6 則評論;口袋名單以 localStorage 保存。測試是 39 個 Vitest 案例(實跑通過),CI 有兩條 GitHub Actions:測試+建置,以及 demo 模式的 Pages 部署。',
+          en: 'Frontend: React 18 + Vite 6 + Tailwind v4 with hand-rolled shadcn-style primitives — 24 .js/.jsx source files, ~2,300 lines, seven routes (home, browse, store, random, favorites, login, 404). At its centre is a data adapter: 12 exported functions that follow VITE_API_MODE into either demo (local seed) or live (fetch against the Lumen API), with both branches returning identical shapes. The seed supplies 8 categories, 8 stores, 26 dishes and 6 reviews; favorites persist in localStorage. Tests are 39 Vitest cases (run, passing), and CI is two GitHub Actions workflows: test + build, and a demo-mode Pages deploy.',
+        },
+      ],
+      responsibilities: [
+        {
+          zh: '整個 repo 的 38 個 commit 都出自我(三組 git 身分同屬一人):2024 年 6 月的 20 個 commit 是課堂期的 Lumen 後端;2026 年 7 月與 8 月的 18 個 commit 是這一輪重構——前端從零建置、後端的權限與資料層修復、前後端測試、CI/Pages 工作流與 README。',
+          en: 'All 38 commits in the repo are mine (three git identities, one person): 20 commits in June 2024 built the Lumen backend during coursework; the 18 commits in July and August 2026 are this rebuild — the frontend from scratch, the backend permission and data-layer repairs, tests on both sides, the CI/Pages workflows and the README.',
+        },
+      ],
+      challenges: [
+        {
+          c: {
+            zh: '權限中介層有一個靜默的繞過:hasPermission() 在 token 無效時 return response()->json([...], 401),而呼叫端只把它當布林判斷——JsonResponse 物件恆為真,於是「沒帶 token」和「帶壞 token」都會直接通過 12 條受保護路由。',
+            en: 'The permission middleware had a silent bypass: on an invalid token, hasPermission() returned response()->json([...], 401), while the caller treated the return value as a boolean — a JsonResponse object is always truthy, so both a missing and a malformed token sailed through all 12 guarded routes.',
+          },
+          s: {
+            zh: '把認證與授權拆開:先 verifyToken() 取回 private id,失敗直接 401;拿到 id 才進 hasPermission(),它現在只回傳純布林,失敗回 403。並補上路由層的 PHPUnit 測試,逐條斷言那 12 條路由掛著正確的 check.permission:<action>、公開路由則不得帶任何權限中介層——測試已寫好,但因為本機沒有 PHP 而尚未實跑。',
+            en: 'Split authentication from authorization: verifyToken() resolves the private id first and returns 401 on failure; only then does hasPermission() run, now returning a real boolean and yielding 403. Route-level PHPUnit tests were added to assert each of the 12 guarded routes carries the right check.permission:<action> and that public routes carry none — written, but not yet executed, since this machine has no PHP.',
+          },
+        },
+        {
+          c: {
+            zh: '帳號鎖定看起來做完了,實際上從未生效過:locks.status 是字串欄位,程式卻用 === 1 這個型別嚴格的整數比較,永遠為假;而且 add() 建立新列時根本沒寫入 status。',
+            en: 'The account lock looked finished but had never once engaged: locks.status is a string column, yet the code compared it with === 1 — a strict integer comparison that is always false — and add() never wrote status when creating a row.',
+          },
+          s: {
+            zh: '改成與 \'1\' 字串比較,並讓 add() 明確寫入 \'0\'。修好之後,把真實行為畫成狀態機而不是寫成宣傳詞:因為 checklock() 跑在 attempt() 之前,計數必須已達 5,鎖是在第 6 次嘗試才跳;離開鎖定的唯一路徑是答對兩題安全問題重設密碼,沒有管理員解鎖、沒有 TTL、也沒有排程任務。',
+            en: 'Compare against the string \'1\', and have add() write \'0\' explicitly. With that fixed, the real behaviour was drawn as a state machine rather than written as a claim: because checklock() runs before attempt(), the counter must already be 5, so the lock trips on the sixth try; and the only way out of Locked is answering both security questions to reset the password — no admin unlock, no TTL, no scheduled job.',
+          },
+        },
+        {
+          c: {
+            zh: 'RBAC 有四張表、有中介層、有權限字串,卻不可能通過:RoleSeeder 其實是 PermissionsSeeder 的複製品,一個角色都沒有建立,也沒有寫入 role_permissions 與 user_roles——所以每一條受權限保護的路由都必然 403。',
+            en: 'RBAC had four tables, a middleware and permission strings, and still could not pass: RoleSeeder was a copy of PermissionsSeeder — it created no roles and wrote neither role_permissions nor user_roles, so every guarded route was guaranteed to 403.',
+          },
+          s: {
+            zh: '重寫 RoleSeeder:建立 buyer / seller 兩個角色,依 action_name 查出 permission id 對映 role_permissions,再指派 user_roles,並補上買家的 member 列;DatabaseSeeder 改成外鍵安全的順序。另外補回一個從來沒有 migration 建立過的 collect 表——收藏功能所依賴的表其實不存在。這些修復目前只有原始碼佐證,沒有實跑遷移與 seeder 的紀錄。',
+            en: 'Rewrote RoleSeeder: create the buyer and seller roles, resolve permission ids by action_name into role_permissions, assign user_roles, and seed the buyers’ member rows; DatabaseSeeder now runs in FK-safe order. Also added the collect migration that never existed — the table the favourites feature depends on was simply absent. These repairs rest on source evidence only; there is no record of the migrations and seeders actually being run.',
+          },
+        },
+        {
+          c: {
+            zh: '要在沒有 PHP、沒有 MySQL 的環境裡把整個產品操作一遍——不論是 GitHub Pages 上的展示,還是自己開發前端時。',
+            en: 'The whole product had to be operable with no PHP and no MySQL — both for a GitHub Pages demo and for developing the frontend at all.',
+          },
+          s: {
+            zh: '所有資料存取收斂成一層 adapter(12 個匯出函式),以 VITE_API_MODE 切換 demo / live,兩條分支回傳同樣的形狀;demo 分支連後端的怪癖都照抄(/product/info/{id}/ 回傳單元素陣列),日後切回 live 不必動元件。39 個 Vitest 案例大多是在守這層。但 parity 並不完美,而且是已知的:demo 分支會過濾 products.status === 1(種子 26 道菜、上架 25 道,所以畫面顯示「菜色 25」),真實後端的 /search/ 與兩條隨機路由都沒有這個條件;前端向 adapter 要 8 家店 / 12 道菜當候選池,live 模式卻永遠只會拿到後端固定的 4 筆。這些落差列在已知問題,而不是假裝不存在;而且不只這兩處——demo 的搜尋還會比對描述欄,後端則只比對名稱。',
+            en: 'All data access converges into one adapter (12 exported functions) switched by VITE_API_MODE, with both branches returning the same shapes; the demo branch even reproduces the backend’s quirks (/product/info/{id}/ returns a one-element array) so switching to live needs no component changes. Most of the 39 Vitest cases guard that layer. Parity is not perfect, and knowingly so: the demo branch filters products.status === 1 (26 seeded dishes, 25 listed — hence the “25 dishes” chip on screen) while the real /search/ and both pickers apply no such predicate; and the picker asks the adapter for a pool of 8 stores / 12 dishes, but in live mode the backend always returns exactly 4. These are tracked as known issues rather than papered over — and they are not the only ones: the demo search also matches on description where the backend matches on name alone.',
+          },
+        },
+      ],
+      facts: [
+        { value: '25', label: { zh: '後端路由(12 條需權限)', en: 'backend routes (12 permission-guarded)' } },
+        { value: '14', label: { zh: '資料表(5 個 migration)', en: 'tables (5 migrations)' } },
+        { value: '39', label: { zh: '前端 Vitest 案例', en: 'frontend Vitest cases' } },
+        { value: '22', label: { zh: '行:整個隨機挑選器', en: 'lines: the entire picker' } },
+      ],
+      lessons: [
+        {
+          zh: '「有寫」不等於「有生效」。權限檢查和帳號鎖在原本的程式碼裡都存在、讀起來也合理,但一個把 JsonResponse 當布林、一個用 === 1 去比字串欄位——兩個安全機制都是靜默失效,沒有任何錯誤訊息。這一輪讓它們現形的不是重讀程式碼,是把路由表寫成斷言、把鎖的生命週期畫成狀態機。',
+          en: 'Written is not the same as working. Both the permission check and the account lock existed and read plausibly, but one treated a JsonResponse as a boolean and the other compared a string column with === 1 — two security mechanisms failing silently, with no error anywhere. What exposed them was not re-reading the code: it was turning the route table into assertions and the lock’s lifecycle into a state machine.',
+        },
+        {
+          zh: '不要把隨機說成推薦。這個產品的賣點是「幫我決定」,實作卻只是 ORDER BY RAND() LIMIT 4。更值得注意的是,系統其實已經在累積瀏覽(look)與收藏(collect)資料,只是那些數字只回流到賣家端的兩條路由,從沒進入買家的挑選路徑——要升級成真正的推薦,缺的不是資料,是把既有的訊號接進去。',
+          en: 'Do not call random a recommendation. The product’s pitch is “decide for me”, and the implementation is ORDER BY RAND() LIMIT 4. What is more telling is that the system already accumulates view (look) and favourite (collect) data — those numbers just flow back into two seller-facing routes and never reach the buyer’s picker. Turning this into a real recommender does not need more data; it needs the existing signal wired in.',
+        },
+        {
+          zh: '讓 demo 與 live 共用同一組函式簽名,是這輪投資報酬率最高的決定——前端因此能離線開發、靜態部署、也能隨時切回真後端。但兩條分支的行為會慢慢分岔(status 過濾、候選池大小),而且沒有任何測試在守這件事。下一次會先寫一組跨模式的契約測試,再開始長功能。',
+          en: 'Making demo and live share one set of function signatures was the highest-return decision of this round — the frontend can be developed offline, deployed statically, and switched back to the real backend at any time. But the two branches drift (the status filter, the pool size), and nothing tests for it. Next time the cross-mode contract tests come first, before any features are stacked on top.',
         },
       ],
     },

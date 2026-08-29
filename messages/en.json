@@ -50,7 +50,9 @@
   },
   "case": {
     "internal": "Internal project (private)",
-    "mockNote": "All screens below show demo (mock) data — no real user data."
+    "mockNote": "All screens below show demo (mock) data — no real user data.",
+    "diagramNote": "Every diagram below is derived from the project's actual source; each node traces back to a real file. They are wide — scroll sideways, or click to open the full-size SVG.",
+    "diagramOpenFull": "Open the full-size SVG"
   },
   "common": {
     "underConstruction": "This page is under construction — full content coming soon.",

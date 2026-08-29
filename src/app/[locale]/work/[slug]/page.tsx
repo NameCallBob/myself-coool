@@ -270,6 +270,44 @@ export default async function CaseStudyPage({ params }: Props) {
         </section>
       )}
 
+      {/* Architecture diagrams — derived from the real codebase */}
+      {project.diagrams && project.diagrams.length > 0 && (
+        <section className="tick mt-20 border-t border-line-2 pt-14">
+          <Reveal>
+            <SectionOpener no="09" label="ARCHITECTURE DIAGRAMS" />
+            <p className="mt-4 font-mono text-xs tracking-[0.06em] text-faint">
+              {tc('diagramNote')}
+            </p>
+          </Reveal>
+          <div className="mt-10 flex flex-col gap-10">
+            {project.diagrams.map((d, i) => (
+              <Reveal key={d.src} delay={i * 40}>
+                <figure>
+                  <a
+                    href={d.src}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block overflow-x-auto rounded-[6px] border border-line-2 bg-white p-4"
+                    title={tc('diagramOpenFull')}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={d.src}
+                      alt={d.alt[loc]}
+                      loading="lazy"
+                      className="h-auto w-full min-w-[1100px]"
+                    />
+                  </a>
+                  <figcaption className="mt-3 font-mono text-[11px] tracking-[0.06em] text-muted">
+                    {d.caption[loc]}
+                  </figcaption>
+                </figure>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Next case study */}
       <Link
         href={`/work/${next.slug}`}

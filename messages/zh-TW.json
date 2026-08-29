@@ -50,7 +50,9 @@
   },
   "case": {
     "internal": "公司內部專案(不公開)",
-    "mockNote": "以下畫面皆為示範(mock)資料,不含任何真實使用者資料。"
+    "mockNote": "以下畫面皆為示範(mock)資料,不含任何真實使用者資料。",
+    "diagramNote": "以下架構圖皆由專案原始碼推導繪製,每個節點都可回溯到實際檔案。圖較寬,可左右捲動,或點擊開啟原尺寸 SVG。",
+    "diagramOpenFull": "點擊開啟原尺寸 SVG"
   },
   "common": {
     "underConstruction": "此頁內容建置中,完整內容即將上線。",
