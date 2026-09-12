@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
 import { useLocale, useTranslations } from 'next-intl';
 import { Menu, Moon, Sun, X } from 'lucide-react';
@@ -9,15 +9,22 @@ import { CONTACT_EMAIL } from '../../../content/site';
 
 const LINKS = [
   { href: '/work', key: 'work' },
-  { href: '/architecture', key: 'architecture' },
   { href: '/ai', key: 'ai' },
   { href: '/about', key: 'about' },
 ] as const;
 
+/** Nothing to subscribe to — this store only reports "are we past hydration". */
+const noopSubscribe = () => () => {};
+
 function ThemeToggle({ label }: { label: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // The server cannot know the stored theme, so the icon has to wait for
+  // hydration. Reading that through a store keeps it out of an effect.
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  );
 
   return (
     <button
@@ -36,6 +43,13 @@ function ThemeToggle({ label }: { label: string }) {
 }
 
 export function Nav() {
+  // Remounting on navigation resets the overlay without writing state from an
+  // effect — the menu is transient UI, so losing it on a route change is correct.
+  const pathname = usePathname();
+  return <NavBar key={pathname} />;
+}
+
+function NavBar() {
   const t = useTranslations('nav');
   const a11y = useTranslations('a11y');
   const locale = useLocale();
@@ -43,9 +57,6 @@ export function Nav() {
   const [open, setOpen] = useState(false);
 
   const otherLocale = locale === 'zh-TW' ? 'en' : 'zh-TW';
-
-  // Close the mobile overlay whenever the route changes
-  useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -55,7 +66,8 @@ export function Nav() {
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-line-2 bg-[var(--glass)] backdrop-blur-[16px] backdrop-saturate-[1.4]">
+    <>
+    <header className="site-header fixed inset-x-0 top-0 z-50 border-b border-line-2 bg-[var(--glass)] backdrop-blur-[16px] backdrop-saturate-[1.4]">
       <nav
         aria-label="Main"
         className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-5 md:px-6"
@@ -117,7 +129,11 @@ export function Nav() {
         </div>
       </nav>
 
-      {/* Mobile overlay */}
+    </header>
+      {/* Mobile overlay — a sibling of <header>, not a child. The header
+          carries backdrop-filter, which makes it the containing block for any
+          `fixed` descendant; nested here the panel measured 0px tall and
+          painted no background, so its links sat on top of the page. */}
       {open && (
         <div className="fixed inset-x-0 top-16 bottom-0 z-40 bg-[var(--glass)] backdrop-blur-[16px] backdrop-saturate-[1.4] md:hidden">
           <div className="flex flex-col gap-2 px-5 py-8">
@@ -141,6 +157,6 @@ export function Nav() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

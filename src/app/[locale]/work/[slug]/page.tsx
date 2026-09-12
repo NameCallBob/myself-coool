@@ -5,9 +5,9 @@ import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
 import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { SectionOpener } from '@/components/ui/SectionOpener';
+import { SectionOpener, sectionId } from '@/components/ui/SectionOpener';
 import { CaseStudyJsonLd } from '@/lib/jsonld';
-import { alternatesFor, ogFor } from '@/lib/seo';
+import { alternatesFor, ogFor, robotsFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../../content/projects';
 import type { Localized } from '../../../../../content/projects';
 
@@ -28,8 +28,10 @@ export async function generateMetadata({ params }: Props) {
     openGraph: ogFor(locale, {
       title: project.title[loc],
       description: project.oneLiner[loc],
+      path: `/work/${slug}`,
     }),
     alternates: alternatesFor(locale, `/work/${slug}`),
+    robots: robotsFor(`/work/${slug}`),
   };
 }
 
@@ -69,6 +71,7 @@ export default async function CaseStudyPage({ params }: Props) {
 
   const t = await getTranslations({ locale, namespace: 'common' });
   const tc = await getTranslations({ locale, namespace: 'case' });
+  const ts = await getTranslations({ locale, namespace: 'sections' });
   const loc = locale === 'zh-TW' ? 'zh' : 'en';
   const index = PROJECTS.indexOf(project);
   const next = PROJECTS[(index + 1) % PROJECTS.length];
@@ -139,16 +142,16 @@ export default async function CaseStudyPage({ params }: Props) {
 
       {cs && (
         <div>
-          <section className="tick mt-20 border-t border-line-2 pt-14">
+          <section aria-labelledby={sectionId('01')} className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionOpener no="01" label="PROBLEM" />
+              <SectionOpener no="01" label="PROBLEM" name={ts('problem')} />
               <Paragraphs items={cs.problem} loc={loc} lede />
             </Reveal>
           </section>
 
-          <section className="tick mt-20 border-t border-line-2 pt-14">
+          <section aria-labelledby={sectionId('02')} className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionOpener no="02" label="CONSTRAINTS" />
+              <SectionOpener no="02" label="CONSTRAINTS" name={ts('constraints')} />
               <ul className="mt-8 max-w-[65ch] space-y-4">
                 {cs.constraints.map((c) => (
                   <li
@@ -162,23 +165,23 @@ export default async function CaseStudyPage({ params }: Props) {
             </Reveal>
           </section>
 
-          <section className="tick mt-20 border-t border-line-2 pt-14">
+          <section aria-labelledby={sectionId('03')} className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionOpener no="03" label="ARCHITECTURE" />
+              <SectionOpener no="03" label="ARCHITECTURE" name={ts('caseArchitecture')} />
               <Paragraphs items={cs.architecture} loc={loc} />
             </Reveal>
           </section>
 
-          <section className="tick mt-20 border-t border-line-2 pt-14">
+          <section aria-labelledby={sectionId('04')} className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionOpener no="04" label="RESPONSIBILITIES" />
+              <SectionOpener no="04" label="RESPONSIBILITIES" name={ts('responsibilities')} />
               <Paragraphs items={cs.responsibilities} loc={loc} />
             </Reveal>
           </section>
 
-          <section className="tick mt-20 border-t border-line-2 pt-14">
+          <section aria-labelledby={sectionId('05')} className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionOpener no="05" label="CHALLENGES → SOLUTIONS" />
+              <SectionOpener no="05" label="CHALLENGES → SOLUTIONS" name={ts('challenges')} />
             </Reveal>
             <div className="mt-10 space-y-12">
               {cs.challenges.map((ch, i) => (
@@ -204,9 +207,9 @@ export default async function CaseStudyPage({ params }: Props) {
             </div>
           </section>
 
-          <section className="tick mt-20 border-t border-line-2 pt-14">
+          <section aria-labelledby={sectionId('06')} className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionOpener no="06" label="SYSTEM FACTS" />
+              <SectionOpener no="06" label="SYSTEM FACTS" name={ts('facts')} />
             </Reveal>
             <div className="mt-10 grid grid-cols-2 gap-8 md:grid-cols-4">
               {cs.facts.map((f, i) => (
@@ -222,9 +225,9 @@ export default async function CaseStudyPage({ params }: Props) {
             </div>
           </section>
 
-          <section className="tick mt-20 border-t border-line-2 pt-14">
+          <section aria-labelledby={sectionId('07')} className="tick mt-20 border-t border-line-2 pt-14">
             <Reveal>
-              <SectionOpener no="07" label="LESSONS" />
+              <SectionOpener no="07" label="LESSONS" name={ts('lessons')} />
               <div className="mt-10 max-w-[46rem] space-y-12 md:ml-[200px]">
                 {cs.lessons.map((l) => (
                   <div key={l.en.slice(0, 40)}>
@@ -240,9 +243,9 @@ export default async function CaseStudyPage({ params }: Props) {
 
       {/* Screens — 一律 mock/合成資料 */}
       {project.screenshots && project.screenshots.length > 0 && (
-        <section className="tick mt-20 border-t border-line-2 pt-14">
+        <section aria-labelledby={sectionId('08')} className="tick mt-20 border-t border-line-2 pt-14">
           <Reveal>
-            <SectionOpener no="08" label="SCREENS" />
+            <SectionOpener no="08" label="SCREENS" name={ts('screens')} />
             <p className="mt-4 font-mono text-xs tracking-[0.06em] text-faint">
               {tc('mockNote')}
             </p>
@@ -272,9 +275,9 @@ export default async function CaseStudyPage({ params }: Props) {
 
       {/* Architecture diagrams — derived from the real codebase */}
       {project.diagrams && project.diagrams.length > 0 && (
-        <section className="tick mt-20 border-t border-line-2 pt-14">
+        <section aria-labelledby={sectionId('09')} className="tick mt-20 border-t border-line-2 pt-14">
           <Reveal>
-            <SectionOpener no="09" label="ARCHITECTURE DIAGRAMS" />
+            <SectionOpener no="09" label="ARCHITECTURE DIAGRAMS" name={ts('diagrams')} />
             <p className="mt-4 font-mono text-xs tracking-[0.06em] text-faint">
               {tc('diagramNote')}
             </p>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Archivo, JetBrains_Mono, Noto_Sans_TC, Noto_Serif_TC } from 'next/font/google';
+import { Archivo, JetBrains_Mono, Noto_Serif_TC } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
@@ -8,7 +8,6 @@ import { routing } from '@/i18n/routing';
 import { Nav } from '@/components/layout/Nav';
 import { Footer } from '@/components/layout/Footer';
 import { GridGuides } from '@/components/layout/GridGuides';
-import { LenisProvider } from '@/components/motion/LenisProvider';
 import { SiteJsonLd } from '@/lib/jsonld';
 import { alternatesFor, OG_IMAGE, ogFor } from '@/lib/seo';
 import { SITE_URL } from '../../../content/site';
@@ -20,16 +19,18 @@ const archivo = Archivo({
   display: 'swap',
 });
 
-const notoSansTC = Noto_Sans_TC({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-noto-tc',
-  display: 'swap',
-});
-
+/**
+ * Body Chinese comes from the reader's own system — `subsets: ['latin']` does
+ * not stop next/font emitting the full CJK slice set, and the two Noto
+ * families were shipping ~2 MB of woff2 on the home page alone.
+ *
+ * Noto Serif TC stays, because the display type is the site's signature, but
+ * at a single weight: three weights meant three times the slices for glyphs
+ * that only ever appear in headings.
+ */
 const notoSerifTC = Noto_Serif_TC({
   subsets: ['latin'],
-  weight: ['500', '600', '700'],
+  weight: ['600'],
   variable: '--font-noto-serif-tc',
   display: 'swap',
 });
@@ -63,6 +64,8 @@ export async function generateMetadata({
     description: m('home'),
     alternates: alternatesFor(locale, ''),
     openGraph: ogFor(locale, { title, description: m('home') }),
+    // No `creator` — there is no X account to point at, and inventing a
+    // handle is worse than omitting the field.
     twitter: { card: 'summary_large_image', images: [OG_IMAGE.url] },
   };
 }
@@ -91,7 +94,7 @@ export default async function LocaleLayout({
     <html
       lang={locale === 'zh-TW' ? 'zh-Hant-TW' : 'en'}
       suppressHydrationWarning
-      className={`${archivo.variable} ${notoSansTC.variable} ${notoSerifTC.variable} ${jetbrainsMono.variable}`}
+      className={`${archivo.variable} ${notoSerifTC.variable} ${jetbrainsMono.variable}`}
     >
       <body>
         <SiteJsonLd locale={locale} />
@@ -102,7 +105,6 @@ export default async function LocaleLayout({
           }}
         />
         <ThemeProvider attribute="data-theme" defaultTheme="light">
-          <LenisProvider />
           <NextIntlClientProvider messages={clientMessages}>
             <a
               href="#main"

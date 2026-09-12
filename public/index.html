@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <title>binbin — 全端工程師</title>
-    <!-- 相對路徑轉導:根網域與子路徑部署都正確 -->
+    <!-- 相對路徑轉導:根網域與子路徑部署都正確。
+         刻意不加 noindex——Google 明文不建議 noindex 與 canonical 併用,
+         而根網域是最常被外部連結的 URL,權重應併給 /zh-TW。 -->
     <meta http-equiv="refresh" content="0; url=zh-TW" />
     <link rel="canonical" href="https://binbinbob.work/zh-TW" />
-    <meta name="robots" content="noindex" />
     <style>
       body { background: #faf8f4; color: #5e574e; font: 14px/1.6 ui-monospace, monospace;
              display: grid; place-items: center; min-height: 100vh; margin: 0; }

@@ -4,8 +4,8 @@ import { Link } from '@/i18n/navigation';
 import { Reveal } from '@/components/motion/Reveal';
 import { DomainBadge } from '@/components/ui/DomainBadge';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { SectionOpener } from '@/components/ui/SectionOpener';
-import { alternatesFor, ogFor } from '@/lib/seo';
+import { SectionOpener, sectionId } from '@/components/ui/SectionOpener';
+import { alternatesFor, ogFor, robotsFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../content/projects';
 import type { Project } from '../../../../content/projects';
 
@@ -18,8 +18,9 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: t('title'),
     description: m('work'),
-    openGraph: ogFor(locale, { title: t('title'), description: m('work') }),
+    openGraph: ogFor(locale, { title: t('title'), description: m('work'), path: '/work' }),
     alternates: alternatesFor(locale, '/work'),
+    robots: robotsFor('/work'),
   };
 }
 
@@ -79,7 +80,7 @@ export default async function WorkPage({ params }: Props) {
       <p className="mt-6 max-w-[46ch] text-base text-muted md:text-lg">{t('description')}</p>
 
       {/* 公開專案 */}
-      <section aria-label={t('publicLabel')} className="tick mt-20 border-t border-line-2 pt-14">
+      <section aria-labelledby={sectionId('01')} className="tick mt-20 border-t border-line-2 pt-14">
         <Reveal>
           <SectionOpener no="01" label="PUBLIC" title={t('publicLabel')} />
           <p className="mt-3 max-w-[52ch] text-sm text-muted">{t('publicNote')}</p>
@@ -90,13 +91,18 @@ export default async function WorkPage({ params }: Props) {
       </section>
 
       {/* 公司內部專案 */}
-      <section aria-label={t('internalLabel')} className="tick mt-20 border-t border-line-2 pt-14">
+      <section aria-labelledby={sectionId('02')} className="tick mt-20 border-t border-line-2 pt-14">
         <Reveal>
-          <SectionOpener no="02" label="INTERNAL" />
-          <h2 className="mt-6 flex items-center gap-3 font-serif text-3xl font-semibold tracking-tight md:text-4xl">
-            {t('internalLabel')}
-            <Lock size={18} strokeWidth={1.5} className="text-faint" aria-hidden />
-          </h2>
+          <SectionOpener
+            no="02"
+            label="INTERNAL"
+            title={
+              <span className="flex items-center gap-3">
+                {t('internalLabel')}
+                <Lock size={18} strokeWidth={1.5} className="text-faint" aria-hidden />
+              </span>
+            }
+          />
           <p className="mt-3 max-w-[52ch] text-sm text-muted">{t('internalNote')}</p>
         </Reveal>
         <div className="mt-10">

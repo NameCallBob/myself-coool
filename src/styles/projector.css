@@ -1,0 +1,502 @@
+/* ─────────────────────────────────────────────
+   Projector surface — Phase 9
+
+   The screen hangs still and the content is projected across it. Every layer
+   below is fixed; only .pj-content scrolls. Depth comes from one perspective
+   transform, light from two gradients — no 3D library, nothing to download.
+   ───────────────────────────────────────────── */
+
+.pj-room {
+  --room: #0c0a09;
+  --screen: #f4f0e7;
+  --ink: #15120e;
+  --ink-soft: #4b4337;
+  --ink-faint: #6f665a; /* 4.96:1 on --screen — the lighter #8d8271 was 3.32:1 */
+  --beam: 251, 240, 214;
+
+  position: relative;
+  min-height: 100svh;
+  background: radial-gradient(130% 80% at 50% -20%, #1c1713 0%, var(--room) 60%);
+  isolation: isolate;
+}
+
+/* ── Lamp ── */
+.pj-beam {
+  position: fixed;
+  top: -24vh;
+  left: 50%;
+  width: min(170vw, 2100px);
+  aspect-ratio: 1 / 1.1;
+  margin-left: calc(min(170vw, 2100px) / -2);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  /* Every stop is the beam colour at varying alpha. Using the `transparent`
+     keyword here means transparent *black*, and interpolating towards it
+     leaves a dark wedge at the gradient's 0deg/360deg seam — which lands as a
+     hard vertical edge straight down the middle of the screen. */
+  background: conic-gradient(
+    from 180deg at 50% 0%,
+    rgba(var(--beam), 0) 0deg,
+    rgba(var(--beam), 0) 66deg,
+    rgba(var(--beam), 0.14) 82deg,
+    rgba(var(--beam), 0.24) 90deg,
+    rgba(var(--beam), 0.14) 98deg,
+    rgba(var(--beam), 0) 114deg,
+    rgba(var(--beam), 0) 360deg
+  );
+  filter: blur(30px);
+}
+.pj-motes {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* ── The hanging screen ── */
+/* The hanging frame: shadow and glow only. It has no fill, because anything
+   painted here cannot be relied on as the background for the scrolling content
+   above it — GSAP promotes an animated block to its own compositing layer, and
+   a promoted layer does not composite a `position: fixed` ancestor behind
+   itself. The result is the dark room showing through as a grey panel. The
+   paper therefore lives on .pj-content, which scrolls with the text. */
+.pj-screen {
+  position: fixed;
+  top: 4.5rem;
+  bottom: 1.5rem;
+  left: 50%;
+  width: min(1240px, calc(100vw - 3rem));
+  /* Centred with a margin, never `translate`: GSAP folds the individual
+     transform properties into `transform` the moment it animates one of them,
+     which silently drops the -50% and slides the screen half a viewport right. */
+  margin-left: calc(min(1240px, 100vw - 3rem) / -2);
+  z-index: 1;
+  pointer-events: none;
+  /* The projector is never quite square to the wall. Kept on the frame, not on
+     the content: a transformed ancestor breaks position:fixed descendants and
+     ScrollTrigger's measurements alike. */
+  transform: perspective(2400px) rotateX(0.45deg) rotateZ(-0.1deg);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 -2px 0 rgba(255, 255, 255, 0.14),
+    0 50px 150px -40px rgba(0, 0, 0, 0.95),
+    0 0 220px -30px rgba(var(--beam), 0.2);
+}
+.pj-screen > span {
+  display: none;
+}
+
+/* ── The projected image: its own surface, scrolling with the content ── */
+.pj-content {
+  position: relative;
+  z-index: 3;
+  width: min(1240px, calc(100vw - 3rem));
+  margin-inline: auto;
+  min-height: 100svh;
+  padding: 9rem clamp(1.25rem, 4vw, 4.5rem) 9rem;
+  color: var(--ink);
+  background-color: var(--screen);
+  /* Woven fabric, baked into the surface rather than layered over it. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='.055'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+}
+
+/* Lens vignette and glass sheen, cast over everything — fixed, so they stay
+   put while the image slides underneath, which is what a real screen does. */
+.pj-glass {
+  position: fixed;
+  top: 4.5rem;
+  bottom: 1.5rem;
+  left: 50%;
+  width: min(1240px, calc(100vw - 3rem));
+  margin-left: calc(min(1240px, 100vw - 3rem) / -2);
+  z-index: 5;
+  pointer-events: none;
+  /* Kept low on purpose: the sheen falls exactly where the marginal column
+     sits, and at 0.3 it dragged that text below the AA contrast bar. */
+  background:
+    linear-gradient(104deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.03) 20%, rgba(255, 255, 255, 0) 38%),
+    radial-gradient(115% 105% at 50% 32%, rgba(12, 10, 9, 0) 55%, rgba(12, 10, 9, 0.1) 100%);
+}
+
+/* Where the image runs off the screen's top and bottom edges */
+.pj-edge {
+  position: fixed;
+  left: 50%;
+  width: min(1240px, calc(100vw - 3rem));
+  margin-left: calc(min(1240px, 100vw - 3rem) / -2);
+  height: 7rem;
+  z-index: 4;
+  pointer-events: none;
+}
+.pj-edge-top {
+  top: 4.5rem;
+  background: linear-gradient(var(--screen) 18%, rgba(244, 240, 231, 0));
+}
+.pj-edge-bottom {
+  bottom: 1.5rem;
+  background: linear-gradient(rgba(244, 240, 231, 0), var(--screen) 82%);
+}
+
+/* ── Type on the screen ── */
+.pj-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.pj-h {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  font-size: clamp(1.9rem, 5.5vw, 4.4rem);
+}
+.pj-h-sm {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  font-size: clamp(1.25rem, 2.6vw, 2rem);
+}
+.pj-body {
+  color: var(--ink-soft);
+  line-height: 1.85;
+  font-size: clamp(0.9rem, 1.15vw, 1.05rem);
+}
+.pj-rule {
+  height: 2px;
+  background: var(--accent);
+  width: 100%;
+}
+.pj-hair {
+  height: 1px;
+  background: rgba(21, 18, 14, 0.16);
+  width: 100%;
+}
+
+/* Marginalia — the device the site was missing */
+.pj-margin {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ink-faint);
+}
+
+.pj-figure {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+  font-size: clamp(2.2rem, 6vw, 4.6rem);
+}
+
+.pj-chip {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid rgba(21, 18, 14, 0.2);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 820px) {
+  .pj-screen,
+  .pj-glass,
+  .pj-edge {
+    top: 3.5rem;
+    bottom: 0.75rem;
+    width: calc(100vw - 1rem);
+    margin-left: calc((100vw - 1rem) / -2);
+  }
+  .pj-content {
+    transform: none;
+  }
+  .pj-content {
+    width: calc(100vw - 1rem);
+    padding: 6rem 1.25rem 6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pj-beam {
+    opacity: 0.85 !important;
+  }
+  .pj-screen {
+    transform: none;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Framed plates — a wall of pictures, not a card grid
+
+   Used for the avatar and for the background board. The tilt, the mount and
+   the sheen are what stop a grid of boxes from reading as UI.
+   ───────────────────────────────────────────── */
+.frame {
+  --tilt: 0deg;
+  margin: 0;
+  rotate: var(--tilt);
+  transition:
+    rotate 420ms var(--ease-out-expo),
+    translate 420ms var(--ease-out-expo);
+}
+.frame:hover {
+  rotate: 0deg;
+  translate: 0 -3px;
+}
+
+.frame-mount {
+  position: relative;
+  padding: clamp(0.5rem, 1.6vw, 1.1rem);
+  background: linear-gradient(160deg, #3a2f24, #1f1811 40%, #45372a);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    0 14px 30px -14px rgba(0, 0, 0, 0.7);
+}
+
+.frame-plate {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.6rem, 2vw, 1.4rem);
+  background: var(--bg-raised);
+  color: var(--fg);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(26, 23, 20, 0.12);
+}
+/* the diagonal sheen every piece of glass has */
+.frame-plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    112deg,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(255, 255, 255, 0.05) 26%,
+    transparent 42%
+  );
+}
+
+.frame-caption {
+  margin-top: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+  text-align: center;
+}
+
+/* ── The board itself ── */
+.wall {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: clamp(0.75rem, 2.4vw, 1.75rem);
+  padding: clamp(0.75rem, 2.4vw, 1.75rem);
+  align-content: start;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Behind copy: quiet enough that text on top still passes contrast. */
+.wall-background {
+  opacity: 0.14;
+  filter: saturate(0.4);
+  mask-image: radial-gradient(130% 110% at 50% 0%, #000 15%, transparent 80%);
+}
+
+/* On its own: a real wall of pictures, at full strength. */
+.wall-feature {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  filter: none;
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  padding: 0;
+  overflow: visible;
+}
+.wall > * {
+  pointer-events: auto;
+}
+
+.wall-plate {
+  font-family: var(--font-mono);
+  text-align: center;
+  line-height: 1.35;
+}
+.wall-plate b {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: clamp(1.1rem, 3vw, 1.9rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.wall-plate span {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .frame:hover {
+    rotate: 0deg;
+    translate: 0 0;
+    transition: none;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   The page chrome inside the dark room
+
+   Nav and footer live outside this page's tree, so they arrive wearing the
+   daylight palette and break the illusion. :has() lets the deck restyle them
+   without the layout needing to know which route is mounted.
+   ───────────────────────────────────────────── */
+body:has(.pj-room) {
+  background: #0c0a09;
+}
+
+/* `.site-header`, not `header` — the projected composition has a <header> of
+   its own, and an unscoped element selector paints the dark room's colour
+   straight over the masthead. */
+body:has(.pj-room) .site-header {
+  background: rgba(12, 10, 9, 0.72);
+  border-color: rgba(246, 242, 234, 0.1);
+}
+body:has(.pj-room) .site-header a,
+body:has(.pj-room) .site-header button {
+  color: rgba(246, 242, 234, 0.62);
+}
+body:has(.pj-room) .site-header a:hover,
+body:has(.pj-room) .site-header button:hover,
+body:has(.pj-room) .site-header a[aria-current='page'] {
+  color: #f6f2ea;
+}
+
+/* The deck is its own footer — the contact slide already says everything. */
+body:has(.pj-room) > footer {
+  display: none;
+}
+
+/* The global paper-grain overlay reads as haze on a dark stage. */
+body:has(.pj-room)::after {
+  opacity: 0.018;
+}
+
+/* ─────────────────────────────────────────────
+   The picture wall — CC0 paintings under museum labels
+
+   The art is public domain; the label is the joke. Hung slightly crooked,
+   straightening on hover, because a wall of perfectly square boxes reads as
+   a card grid and kills the gag.
+   ───────────────────────────────────────────── */
+.art-wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: start;
+}
+
+.art-piece {
+  --tilt: 0deg;
+  margin: 0;
+  rotate: var(--tilt);
+  transition:
+    rotate 380ms var(--ease-out-expo),
+    translate 380ms var(--ease-out-expo);
+}
+.art-piece:hover,
+.art-piece:focus-within {
+  rotate: 0deg;
+  translate: 0 -4px;
+}
+
+.art-mount {
+  position: relative;
+  display: block;
+  padding: clamp(0.4rem, 1.2vw, 0.8rem);
+  background: linear-gradient(158deg, #4a3b2c, #241c14 42%, #52412f);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 16px 30px -16px rgba(0, 0, 0, 0.75);
+}
+/* glass */
+.art-mount::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.04) 24%,
+    rgba(255, 255, 255, 0) 44%
+  );
+}
+
+.art-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  filter: saturate(0.88) contrast(1.02);
+}
+
+/* The card screwed to the wall next to the painting */
+.art-label {
+  margin-top: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  /* Literal, not var(--bg-raised): that token flips to #201c18 in dark theme
+     while .art-caption keeps the projector's fixed --ink, leaving black text
+     on a near-black card. The lit screen stays light in both themes. */
+  background: #fff;
+  border: 1px solid rgba(21, 18, 14, 0.14);
+  border-left: 2px solid var(--accent);
+}
+.art-caption {
+  font-family: var(--font-serif);
+  font-size: clamp(0.8rem, 1.05vw, 0.95rem);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink, #15120e);
+}
+.art-credit {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint, #8d8271);
+}
+
+.art-note {
+  margin-top: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ink-faint, #8d8271);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art-piece,
+  .art-piece:hover {
+    rotate: 0deg;
+    translate: 0 0;
+    transition: none;
+  }
+}

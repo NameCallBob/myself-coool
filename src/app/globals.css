@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '../styles/projector.css';
 
 /* ─────────────────────────────────────────────
    Design tokens — Phase 4 spec
@@ -74,7 +75,12 @@
   --color-data-teal: var(--data-teal);
   --color-data-slate: var(--data-slate);
 
-  --font-sans: var(--font-archivo), var(--font-noto-tc), system-ui, sans-serif;
+  /* Latin from Archivo; Chinese from whatever the reader already has. The
+     body text looks slightly different per OS, which is the accepted price of
+     not shipping a megabyte of CJK slices for running copy. */
+  --font-sans:
+    var(--font-archivo), 'PingFang TC', 'Heiti TC', 'Microsoft JhengHei',
+    'Noto Sans CJK TC', system-ui, sans-serif;
   --font-serif: var(--font-noto-serif-tc), 'Songti TC', 'Noto Serif TC', serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
@@ -86,7 +92,9 @@
 
 /* ── Base ─────────────────────────────────── */
 html {
-  scroll-behavior: auto; /* Lenis owns smooth scrolling */
+  /* Native scrolling only. A smooth-scroll library here would fight
+     ScrollTrigger on the home page and costs INP on touch devices. */
+  scroll-behavior: auto;
 }
 
 body {

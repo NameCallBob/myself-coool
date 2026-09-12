@@ -2,8 +2,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { AgenticLoopSchematic } from '@/components/diagrams/AgenticLoopSchematic';
 import { Reveal } from '@/components/motion/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { SectionOpener } from '@/components/ui/SectionOpener';
-import { alternatesFor, ogFor } from '@/lib/seo';
+import { SectionOpener, sectionId } from '@/components/ui/SectionOpener';
+import { alternatesFor, ogFor, robotsFor } from '@/lib/seo';
 import { AGENTIC } from '../../../../content/agentic';
 
 type Props = { params: Promise<{ locale: string }> };
@@ -15,8 +15,9 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: t('ai'),
     description: m('ai'),
-    openGraph: ogFor(locale, { title: t('ai'), description: m('ai') }),
+    openGraph: ogFor(locale, { title: t('ai'), description: m('ai'), path: '/ai' }),
     alternates: alternatesFor(locale, '/ai'),
+    robots: robotsFor('/ai'),
   };
 }
 
@@ -25,6 +26,7 @@ export default async function AiPage({ params }: Props) {
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'nav' });
   const a11y = await getTranslations({ locale, namespace: 'a11y' });
+  const ts = await getTranslations({ locale, namespace: 'sections' });
   const loc = locale === 'zh-TW' ? 'zh' : 'en';
 
   return (
@@ -52,7 +54,7 @@ export default async function AiPage({ params }: Props) {
 
       {/* 01 / method — what changes between vibe and agentic */}
       <section
-        aria-label={AGENTIC.method.title[loc]}
+        aria-labelledby={sectionId('01')}
         className="tick mt-20 border-t border-line-2 pt-16 md:mt-28"
       >
         <Reveal>
@@ -90,9 +92,9 @@ export default async function AiPage({ params }: Props) {
       </section>
 
       {/* 02 / the loop */}
-      <section aria-label="Loop" className="tick mt-20 border-t border-line-2 pt-16 md:mt-28">
+      <section aria-labelledby={sectionId('02')} className="tick mt-20 border-t border-line-2 pt-16 md:mt-28">
         <Reveal>
-          <SectionOpener no="02" label="THE LOOP" />
+          <SectionOpener no="02" label="THE LOOP" name={ts('theLoop')} />
         </Reveal>
         <figure className="mt-10 rounded-[6px] border border-line-2 bg-surface p-4 md:p-8">
           <AgenticLoopSchematic label={a11y('agenticLoopLabel')} />
@@ -106,7 +108,7 @@ export default async function AiPage({ params }: Props) {
       {AGENTIC.cases.map((c) => (
         <section
           key={c.no}
-          aria-label={c.title[loc]}
+          aria-labelledby={sectionId(c.no)}
           className="tick mt-20 border-t border-line-2 pt-16 md:mt-28"
         >
           <Reveal>
@@ -132,7 +134,7 @@ export default async function AiPage({ params }: Props) {
 
       {/* 05 / boundaries — what agents don't get to do */}
       <section
-        aria-label={AGENTIC.boundaries.title[loc]}
+        aria-labelledby={sectionId('05')}
         className="tick mt-20 border-t border-line-2 pt-16 md:mt-28"
       >
         <Reveal>

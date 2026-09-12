@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Visual-verification output
+.shots/
+
+# Reference photo for the illustrated avatar — never commit to a public repo
+IMG_*.JPG
+IMG_*.jpeg
+IMG_*.png
