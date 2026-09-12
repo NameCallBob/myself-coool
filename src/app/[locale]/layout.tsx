@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { Archivo, JetBrains_Mono, Noto_Serif_TC } from 'next/font/google';
+import { Archivo, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
@@ -24,13 +25,16 @@ const archivo = Archivo({
  * not stop next/font emitting the full CJK slice set, and the two Noto
  * families were shipping ~2 MB of woff2 on the home page alone.
  *
- * Noto Serif TC stays, because the display type is the site's signature, but
- * at a single weight: three weights meant three times the slices for glyphs
- * that only ever appear in headings.
+ * The display face is self-hosted and cut to the glyphs this site actually
+ * renders (1,161 Han characters, measured off the built HTML): one 252 KB
+ * file instead of ~650 KB spread over a dozen unicode-range slices. Regenerate
+ * with `node scripts/subset-fonts.mjs` after adding Chinese copy — a glyph
+ * outside the subset silently falls back to the system serif.
  */
-const notoSerifTC = Noto_Serif_TC({
-  subsets: ['latin'],
-  weight: ['600'],
+const notoSerifTC = localFont({
+  src: '../../../public/fonts/noto-serif-tc-600.woff2',
+  weight: '600',
+  style: 'normal',
   variable: '--font-noto-serif-tc',
   display: 'swap',
 });

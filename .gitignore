@@ -47,3 +47,4 @@ next-env.d.ts
 IMG_*.JPG
 IMG_*.jpeg
 IMG_*.png
+public/fonts/*.ttf
