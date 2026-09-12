@@ -102,8 +102,8 @@ export const PROJECTS: Project[] = [
       challenges: [
         {
           c: {
-            zh: '資安稽核發現:部分自訂 API action 繞過了租戶過濾,可跨租戶操作帳號。',
-            en: 'A security audit found custom API actions bypassing tenant filtering — accounts could be manipulated across tenants.',
+            zh: '驗收階段的資安稽核發現:部分自訂 API action 繞過了租戶過濾,可跨租戶操作帳號。系統從未對外營運,這些問題都在交付前被攔下。',
+            en: 'An acceptance-stage security audit found custom API actions bypassing tenant filtering — accounts could be manipulated across tenants. The system has never been in production; these were caught before delivery.',
           },
           s: {
             zh: '把隔離下沉到基底(TenantAwareModel + middleware 統一解析),逐一修補繞過 queryset 的 action。該輪稽核共 35 項發現(含 2 項 Critical)全數確認,30 項修復完成、5 項部分修復,尚待 staging 環境複驗——這個狀態如實記錄。',
@@ -112,8 +112,8 @@ export const PROJECTS: Project[] = [
         },
         {
           c: {
-            zh: '薪資 API 的快取鍵沒有包含使用者身分——同一個 TTL 窗內,一般員工可能命中管理員的快取,看到全公司薪資。',
-            en: "The payroll API's cache key ignored user identity — within one TTL window, an employee could hit an admin's cached response and see company-wide salaries.",
+            zh: '驗收測試期間發現:薪資 API 的快取鍵沒有包含使用者身分——同一個 TTL 窗內,一般員工可能命中管理員的快取,看到全公司薪資。當時跑的是合成種子資料,沒有真實薪資外流。',
+            en: "Found during acceptance testing: the payroll API's cache key ignored user identity — within one TTL window, an employee could hit an admin's cached response and see company-wide salaries. The run used synthetic seed data, so no real payroll was ever exposed.",
           },
           s: {
             zh: '在快取裝飾器加入 vary_by_user,把使用者折進快取鍵;並用真實 HTTP 呼叫寫了回歸測試,證明兩個使用者互相看不到彼此的快取。',
@@ -139,8 +139,8 @@ export const PROJECTS: Project[] = [
       ],
       lessons: [
         {
-          zh: '快取設計就是權限設計——薪資快取洩漏的根因,是快取鍵少了身分維度。在多租戶系統裡,這種錯誤不是效能問題,是資料外洩。',
-          en: 'Cache design is authorization design: the payroll leak came from a cache key missing the identity dimension. In a multi-tenant system that class of bug is not a performance issue — it is a breach.',
+          zh: '快取設計就是權限設計——那次薪資快取缺陷的根因,是快取鍵少了身分維度。在多租戶系統裡,這種錯誤不是效能問題,是資料外洩;幸好它在驗收階段就被攔下。',
+          en: 'Cache design is authorization design: that payroll cache defect came from a cache key missing the identity dimension. In a multi-tenant system that class of bug is not a performance issue — it is a breach. This one was caught in acceptance.',
         },
         {
           zh: '系統性的漏洞往往來自模型設計:全域角色與租戶角色雙軌並存,連帶引發提權與跨租戶問題。重來一次,我會從第一天就統一以租戶維度設計權限。',
@@ -315,8 +315,8 @@ export const PROJECTS: Project[] = [
           en: 'The platform is multiple services: a main business API (Django REST Framework) plus a standalone approval microservice. The ops console is a React 18 + Ant Design SPA — ~600k lines, a service layer split into 128 domain files with 1,951 API call sites, and components organized into 50+ module folders.',
         },
         {
-          zh: '橫切關注全部收斂在單一 Axios 攔截層:JWT 自動附加、401 刷新佇列、403 全域權限廣播、錯誤 toast 去重、json-bigint 處理大數精度。瀏覽器內以 TensorFlow.js 做影像物件辨識,認證支援 WebAuthn/Passkey,30+ 個 feature flag 控制功能開關,CI 設有 bundle 體積閘門。',
-          en: 'Cross-cutting concerns converge in a single Axios interceptor layer: automatic JWT attachment, a 401 refresh queue, global 403 broadcasting, deduped error toasts, and json-bigint for numeric precision. In-browser object detection runs on TensorFlow.js, auth supports WebAuthn/Passkey, 30+ feature flags gate functionality, and CI enforces a bundle-size budget.',
+          zh: '橫切關注全部收斂在單一 Axios 攔截層:JWT 自動附加、401 刷新佇列、403 全域權限廣播、錯誤 toast 去重、json-bigint 處理大數精度。認證支援 WebAuthn/Passkey,30+ 個 feature flag 控制功能開關,CI 設有 bundle 體積閘門。',
+          en: 'Cross-cutting concerns converge in a single Axios interceptor layer: automatic JWT attachment, a 401 refresh queue, global 403 broadcasting, deduped error toasts, and json-bigint for numeric precision. Auth supports WebAuthn/Passkey, 30+ feature flags gate functionality, and CI enforces a bundle-size budget.',
         },
       ],
       responsibilities: [
@@ -348,12 +348,12 @@ export const PROJECTS: Project[] = [
         },
         {
           c: {
-            zh: '一輪涵蓋工作流程、表單、權限、無障礙與效能的企業級稽核,產出 163 筆原始發現;其中最高槓桿的一類,是跨 4 個以上模組重演的「假成功」反模式——表單顯示儲存成功但沒有真正寫進後端、按鈕顯示成功但功能早已被靜默停用。',
-            en: 'An enterprise audit across workflows, forms, permissions, accessibility and performance produced 163 raw findings — the highest-leverage class being a “fake success” anti-pattern recurring in four-plus modules: forms toasting success without persisting to the backend, buttons reporting success on silently disabled features.',
+            zh: '上線前一輪涵蓋工作流程、表單、權限、無障礙與效能的企業級稽核,產出 163 筆原始發現;其中最高槓桿的一類,是跨 4 個以上模組重演的「假成功」反模式——表單顯示儲存成功但沒有真正寫進後端、按鈕顯示成功但功能早已被靜默停用。',
+            en: 'A pre-launch enterprise audit across workflows, forms, permissions, accessibility and performance produced 163 raw findings — the highest-leverage class being a “fake success” anti-pattern recurring in four-plus modules: forms toasting success without persisting to the backend, buttons reporting success on silently disabled features.',
           },
           s: {
-            zh: '163 筆先去重為 49 筆;21 筆 Critical/High 逐一交叉驗證(21/21 確認為真)後才投入修復,對應 18 個批次的系列 commit——含修正假成功動作、讓 8 個佣金相關檔案改回統一的 errorHandler。其餘 28 筆 Medium/Low 如實列管、未虛報進度。',
-            en: 'The 163 were deduplicated to 49; the 21 Critical/High items were each cross-verified (21/21 confirmed real) before any fix, then landed across 18 batched commits — repairing the fake-success actions and returning eight commission files to the unified errorHandler. The remaining 28 Medium/Low findings stay tracked as open, with no progress inflated.',
+            zh: '163 筆先去重為 49 筆;21 筆 Critical/High 逐一交叉驗證(21/21 確認為真)後才投入修復,全部在對外開放前完成,對應 18 個批次的系列 commit——含修正假成功動作、讓 8 個佣金相關檔案改回統一的 errorHandler。其餘 28 筆 Medium/Low 如實列管、未虛報進度。',
+            en: 'The 163 were deduplicated to 49; the 21 Critical/High items were each cross-verified (21/21 confirmed real) before any fix — all of it completed before the module went live — then landed across 18 batched commits — repairing the fake-success actions and returning eight commission files to the unified errorHandler. The remaining 28 Medium/Low findings stay tracked as open, with no progress inflated.',
           },
         },
         {
@@ -395,11 +395,11 @@ export const PROJECTS: Project[] = [
     visibility: 'internal',
     title: { zh: 'Naily — AI 美甲電商 App', en: 'Naily — AI Nail Commerce App' },
     oneLiner: {
-      zh: 'Flutter 電商 App:裝置端 AI 指甲辨識、AR 試戴與客製穿戴甲。2025 年 11 月起由我接手全部開發與維護。',
-      en: 'A Flutter commerce app — on-device AI nail sizing, AR try-on and custom press-ons. I took over all development and maintenance in November 2025.',
+      zh: 'Flutter 電商 App:商城、客製穿戴甲與金流。2025 年 11 月起由我接手 App 前端的開發與維護;裝置端 AI 與 AR 模組屬於另一個團隊。',
+      en: 'A Flutter commerce app — storefront, custom press-ons and payments. I took over the app frontend in November 2025; the on-device AI and AR modules belong to another team.',
     },
     scope: { zh: '雙平台上架 · 2025.11 起接手', en: 'Live on both stores · takeover since 2025.11' },
-    stack: ['FLUTTER', 'ONNX', 'FIREBASE', 'ECPAY'],
+    stack: ['FLUTTER', 'FIREBASE', 'ECPAY'],
     keyMetric: { value: '82', label: { zh: '畫面', en: 'screens' } },
     links: {
       appStore: 'https://apps.apple.com/tw/app/naily-%E6%97%A5%E7%A7%80%E7%BE%8E%E5%AD%B8/id6748354584',
@@ -419,8 +419,8 @@ export const PROJECTS: Project[] = [
           en: 'Inherited a multi-author codebase built by the original team (198 commits before the handover), with no transition period.',
         },
         {
-          zh: 'AI 推論必須在裝置端執行,受手機算力限制——接手時的 AR 試戴只有 1 FPS。',
-          en: 'AI inference must run on-device within phone-level compute — at handover, AR try-on ran at 1 FPS.',
+          zh: '裝置端的 AI 指甲辨識與 AR 試戴由另一個團隊負責,不在我的工作範圍;這份案例只涵蓋這些模組以外的 App 前端。',
+          en: 'On-device nail recognition and AR try-on are another team’s work, outside my scope; this case study covers only the app frontend around those modules.',
         },
         {
           zh: '涉及金流與個資:token 只能放 secure storage、日誌不得記錄完整 request body、iOS 需處理 ATT 追蹤同意;上架前完成 P0–P2 上架就緒稽核修復,現已於雙平台上架。',
@@ -433,27 +433,17 @@ export const PROJECTS: Project[] = [
           en: 'A modular Flutter app: feature-first layering (config / models / services / screens) with declarative GoRouter navigation — 82 screens, 72 services, 44 models across 533 Dart files (~129k lines), talking to 123 backend API endpoints.',
         },
         {
-          zh: '裝置端 AI 拆成 6 個職責分離的 AR/CV 套件,以 ONNX Runtime 執行 4 個模型(YOLO11 指甲偵測/分割、手掌關節點),iOS 另以 platform channel 銜接原生 CoreML。商務面整合 ECPay 金流/物流/電子發票與四家社交登入;Firebase 負責推播、Crashlytics 與分析;CI 有三條 pipeline(兩階段 CI、夜間全量 E2E、tag 觸發簽署發版)。',
-          en: 'On-device AI is split into six single-purpose AR/CV packages running four ONNX models (YOLO11 nail detection/segmentation, hand landmarks), with an iOS platform channel to native CoreML. Commerce integrates ECPay payments/logistics/e-invoicing and four social logins; Firebase covers push, Crashlytics and analytics; CI runs three pipelines — staged CI, nightly full E2E, and tag-triggered signed releases.',
+          zh: '裝置端 AI 與 AR 模組(ONNX Runtime 上的指甲偵測/分割與手掌關節點模型、iOS 的 CoreML 銜接)由另一個團隊建置與維護,本案例不涵蓋。我負責的商務面整合 ECPay 金流/物流/電子發票與四家社交登入;Firebase 負責推播、Crashlytics 與分析;CI 有三條 pipeline(兩階段 CI、夜間全量 E2E、tag 觸發簽署發版)。',
+          en: 'The on-device AI and AR modules (nail detection/segmentation and hand-landmark models on ONNX Runtime, plus the iOS CoreML bridge) are built and maintained by another team and are not covered here. On the side I own, commerce integrates ECPay payments/logistics/e-invoicing and four social logins; Firebase covers push, Crashlytics and analytics; CI runs three pipelines — staged CI, nightly full E2E, and tag-triggered signed releases.',
         },
       ],
       responsibilities: [
         {
-          zh: '2025 年 11 月接手;此前的基礎架構與商城流程由原團隊建置。接手後的開發、維護與發版由我負責(該期間 121 個 commit、占 85%):FCM 與追蹤整合、客製穿戴甲功能、點數系統、AR 架構重寫、iOS CoreML 原生層、安全硬化與 CI/CD。後端 API 為獨立服務,不在此 repo 範圍。',
-          en: 'Took over in November 2025; the foundation and commerce flows were built by the original team. Since then all development, maintenance and releases are mine (121 commits, 85% of the period): FCM and tracking integration, the custom press-on feature, a points system, the AR rewrite, the iOS CoreML native layer, security hardening and CI/CD. The backend API is a separate service outside this repo.',
+          zh: '2025 年 11 月接手;此前的基礎架構與商城流程由原團隊建置。接手後 App 前端的開發、維護與發版由我負責(該期間 121 個 commit、占 85%):FCM 與追蹤整合、客製穿戴甲功能、點數系統、巨檔拆分、安全硬化與 CI/CD。裝置端 AI 與 AR 模組由另一個團隊負責;後端 API 為獨立服務,不在此 repo 範圍。',
+          en: 'Took over in November 2025; the foundation and commerce flows were built by the original team. Since then the app frontend’s development, maintenance and releases are mine (121 commits, 85% of the period): FCM and tracking integration, the custom press-on feature, a points system, breaking up the oversized files, security hardening and CI/CD. The on-device AI and AR modules belong to another team; the backend API is a separate service outside this repo.',
         },
       ],
       challenges: [
-        {
-          c: {
-            zh: '接手時的 AR 試戴只有 1 FPS,偵測時設計圖還會閃爍漂移。',
-            en: 'At handover, AR try-on ran at 1 FPS, with the design overlay flickering and drifting during detection.',
-          },
-          s: {
-            zh: '汰換三代舊實作,重寫為五個職責分離的套件(偵測、渲染、傳統 CV、遮罩重上色、手動工作室),iOS 改走原生 CoreML 偵測;再加跨幀遲滯消除閃爍。FPS 從 1 提升到即時,核心偵測頁從 3,051 行減到 1,356 行。',
-            en: 'Retired three generations of old implementations and rewrote it as five single-purpose packages (detection, rendering, classic CV, mask recolor, manual studio), moving iOS detection to native CoreML, plus cross-frame hysteresis to kill flicker. FPS went from 1 to realtime; the core detection page shrank from 3,051 to 1,356 lines.',
-          },
-        },
         {
           c: {
             zh: '核心畫面是數千行的巨檔:訂單詳情 5,256 行、結帳 3,416 行,改一處動全身。',
@@ -1382,7 +1372,7 @@ export const PROJECTS: Project[] = [
             en: 'A security review found endpoints exempting “internal” traffic from auth — with “internal” judged by X-Forwarded-For, a header any client can forge; one 127.0.0.1 skipped login entirely. The same audit caught checkout trusting client-sent unit prices, and order-level discounts not prorated, inflating statement totals above what was owed.',
           },
           s: {
-            zh: '移除可偽造的內網豁免,預設一律要登入、真正的例外逐一顯式宣告;新增權威定價模組,單價由後端依當時階梯價與促銷重算;修正折扣分攤讓對帳單與應收一致。三項修復連同對應測試一併提交,已上線運行。',
+            zh: '把驗證預設從「有例外的允許」翻轉成「一律要登入、例外逐一顯式宣告」;新增權威定價模組,單價由後端依當時階梯價與促銷重算;修正折扣分攤讓對帳單與應收一致。三項修復連同對應測試一併提交,已上線運行。',
             en: 'Removed the forgeable exemption — authentication is the default, real exceptions declared one by one; added an authoritative-pricing module recomputing unit prices server-side from current tiers and promotions; fixed discount proration so statements match receivables. All three landed with accompanying tests and are live.',
           },
         },
@@ -1582,7 +1572,7 @@ export const PROJECTS: Project[] = [
         },
         {
           c: {
-            zh: '身分證後四碼與電話後三碼原本以明碼存庫,作為登入比對依據——資料庫一旦外洩就是直接可識別的個資;而且表裡已有既存明碼資料,不能砍掉重灌。',
+            zh: '驗收修復階段發現:身分證後四碼與電話後三碼原本以明碼存庫,作為登入比對依據——資料庫一旦外洩就是直接可識別的個資;而且表裡已有既存明碼資料,不能砍掉重灌。',
             en: 'ID and phone digits were originally stored in plaintext as the login comparison key — a database leak would expose directly identifiable PII — and the tables already held live plaintext rows, so “wipe and reload” was not an option.',
           },
           s: {
@@ -1918,8 +1908,8 @@ export const PROJECTS: Project[] = [
       ],
       constraints: [
         {
-          zh: '三個公開 repo(Django REST 後端、React 前端、PyTorch BERT 模型)。誠實揭露分工:原始專案(2024)由本人於計畫期間開發;近期這輪資安稽核與全面重構為 AI(Claude)輔助完成,每一項修復皆對應到可查證的 commit,數字不灌水。',
-          en: 'Three public repos — a Django REST backend, a React frontend and a PyTorch BERT model. Attribution kept honest: the original project (2024) is my own work from the program; the recent security audit and full rebuild were done with AI (Claude) assistance, every fix tied to a verifiable commit, no numbers inflated.',
+          zh: '三個公開 repo(Django REST 後端、React 前端、PyTorch BERT 微調腳本)。誠實揭露分工:原始專案(2024)由本人於計畫期間開發;近期這輪資安稽核與全面重構為 AI(Claude)輔助完成,每一項修復皆對應到可查證的 commit,數字不灌水。',
+          en: 'Three public repos — a Django REST backend, a React frontend and a PyTorch BERT fine-tuning script. Attribution kept honest: the original project (2024) is my own work from the program; the recent security audit and full rebuild were done with AI (Claude) assistance, every fix tied to a verifiable commit, no numbers inflated.',
         },
         {
           zh: '展示環境沒有 MySQL、沒有 GPU、也沒有原始訓練資料,demo 仍必須完整可跑。',
@@ -1942,8 +1932,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '2024 年於計畫期間獨立開發原始三件式(後端 API、前端、BERT 模型)。2026 年這輪的資安稽核、後端硬化、前端重構與模型修復為 AI(Claude)輔助完成,分三個 repo 推進,commit 歷史與測試結果皆可查證。',
-          en: 'Independently built the original three pieces (backend API, frontend, BERT model) during the 2024 program. The 2026 security audit, backend hardening, frontend rebuild and model fixes were done with AI (Claude) assistance across the three repos, with verifiable commit history and test results.',
+          zh: '2024 年於計畫期間獨立開發原始三件式(後端 API、前端,以及在 Google 預訓練 bert-base-cased 上微調的實體標記模型——是套用既有模型,不是自建模型架構)。2026 年這輪的資安稽核、後端硬化、前端重構與模型修復為 AI(Claude)輔助完成,分三個 repo 推進,commit 歷史與測試結果皆可查證。',
+          en: 'Independently built the original three pieces during the 2024 program — backend API, frontend, and an entity-tagging model fine-tuned on Google’s pretrained bert-base-cased (applying an existing model, not designing an architecture). The 2026 security audit, backend hardening, frontend rebuild and model fixes were done with AI (Claude) assistance across the three repos, with verifiable commit history and test results.',
         },
       ],
       challenges: [
@@ -2336,8 +2326,8 @@ export const PROJECTS: Project[] = [
       ],
       constraints: [
         {
-          zh: 'YOLO 權重檔沒有進版控——.gitignore 直接排除 *.pt,所以 clone 下來的 repo,Flask 服務在 import 時就會因為找不到 helmet.pt 而炸掉。任何公開的展示都不能依賴推論。',
-          en: 'The YOLO weights are not in version control — .gitignore excludes *.pt outright — so on a fresh clone the Flask service dies at import time looking for helmet.pt. No public demo can depend on inference running.',
+          zh: 'YOLO 偵測模型與 helmet.pt 權重由他人提供,不是我的工作;我負責的是 PHP 後端與串接。權重檔也沒有進版控——.gitignore 直接排除 *.pt,所以 clone 下來的 repo,Flask 服務在 import 時就會因為找不到 helmet.pt 而炸掉。任何公開的展示都不能依賴推論。',
+          en: 'The YOLO detection model and the helmet.pt weights came from someone else — my work here is the PHP backend and the wiring around it. The weights are not in version control either: .gitignore excludes *.pt outright, so on a fresh clone the Flask service dies at import time looking for helmet.pt. No public demo can depend on inference running.',
         },
         {
           zh: '後端沒有非同步層。QUEUE_CONNECTION=sync、Console\\Kernel 的 schedule() 是空的、ExampleJob 仍是未動過的骨架,全庫 grep 不到任何 dispatch()、Queue:: 或 Notification 呼叫。偵測是一次阻塞的請求內呼叫,判定違規之後不會有信、推播或 webhook——這是既有事實,不是待辦。',
@@ -2360,8 +2350,8 @@ export const PROJECTS: Project[] = [
       ],
       responsibilities: [
         {
-          zh: '全部由我完成,git 全歷史 27 個 commit(跨我自己的兩組身分)。2024/06 的 5 個 commit 是 Lumen + Flask/YOLO 原型;2026/07–08 的 22 個 commit 是這輪工作:目錄重整、React 儀表板與 demo/live 轉接層、34 個 vitest 測試、GitHub Pages CI,以及一串後端的正確性與資安修復。PHP 環境不在我目前的機器上,所以後端這輪是靜態閱讀原始碼後改的,沒有實際啟動驗證——這點如實記錄。',
-          en: 'All of it is mine: 27 commits across the full git history (under two of my own identities). Five commits in June 2024 are the Lumen + Flask/YOLO prototype; 22 commits in July–August 2026 are this round — the directory restructure, the React dashboard and its demo/live adapter, 34 vitest tests, GitHub Pages CI, and a run of backend correctness and security fixes. PHP is not installed on my current machine, so those backend changes were made by reading the source rather than by booting the service — recorded as-is.',
+          zh: '全部由我完成,git 全歷史 27 個 commit(跨我自己的兩組身分)。2024/06 的 5 個 commit 是 Lumen 後端加上串接他人提供的 Flask/YOLO 偵測服務的原型(模型本身不是我的);2026/07–08 的 22 個 commit 是這輪工作:目錄重整、React 儀表板與 demo/live 轉接層、34 個 vitest 測試、GitHub Pages CI,以及一串後端的正確性與資安修復。PHP 環境不在我目前的機器上,所以後端這輪是靜態閱讀原始碼後改的,沒有實際啟動驗證——這點如實記錄。',
+          en: 'All of it is mine: 27 commits across the full git history (under two of my own identities). Five commits in June 2024 are the prototype — the Lumen backend wired to a Flask/YOLO detector someone else supplied (the model is not mine); 22 commits in July–August 2026 are this round — the directory restructure, the React dashboard and its demo/live adapter, 34 vitest tests, GitHub Pages CI, and a run of backend correctness and security fixes. PHP is not installed on my current machine, so those backend changes were made by reading the source rather than by booting the service — recorded as-is.',
         },
       ],
       challenges: [

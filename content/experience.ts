@@ -56,8 +56,8 @@ export const EXPERIENCE: Experience[] = [
     role: { zh: '參與學生 · 全端 + AI 模型開發', en: 'Participating student · full-stack + AI model' },
     period: '2024',
     summary: {
-      zh: '以「四時煮食時」食療推薦與健康管理平台參與科工館與教育部的 AI 健康應用計畫,獨立開發 Django 後端、React 前端與 BERT 實體標記推薦模型。',
-      en: 'Took part in the museum × MOE AI Health Application program with “Four Times for Cook”, a food-therapy recommendation and health-management platform — independently building the Django backend, React frontend and a BERT entity-tagging recommendation model.',
+      zh: '以「四時煮食時」食療推薦與健康管理平台參與科工館與教育部的 AI 健康應用計畫,獨立開發 Django 後端、React 前端,以及在 Google 預訓練 BERT 上微調的實體標記推薦模型。',
+      en: 'Took part in the museum × MOE AI Health Application program with “Four Times for Cook”, a food-therapy recommendation and health-management platform — independently building the Django backend, the React frontend and an entity-tagging recommendation model fine-tuned on Google’s pretrained BERT.',
     },
   },
 ];
