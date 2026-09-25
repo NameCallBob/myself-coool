@@ -7,5 +7,7 @@ import type { ToolProps } from './types';
 
 /** Slug → lazily loaded implementation. One chunk per tool. */
 export const TOOL_COMPONENTS: Record<string, ComponentType<ToolProps>> = {
-
+  'text-diff': dynamic(() => import('./text-diff'), { ssr: false }),
+  'json-format': dynamic(() => import('./json-format'), { ssr: false }),
+  'password-generator': dynamic(() => import('./password-generator'), { ssr: false }),
 };

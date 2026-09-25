@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { bytes, count } from '@/lib/tools/format';
 import { loc, t } from '@/lib/tools/locale';
 import { BASE_PATH, prefetchAll, storageEstimate, wipeEverything } from '@/lib/tools/pwa';
@@ -75,9 +75,12 @@ export function OfflineManager({ locale }: { locale: string }) {
   }, [tick]);
 
   // One language's pages plus the shared chunks. Downloading the other
-  // locale's hundred pages to read this one would be a waste of the reader's
-  // bandwidth and their disk.
-  const queue = manifest ? [...manifest.offline.shared, ...(manifest.offline[locale] ?? [])] : [];
+  // locale's hundred pages to read this one would waste the reader's bandwidth
+  // and their disk.
+  const queue = useMemo(
+    () => (manifest ? [...manifest.offline.shared, ...(manifest.offline[locale] ?? [])] : []),
+    [manifest, locale]
+  );
 
   const download = useCallback(async () => {
     if (queue.length === 0) return;

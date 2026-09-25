@@ -2,7 +2,9 @@
 
 /** Slugs with an implementation on disk, in registry order. */
 export const BUILT_TOOLS: readonly string[] = [
-
+  'text-diff',
+  'json-format',
+  'password-generator',
 ];
 
 export const BUILT = new Set(BUILT_TOOLS);
