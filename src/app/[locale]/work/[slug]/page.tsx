@@ -10,6 +10,7 @@ import { CaseStudyJsonLd } from '@/lib/jsonld';
 import { alternatesFor, ogFor, robotsFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../../content/projects';
 import type { Localized } from '../../../../../content/projects';
+import { displaySerif } from '@/lib/fonts';
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
@@ -78,7 +79,7 @@ export default async function CaseStudyPage({ params }: Props) {
   const cs = project.caseStudy;
 
   return (
-    <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
+    <div className={`relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32 ${displaySerif.variable}`}>
       <CaseStudyJsonLd project={project} locale={locale} />
       <SectionHeading no={String(index + 1).padStart(2, '0')} label="WORK / CASE STUDY" />
       <h1 className="mt-6 max-w-[20ch] font-serif text-4xl leading-[1.25] font-semibold tracking-tight md:text-6xl">

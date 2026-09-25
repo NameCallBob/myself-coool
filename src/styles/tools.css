@@ -1,0 +1,476 @@
+/* ─────────────────────────────────────────────
+   Instruments — the /tools design layer.
+
+   Derived from what this section actually is: a parts catalogue for a bench
+   of instruments. So the index is set like the contents page of a technical
+   manual (dot leaders, part numbers, no cards), and a tool is set like a
+   bench station (two unequal panes with a measured seam, a readout strip
+   along the bottom).
+
+   Deliberately absent: cards, drop shadows, glass, gradients, icon tiles,
+   and per-tool decorative icons. The part number is the visual anchor and it
+   is functional — type A01 into the palette and it takes you there.
+   ───────────────────────────────────────────── */
+
+.inst {
+  --inst-gutter: 18px;
+  --inst-row: 2.375rem;
+  --inst-seam: color-mix(in oklab, var(--border-3) 60%, transparent);
+}
+
+/* ── Part number ──────────────────────────── */
+.inst-no {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-faint);
+}
+.inst-no > b {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* ── Catalogue index ──────────────────────── */
+.inst-drawer + .inst-drawer {
+  margin-top: 2.75rem;
+}
+
+.inst-drawer-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-3);
+}
+
+/* One row per tool. The leader is the signature detail: a dotted rule that
+   physically connects a name on the left to its metadata on the right, the
+   way a manual's contents page does. It collapses on narrow screens. */
+.inst-row {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, auto) 1fr auto;
+  align-items: baseline;
+  gap: 0 0.6rem;
+  min-height: var(--inst-row);
+  padding: 0.45rem 0.35rem;
+  border-bottom: 1px solid var(--border-1);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 140ms linear;
+}
+.inst-row:hover,
+.inst-row:focus-visible {
+  background: color-mix(in oklab, var(--accent) 5%, transparent);
+}
+.inst-row[aria-current='true'] {
+  background: var(--accent-dim);
+}
+
+.inst-row-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.inst-leader {
+  align-self: center;
+  height: 1px;
+  min-width: 1.5rem;
+  background-image: radial-gradient(circle, var(--border-3) 0.5px, transparent 0.5px);
+  background-size: 5px 1px;
+  background-repeat: repeat-x;
+  opacity: 0.85;
+}
+
+.inst-row-blurb {
+  grid-column: 2 / -1;
+  margin-top: 0.15rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+@media (max-width: 640px) {
+  .inst-row {
+    grid-template-columns: 2.75rem 1fr auto;
+  }
+  .inst-leader {
+    display: none;
+  }
+}
+
+/* ── Flags ────────────────────────────────── */
+.inst-flag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--border-2);
+  color: var(--fg-faint);
+  white-space: nowrap;
+}
+.inst-flag[data-kind='sensitive'] {
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  color: var(--accent);
+}
+
+/* ── Bench (a tool page) ──────────────────── */
+/* Unequal on purpose: input gets more room than output, and the seam between
+   them carries a scale so the split reads as measured rather than centred. */
+.inst-bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) 1px minmax(0, 1fr);
+  gap: 0 var(--inst-gutter);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .inst-bench {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+  .inst-seam {
+    display: none;
+  }
+}
+
+.inst-seam {
+  align-self: stretch;
+  min-height: 12rem;
+  background-image: linear-gradient(var(--inst-seam), var(--inst-seam));
+  background-size: 1px 100%;
+  background-repeat: no-repeat;
+  position: relative;
+}
+/* Ticks every 24px down the seam — the measured detail. */
+.inst-seam::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background-image: linear-gradient(var(--inst-seam) 1px, transparent 1px);
+  background-size: 100% 24px;
+}
+
+.inst-pane-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--fg-faint);
+}
+
+/* ── Controls ─────────────────────────────── */
+.inst-field {
+  display: block;
+  margin-bottom: 0.9rem;
+}
+.inst-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.inst-hint {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--fg-faint);
+}
+
+.inst-input,
+.inst-area,
+.inst-select {
+  width: 100%;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-2);
+  border-radius: 2px;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  padding: 0.5rem 0.6rem;
+}
+.inst-area {
+  min-height: 9rem;
+  resize: vertical;
+  tab-size: 2;
+}
+.inst-input:focus-visible,
+.inst-area:focus-visible,
+.inst-select:focus-visible {
+  border-color: var(--accent);
+}
+.inst-input[aria-invalid='true'],
+.inst-area[aria-invalid='true'] {
+  border-color: var(--accent);
+}
+
+.inst-out {
+  width: 100%;
+  min-height: 9rem;
+  background: var(--bg-base);
+  border: 1px solid var(--border-2);
+  border-radius: 2px;
+  padding: 0.5rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-x: auto;
+}
+
+/* Buttons are rules, not pills. Square corners, hairline border, ink fill on
+   the primary action only. */
+.inst-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border-3);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background-color 140ms linear,
+    border-color 140ms linear;
+}
+.inst-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  border-color: var(--accent);
+}
+.inst-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.inst-btn[data-primary='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.inst-btn[data-primary='true']:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 85%, var(--fg));
+}
+
+.inst-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* Segmented switch — one bordered strip, no floating pills. */
+.inst-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.inst-seg > button {
+  padding: 0.3rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  border: 0;
+  border-left: 1px solid var(--border-2);
+}
+.inst-seg > button:first-child {
+  border-left: 0;
+}
+.inst-seg > button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ── Readout strip ────────────────────────── */
+/* The measurement line. Every tool reports what it just did — sizes, counts,
+   elapsed time — and that the work happened here. It is the privacy claim
+   restated as an instrument reading rather than a badge. */
+.inst-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  margin-top: 1.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+.inst-readout dt {
+  display: inline;
+}
+.inst-readout dd {
+  display: inline;
+  margin-left: 0.3rem;
+  color: var(--fg-muted);
+}
+.inst-readout > div {
+  white-space: nowrap;
+}
+
+/* ── Data tables ──────────────────────────── */
+.inst-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.inst-table th,
+.inst-table td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border-1);
+  vertical-align: top;
+}
+.inst-table th {
+  color: var(--fg-faint);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-bottom-color: var(--border-3);
+}
+.inst-table tbody tr:hover {
+  background: color-mix(in oklab, var(--accent) 4%, transparent);
+}
+.inst-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* ── Drop target ──────────────────────────── */
+.inst-drop {
+  border: 1px dashed var(--border-3);
+  border-radius: 2px;
+  padding: 1.1rem 0.75rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  background: transparent;
+  width: 100%;
+  transition: border-color 140ms linear;
+}
+.inst-drop[data-over='true'] {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-dim);
+}
+
+/* ── Diff / mono markup ───────────────────── */
+.inst-ins {
+  background: color-mix(in oklab, var(--data-teal) 22%, transparent);
+  text-decoration: none;
+}
+.inst-del {
+  background: var(--accent-dim);
+  text-decoration: line-through;
+}
+
+/* ── Command palette ──────────────────────── */
+.inst-palette {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding: 12vh 1rem 1rem;
+  background: color-mix(in oklab, var(--bg-deep) 72%, transparent);
+  backdrop-filter: blur(3px);
+}
+.inst-palette-box {
+  width: min(42rem, 100%);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-3);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+.inst-palette-input {
+  border: 0;
+  border-bottom: 1px solid var(--border-2);
+  background: transparent;
+  padding: 0.7rem 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--fg);
+  outline-offset: -2px;
+}
+.inst-palette-list {
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+.inst-palette-item {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr auto;
+  gap: 0.6rem;
+  align-items: baseline;
+  width: 100%;
+  padding: 0.4rem 0.85rem;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+}
+.inst-palette-item[data-active='true'] {
+  background: var(--accent-dim);
+}
+
+/* ── Offline / status chip ────────────────── */
+.inst-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--fg-faint);
+}
+.inst-status::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--data-teal);
+}
+.inst-status[data-state='offline']::before {
+  background: var(--fg-faint);
+}
+
+/* ── Update banner ────────────────────────── */
+.inst-banner {
+  position: fixed;
+  z-index: 70;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-3);
+  font-size: 0.8125rem;
+}
+
+/* Long values must never widen the page. */
+.inst-wrap {
+  overflow-wrap: anywhere;
+}

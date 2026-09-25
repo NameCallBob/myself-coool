@@ -8,6 +8,7 @@ import { EXPERIENCE } from '../../../../content/experience';
 import { PLATES } from '../../../../content/plates';
 import { Avatar } from '@/components/ui/Avatar';
 import { PlateWall } from '@/components/ui/PlateWall';
+import { displaySerif } from '@/lib/fonts';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -32,7 +33,7 @@ export default async function AboutPage({ params }: Props) {
   const loc = locale === 'zh-TW' ? 'zh' : 'en';
 
   return (
-    <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
+    <div className={`relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32 ${displaySerif.variable}`}>
       <ProfileJsonLd locale={locale} />
       <SectionHeading no="01" label="ABOUT" />
       <h1 className="sr-only">{t('title')}</h1>

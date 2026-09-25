@@ -1,6 +1,5 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Archivo, JetBrains_Mono } from 'next/font/google';
-import localFont from 'next/font/local';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
@@ -25,19 +24,10 @@ const archivo = Archivo({
  * not stop next/font emitting the full CJK slice set, and the two Noto
  * families were shipping ~2 MB of woff2 on the home page alone.
  *
- * The display face is self-hosted and cut to the glyphs this site actually
- * renders (1,161 Han characters, measured off the built HTML): one 252 KB
- * file instead of ~650 KB spread over a dozen unicode-range slices. Regenerate
- * with `node scripts/subset-fonts.mjs` after adding Chinese copy — a glyph
- * outside the subset silently falls back to the system serif.
+ * The display face is NOT declared here: see src/lib/fonts.ts. Declaring it in
+ * the root layout made every page preload it, including the 200 tool pages
+ * that never use it.
  */
-const notoSerifTC = localFont({
-  src: '../../../public/fonts/noto-serif-tc-600.woff2',
-  weight: '600',
-  style: 'normal',
-  variable: '--font-noto-serif-tc',
-  display: 'swap',
-});
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -71,8 +61,25 @@ export async function generateMetadata({
     // No `creator` — there is no X account to point at, and inventing a
     // handle is worse than omitting the field.
     twitter: { card: 'summary_large_image', images: [OG_IMAGE.url] },
+    // iOS ignores the web manifest's icon list when adding to the home screen.
+    appleWebApp: { capable: true, title: 'binbin', statusBarStyle: 'default' },
+    icons: {
+      apple: '/icons/apple-touch-icon.png',
+    },
   };
 }
+
+/**
+ * Theme colour has to follow the reader's scheme, so it is declared here
+ * rather than in the manifest — the manifest only carries one value and the
+ * light one would tint the dark UI's chrome.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#faf8f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#12100e' },
+  ],
+};
 
 export default async function LocaleLayout({
   children,
@@ -98,7 +105,7 @@ export default async function LocaleLayout({
     <html
       lang={locale === 'zh-TW' ? 'zh-Hant-TW' : 'en'}
       suppressHydrationWarning
-      className={`${archivo.variable} ${notoSerifTC.variable} ${jetbrainsMono.variable}`}
+      className={`${archivo.variable} ${jetbrainsMono.variable}`}
     >
       <body>
         <SiteJsonLd locale={locale} />

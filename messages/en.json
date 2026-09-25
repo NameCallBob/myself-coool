@@ -6,7 +6,8 @@
     "contact": "Contact",
     "menuOpen": "Open menu",
     "menuClose": "Close menu",
-    "home": "Back to home"
+    "home": "Back to home",
+    "tools": "Tools"
   },
   "footer": {
     "statement": "An engineering-notes record of the systems I build and run.",
@@ -40,7 +41,8 @@
     "home": "Full-stack developer building an AI nail platform and a multi-tenant HRIS at Manience Inc., and independently running two systems in production at NKUST.",
     "work": "Project experience: public campus systems and internal commercial work, each broken down by problem, architecture and trade-offs.",
     "ai": "From vibe coding to agentic engineering: spec-first, controlled context, verification loops and human review — evidenced by this site and two campus systems in production.",
-    "about": "A student independently shipping production systems — experience, timeline and stack."
+    "about": "A student independently shipping production systems — experience, timeline and stack.",
+    "tools": "A hundred tools that run entirely in your browser — encoding, hashing, time zones, images and maths. No upload, no network, works offline."
   },
   "case": {
     "internal": "Internal project (private)",

@@ -85,11 +85,23 @@ const ROUTE_SOURCES = {
     'src/app/[locale]/about/page.tsx',
   ],
   '/ai': ['content/agentic.ts', 'messages', 'src/app/[locale]/ai/page.tsx'],
+  // The bench moves as a whole: the registry, the prose, the shared kit and
+  // the routes. A single tool changing is a change to /tools.
+  '/tools': [
+    'content/tools',
+    'src/app/[locale]/tools',
+    'src/components/tools',
+    'src/lib/tools',
+    'src/tools',
+  ],
 };
+// A route whose sources are not committed yet has no history to read, so it
+// falls back to HEAD's date rather than emitting an empty `lastmod`.
+const headDate = git('log', '-1', '--format=%ad', '--date=short').trim();
 const routes = Object.fromEntries(
   Object.entries(ROUTE_SOURCES).map(([route, paths]) => [
     route,
-    git('log', '-1', '--format=%ad', '--date=short', '--', ...paths).trim(),
+    git('log', '-1', '--format=%ad', '--date=short', '--', ...paths).trim() || headDate,
   ]),
 );
 

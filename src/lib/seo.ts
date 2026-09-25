@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { SITE_NAME, SITE_URL } from '../../content/site';
 import { PROJECTS } from '../../content/projects';
+import { findTool } from '../../content/tools/registry';
+import { BUILT } from '@/tools/built.generated';
 import { routing } from '@/i18n/routing';
 
 /** Shared social preview image (metadataBase resolves it to an absolute URL). */
@@ -22,6 +24,17 @@ export const OG_IMAGE = {
 export function isIndexable(path: string): boolean {
   const slug = path.startsWith('/work/') ? path.slice('/work/'.length) : null;
   if (slug) return Boolean(PROJECTS.find((p) => p.slug === slug)?.caseStudy);
+
+  // The bench: the index earns a place, and so does a tool that carries its
+  // own prose and actually exists. A hundred thin near-identical pages would
+  // read as a doorway set and drag the whole domain down with them, so the
+  // rest stay crawlable but unindexed (docs/phase-10-tools-plan.md §3).
+  if (path === '/tools/settings') return false;
+  if (path.startsWith('/tools/')) {
+    const toolSlug = path.slice('/tools/'.length);
+    const tool = findTool(toolSlug);
+    return Boolean(tool?.indexable && BUILT.has(toolSlug));
+  }
 
   return true;
 }

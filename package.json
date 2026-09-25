@@ -3,13 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
+    "build": "next build && node scripts/build-pwa.mjs",
     "content:dates": "node scripts/content-dates.mjs --write",
+    "dev": "next dev",
+    "fonts": "node scripts/subset-fonts.mjs",
+    "icons": "node scripts/gen-icons.mjs",
+    "lint": "eslint",
+    "prebuild": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-tool-loader.mjs",
+    "serve": "node scripts/serve-out.mjs",
     "shots": "node scripts/shots.mjs",
-    "fonts": "node scripts/subset-fonts.mjs"
+    "start": "next start",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/tools/**/*.test.ts\" \"src/lib/**/*.test.ts\"",
+    "verify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",

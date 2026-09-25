@@ -11,6 +11,9 @@ const LINKS = [
   { href: '/work', key: 'work' },
   { href: '/ai', key: 'ai' },
   { href: '/about', key: 'about' },
+  // Last on purpose: the bench is a side room, not the argument this site is
+  // making. See docs/phase-10-tools-plan.md §1.
+  { href: '/tools', key: 'tools' },
 ] as const;
 
 /** Nothing to subscribe to — this store only reports "are we past hydration". */

@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Unit tests run on `node --test` with Node's own type stripping, which
+    // needs the real specifier — `./random.ts`, not `./random`. Allowed here
+    // because this project never emits from tsc (noEmit above).
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [

@@ -8,6 +8,7 @@ import { SectionOpener, sectionId } from '@/components/ui/SectionOpener';
 import { alternatesFor, ogFor, robotsFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../content/projects';
 import type { Project } from '../../../../content/projects';
+import { displaySerif } from '@/lib/fonts';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -72,7 +73,7 @@ export default async function WorkPage({ params }: Props) {
   const internalProjects = PROJECTS.filter((p) => p.visibility === 'internal');
 
   return (
-    <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
+    <div className={`relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32 ${displaySerif.variable}`}>
       <SectionHeading no="00" label="PROJECT EXPERIENCE" />
       <h1 className="mt-6 font-serif text-4xl font-semibold tracking-tight md:text-6xl">
         {t('title')}

@@ -5,6 +5,7 @@ import { SectionHeading } from '@/components/ui/SectionHeading';
 import { SectionOpener, sectionId } from '@/components/ui/SectionOpener';
 import { alternatesFor, ogFor, robotsFor } from '@/lib/seo';
 import { AGENTIC } from '../../../../content/agentic';
+import { displaySerif } from '@/lib/fonts';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -30,7 +31,7 @@ export default async function AiPage({ params }: Props) {
   const loc = locale === 'zh-TW' ? 'zh' : 'en';
 
   return (
-    <div className="relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32">
+    <div className={`relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32 ${displaySerif.variable}`}>
       {/* 00 / header — the vibe → agentic narrative */}
       <SectionHeading no="00" label="AGENTIC ENGINEERING" />
       <h1 className="mt-6 font-serif text-4xl font-semibold tracking-tight md:text-6xl">

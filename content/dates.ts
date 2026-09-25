@@ -11,15 +11,15 @@ export type ContentDate = { published: string; updated: string };
 export const CONTENT_DATES: Record<string, ContentDate> = {
   'hris-saas': {
     published: '2026-07-16',
-    updated: '2026-08-29'
+    updated: '2026-09-12'
   },
   'ai-nail-platform': {
     published: '2026-07-16',
-    updated: '2026-07-17'
+    updated: '2026-09-12'
   },
   'naily-app': {
     published: '2026-07-16',
-    updated: '2026-07-18'
+    updated: '2026-09-12'
   },
   'naily-storefront': {
     published: '2026-07-17',
@@ -43,7 +43,7 @@ export const CONTENT_DATES: Record<string, ContentDate> = {
   },
   'b2b-wholesale-platform': {
     published: '2026-07-17',
-    updated: '2026-07-17'
+    updated: '2026-09-12'
   },
   'field-sales-pwa': {
     published: '2026-07-17',
@@ -51,7 +51,7 @@ export const CONTENT_DATES: Record<string, ContentDate> = {
   },
   'agm-evoting-system': {
     published: '2026-07-17',
-    updated: '2026-07-17'
+    updated: '2026-09-12'
   },
   'ai-workflow': {
     published: '2026-07-16',
@@ -63,11 +63,11 @@ export const CONTENT_DATES: Record<string, ContentDate> = {
   },
   'four-times-for-cook': {
     published: '2026-07-21',
-    updated: '2026-08-29'
+    updated: '2026-09-12'
   },
   'helmet-detect': {
     published: '2026-08-29',
-    updated: '2026-08-29'
+    updated: '2026-09-12'
   },
   'food-selector': {
     published: '2026-08-29',
@@ -77,8 +77,9 @@ export const CONTENT_DATES: Record<string, ContentDate> = {
 
 /** Last change to any source that renders a given static route. */
 export const ROUTE_DATES: Record<string, string> = {
-  '': '2026-08-29',
-  '/work': '2026-08-29',
-  '/about': '2026-08-29',
-  '/ai': '2026-08-29'
+  '': '2026-09-12',
+  '/work': '2026-09-12',
+  '/about': '2026-09-12',
+  '/ai': '2026-09-12',
+  '/tools': '2026-09-12'
 };

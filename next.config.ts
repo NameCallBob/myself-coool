@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
 
   output: 'export',
   basePath,
+  // The service worker registration and the offline pre-fetch both need the
+  // base path at runtime, and `basePath` itself is not readable from the
+  // browser. Re-exporting it as a public env var keeps one source of truth.
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
   trailingSlash: false,
   images: {
     unoptimized: true,

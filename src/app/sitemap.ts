@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '../../content/site';
 import { PROJECTS } from '../../content/projects';
+import { TOOLS } from '../../content/tools/registry';
 import { CONTENT_DATES, ROUTE_DATES } from '../../content/dates';
 import { routing } from '@/i18n/routing';
 import { isIndexable } from '@/lib/seo';
@@ -24,6 +25,13 @@ function paths(): { path: string; lastModified: string }[] {
     })),
     { path: '/ai', lastModified: ROUTE_DATES['/ai'] },
     { path: '/about', lastModified: ROUTE_DATES['/about'] },
+    { path: '/tools', lastModified: ROUTE_DATES['/tools'] },
+    // Tool pages share the section's date: they ship in batches, and a
+    // per-tool date would need its own git walk to mean anything.
+    ...TOOLS.map((tool) => ({
+      path: `/tools/${tool.slug}`,
+      lastModified: ROUTE_DATES['/tools'],
+    })),
   ];
 
   return entries.filter((e) => isIndexable(e.path));

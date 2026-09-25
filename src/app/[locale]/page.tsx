@@ -6,6 +6,7 @@ import { PROJECTS } from '../../../content/projects';
 import { EXPERIENCE } from '../../../content/experience';
 import { ART_PLATES } from '../../../content/art-plates';
 import { CAPTIONS } from '../../../content/captions';
+import { displaySerif } from '@/lib/fonts';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -106,5 +107,11 @@ export default async function HomePage({ params }: Props) {
     },
   };
 
-  return <DeckSections data={data} />;
+  // The class rides on a wrapper so the serif face loads for the deck without
+  // the root layout preloading it on every route (src/lib/fonts.ts).
+  return (
+    <div className={displaySerif.variable}>
+      <DeckSections data={data} />
+    </div>
+  );
 }
