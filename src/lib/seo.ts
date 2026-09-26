@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { SITE_NAME, SITE_URL } from '../../content/site';
 import { PROJECTS } from '../../content/projects';
 import { findTool } from '../../content/tools/registry';
+import { noteFor } from '../../content/tools/notes';
 import { BUILT } from '@/tools/built.generated';
 import { routing } from '@/i18n/routing';
 
@@ -25,15 +26,19 @@ export function isIndexable(path: string): boolean {
   const slug = path.startsWith('/work/') ? path.slice('/work/'.length) : null;
   if (slug) return Boolean(PROJECTS.find((p) => p.slug === slug)?.caseStudy);
 
-  // The bench: the index earns a place, and so does a tool that carries its
-  // own prose and actually exists. A hundred thin near-identical pages would
-  // read as a doorway set and drag the whole domain down with them, so the
-  // rest stay crawlable but unindexed (docs/phase-10-tools-plan.md §3).
+  // The bench: the index earns a place, and so does a tool that exists and
+  // carries its own prose. A hundred thin near-identical pages would read as a
+  // doorway set and drag the whole domain down with them, so the rest stay
+  // crawlable but unindexed (docs/phase-10-tools-plan.md §3).
+  //
+  // All three conditions are checked, not just the registry flag: `indexable`
+  // is an intention, and a page is only worth indexing once the intention has
+  // actually been met by a built tool with something written under it.
   if (path === '/tools/settings') return false;
   if (path.startsWith('/tools/')) {
     const toolSlug = path.slice('/tools/'.length);
     const tool = findTool(toolSlug);
-    return Boolean(tool?.indexable && BUILT.has(toolSlug));
+    return Boolean(tool?.indexable && BUILT.has(toolSlug) && noteFor(toolSlug));
   }
 
   return true;

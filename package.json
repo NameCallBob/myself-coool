@@ -14,6 +14,7 @@
     "shots": "node scripts/shots.mjs",
     "start": "next start",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/tools/**/*.test.ts\" \"src/lib/**/*.test.ts\"",
+    "tool-status": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/tool-status.mjs",
     "verify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify.mjs"
   },
   "dependencies": {

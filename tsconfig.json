@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    // ES2020 for BigInt literals: the radix converter needs arbitrary-precision
+    // integers, and Next.js targets Chrome/Edge/Firefox 111+ and Safari 16.4+,
+    // all of which have had BigInt for years. tsc emits nothing here (noEmit),
+    // so this only governs which syntax the type-checker accepts.
+    "target": "ES2020",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
