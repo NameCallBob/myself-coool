@@ -184,6 +184,70 @@ for (const path of paths) {
 /* ── Source rules ─────────────────────────── */
 
 /**
+ * Strips comments and string literals, keeping template interpolations.
+ *
+ * Needed because the first version of the scan below flagged five tools that
+ * were innocent: four of them say "this tool does not write localStorage" in
+ * their own UI copy, and the curl converter emits `fetch(...)` as the code it
+ * generates for you to paste. The rule is about what the tool executes, not
+ * about what it says, so the prose has to come out before matching — while
+ * `${...}` inside a template stays, since that is real code.
+ */
+function codeOnly(source) {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    const next = source[i + 1];
+
+    if (ch === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i += 1;
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      i += 2;
+      while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) i += 1;
+      i += 2;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      const quote = ch;
+      i += 1;
+      while (i < source.length) {
+        if (source[i] === '\\') {
+          i += 2;
+          continue;
+        }
+        if (source[i] === quote) {
+          i += 1;
+          break;
+        }
+        if (quote === '`' && source[i] === '$' && source[i + 1] === '{') {
+          let depth = 1;
+          i += 2;
+          const start = i;
+          while (i < source.length && depth > 0) {
+            if (source[i] === '{') depth += 1;
+            else if (source[i] === '}') depth -= 1;
+            if (depth > 0) i += 1;
+          }
+          out += ` ${source.slice(start, i)} `;
+          i += 1;
+          continue;
+        }
+        i += 1;
+      }
+      out += ' ';
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+/**
  * Read straight off the source, not the bundle.
  *
  * ESLint already refuses `Math.random`, `eval` and `dangerouslySetInnerHTML`
@@ -200,9 +264,7 @@ for (const path of paths) {
     if (!existsSync(dir)) continue;
     for (const file of readdirSync(dir)) {
       if (!/\.tsx?$/.test(file) || file.endsWith('.test.ts')) continue;
-      const source = readFileSync(join(dir, file), 'utf8');
-      // Strip comments so prose about `fetch` does not trip the scan.
-      const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const code = codeOnly(readFileSync(join(dir, file), 'utf8'));
 
       const network = NETWORK.exec(code);
       if (network) note(`${tool.slug}/${file}`, `reaches the network: ${network[0]}`);
