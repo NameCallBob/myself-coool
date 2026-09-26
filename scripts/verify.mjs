@@ -16,7 +16,8 @@
  *   --all:   every tool page (slow)
  */
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { chromium } from 'playwright';
 
 const PORT = 4399;
@@ -104,6 +105,17 @@ for (const path of paths) {
       await page.waitForTimeout(250);
     }
 
+    // House rule: every tool ends with a readout strip. Its absence is the
+    // cheapest reliable signal that a page is a stub rather than a tool.
+    if (path.startsWith('/zh-TW/tools/') && path !== '/zh-TW/tools/settings') {
+      if ((await page.locator('.inst-readout').count()) === 0) {
+        note(path, 'no readout strip — tool looks unimplemented');
+      }
+      if ((await page.locator('button, input, textarea, select').count()) < 2) {
+        note(path, 'almost no controls — tool looks unimplemented');
+      }
+    }
+
     await drain(page, seen);
 
     const outside = foreign(seen.requests);
@@ -167,6 +179,40 @@ for (const path of paths) {
 
   const missing = TOOLS.filter((tool) => !existsSync(`out/zh-TW/tools/${tool.slug}.html`));
   if (missing.length) note('export', `${missing.length} tool pages were not emitted`);
+}
+
+/* ── Source rules ─────────────────────────── */
+
+/**
+ * Read straight off the source, not the bundle.
+ *
+ * ESLint already refuses `Math.random`, `eval` and `dangerouslySetInnerHTML`
+ * in this tree. These are the two rules it cannot express: a tool must not
+ * reach the network at all, and a tool whose input is a secret must not write
+ * that input anywhere it can outlive the tab.
+ */
+{
+  const NETWORK = /\b(fetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts)/;
+  const PERSIST = /\b(localStorage|sessionStorage|indexedDB|document\.cookie)/;
+
+  for (const tool of TOOLS) {
+    const dir = join('src/tools', tool.slug);
+    if (!existsSync(dir)) continue;
+    for (const file of readdirSync(dir)) {
+      if (!/\.tsx?$/.test(file) || file.endsWith('.test.ts')) continue;
+      const source = readFileSync(join(dir, file), 'utf8');
+      // Strip comments so prose about `fetch` does not trip the scan.
+      const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+      const network = NETWORK.exec(code);
+      if (network) note(`${tool.slug}/${file}`, `reaches the network: ${network[0]}`);
+
+      if (tool.sensitive) {
+        const persist = PERSIST.exec(code);
+        if (persist) note(`${tool.slug}/${file}`, `sensitive tool persists via ${persist[0]}`);
+      }
+    }
+  }
 }
 
 await browser.close();
