@@ -434,6 +434,22 @@ async function signWith(
   };
 }
 
+/**
+ * Flips a byte of the signature.
+ *
+ * Editing the last base64url character does not reliably do this: a 2048-bit
+ * signature is 256 bytes, which is 341 and a third base64 characters, so the
+ * 342nd carries two significant bits and four the decoder discards. Changing
+ * it can leave the decoded bytes identical, and the "tampered" token verifies
+ * — which is how this test came to fail about half the time.
+ */
+function corrupt(token: string): string {
+  const [header, payload, signature] = token.split('.');
+  const bytes = Buffer.from(signature, 'base64url');
+  bytes[0] ^= 0xff;
+  return `${header}.${payload}.${bytes.toString('base64url')}`;
+}
+
 test('RS256 verifies against a PEM public key', async () => {
   const { token, pem } = await signWith(
     'RS256',
@@ -447,8 +463,7 @@ test('RS256 verifies against a PEM public key', async () => {
     '{"sub":"rs"}'
   );
   assert.deepEqual(await verify(decodeJwt(token), 'RS256', pem, subtle), { status: 'valid' });
-  const broken = token.replace(/.$/, (ch) => (ch === 'A' ? 'B' : 'A'));
-  assert.equal((await verify(decodeJwt(broken), 'RS256', pem, subtle)).status, 'invalid');
+  assert.equal((await verify(decodeJwt(corrupt(token)), 'RS256', pem, subtle)).status, 'invalid');
 });
 
 test('PS256 verifies with the RFC 7518 salt length', async () => {

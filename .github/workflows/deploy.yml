@@ -25,7 +25,18 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+
+      # 工具邏輯的單元測試。跑在 node --test 上,沒有額外依賴。
+      - run: npm test
+
       - run: npm run build
+
+      # /tools 這一頁對讀者的承諾是「載入之後不發出任何網路請求」,
+      # 而那句話只有在這裡被強制執行才算數:verify 會載入每一個頁面、
+      # 斷言零跨來源請求、零 CSP 違規、離線可用。沒過就不會部署。
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify -- --all
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { fastestOf, scaledWithin } from '../../lib/tools/bench-timing.ts';
 import {
   ConvertError,
   FORMATS,
@@ -750,17 +751,15 @@ test('[19] a wide table costs no more than a tall one with the same cell count',
     for (let c = 0; c < cols; c += 1) row[`column_${c}`] = 'v';
     return Array.from({ length: rows }, () => ({ ...row }));
   };
-  const time = (value: Json) => {
-    const started = performance.now();
-    assert.ok(stringifyCsv(value).length > 0);
-    return performance.now() - started;
-  };
-  time(build(50, 50));
-  const tall = time(build(2_000, 300));
-  const wide = time(build(300, 2_000));
+  const tall = build(2_000, 300);
+  const wide = build(300, 2_000);
   // Same 600,000 cells either way. Collecting the column union with
-  // Array.includes makes the wide one several times more expensive.
-  assert.ok(wide < Math.max(tall, 1) * 2.5, `tall ${tall.toFixed(0)}ms, wide ${wide.toFixed(0)}ms`);
+  // Array.includes made the wide one several times more expensive. Fastest-of-N
+  // because timer noise only ever adds time (see bench-timing.ts).
+  const tallMs = fastestOf(() => void stringifyCsv(tall), 3);
+  const wideMs = fastestOf(() => void stringifyCsv(wide), 3);
+  const scaling = scaledWithin(tallMs, wideMs, 2.5);
+  assert.ok(scaling.ok, `same cell count, wide should not cost more — ${scaling.detail}`);
 });
 
 test('[20] the input ceiling is reported in the unit it actually measures', () => {

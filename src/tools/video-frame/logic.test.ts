@@ -266,7 +266,7 @@ test('frameFileName keeps CJK and strips what file systems refuse', () => {
   assert.equal(frameFileName('my holiday clip.mov', 5, 'png'), 'my_holiday_clip_00-00-05-000.png');
   // Each refused character becomes a dash; a trailing one is then trimmed.
   assert.equal(frameFileName('a/b:c*d?.mp4', 5, 'png'), 'a-b-c-d_00-00-05-000.png');
-  assert.equal(frameFileName('sub dir.mp4', 5, 'png'), 'subdir_00-00-05-000.png');
+  assert.equal(frameFileName('sub\u0000dir\u001f.mp4', 5, 'png'), 'subdir_00-00-05-000.png');
   assert.equal(frameFileName('🎬.mp4', 5, 'png'), '🎬_00-00-05-000.png');
 });
 

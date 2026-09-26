@@ -263,8 +263,28 @@ function codeOnly(source) {
     const dir = join('src/tools', tool.slug);
     if (!existsSync(dir)) continue;
     for (const file of readdirSync(dir)) {
-      if (!/\.tsx?$/.test(file) || file.endsWith('.test.ts')) continue;
-      const code = codeOnly(readFileSync(join(dir, file), 'utf8'));
+      if (!/\.tsx?$/.test(file)) continue;
+      // Network and persistence rules are about shipped code; the control
+      // character check below applies to tests too.
+      const isTest = file.endsWith('.test.ts');
+      const source = readFileSync(join(dir, file), 'utf8');
+      const code = codeOnly(source);
+
+      /**
+       * A literal control character in source is almost always a test author
+       * typing the character instead of its escape. It still compiles and the
+       * tests still pass, but git marks the file binary — no diff, no blame —
+       * and it happened once already, in the URL codec's %00 test.
+       */
+      const control = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.exec(source);
+      if (control) {
+        note(
+          `${tool.slug}/${file}`,
+          `literal control character U+${control[0].codePointAt(0).toString(16).padStart(4, '0')} in source — write the escape instead`
+        );
+      }
+
+      if (isTest) continue;
 
       const network = NETWORK.exec(code);
       if (network) note(`${tool.slug}/${file}`, `reaches the network: ${network[0]}`);

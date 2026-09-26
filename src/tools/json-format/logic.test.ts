@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { fastestOf, scaledWithin } from '../../lib/tools/bench-timing.ts';
 import { findDuplicateKeys, findError, locate, parseJson, render, sortDeep, toLines } from './logic.ts';
 
 test('valid JSON reports structure, not just success', () => {
@@ -169,14 +170,13 @@ test('[18] a deep document with a real syntax error is not blamed on its depth',
 
 test('[18] diagnosing a document full of numbers stays linear', () => {
   const build = (n: number) => `[${Array.from({ length: n }, (_, i) => String(i * 1234567)).join(',')},]`;
-  const time = (text: string) => {
-    const started = performance.now();
-    assert.ok(findError(text));
-    return performance.now() - started;
-  };
-  time(build(1_000));
-  const small = time(build(40_000));
-  const large = time(build(160_000));
-  // Four times the input, not sixteen times the work.
-  assert.ok(large < Math.max(small, 1) * 8, `40k took ${small}ms, 160k took ${large}ms`);
+  const small = build(40_000);
+  const large = build(160_000);
+  // Fastest-of-N rather than a single run: timer noise only ever adds time,
+  // so the quickest run is the honest estimate and the one that survives a
+  // busy machine. Four times the input must not mean sixteen times the work.
+  const quick = fastestOf(() => void findError(small));
+  const slow = fastestOf(() => void findError(large));
+  const scaling = scaledWithin(quick, slow, 8);
+  assert.ok(scaling.ok, `four times the input should not cost sixteen times — ${scaling.detail}`);
 });
