@@ -252,3 +252,22 @@ test('formatQuantity falls back to exponent notation at the extremes', () => {
   assert.ok(formatQuantity(1e-9).includes('e-'));
   assert.equal(formatQuantity(9.460730472580800e15), '9.460730e+15');
 });
+
+test('a separator is only accepted where a thousands separator belongs', () => {
+  // "1 2" is a typo, not the number 12: stripping all whitespace accepted it
+  // silently, which is the worst possible reading of a mistyped amount.
+  for (const bad of ['1 2', '1 23', '1,2', '1,23', '12,3456', '1 234 56', '1.234 5', '1.2 3', '1_2', '1、2']) {
+    assert.ok(Number.isNaN(parseAmount(bad)), `${JSON.stringify(bad)} should not parse`);
+  }
+  // Real grouping still works, in every separator this field has ever seen.
+  assert.equal(parseAmount('1 234'), 1234);
+  assert.equal(parseAmount('12 345'), 12345);
+  assert.equal(parseAmount('1,234,567.25'), 1234567.25);
+  assert.equal(parseAmount('1_234_567'), 1234567);
+  assert.equal(parseAmount('1、234'), 1234);
+  assert.equal(parseAmount('-2 500.5'), -2500.5);
+  assert.equal(parseAmount('１，２３４'), 1234, 'full-width digits and comma');
+  // And a number with no separators at all is untouched by the rule.
+  assert.equal(parseAmount('1234567'), 1234567);
+  assert.equal(parseAmount('0.000125'), 0.000125);
+});

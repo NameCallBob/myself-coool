@@ -19,6 +19,7 @@ import {
   DETECTORS,
   InputTooLarge,
   MAX_INPUT,
+  MAX_MATCHES,
   STANDARD_DETECTORS,
   redact,
   segments,
@@ -78,6 +79,7 @@ export default function PiiMask({ l }: ToolProps) {
         counts: {} as Record<string, number>,
         distinct: {} as Record<string, number>,
         truncated: false,
+        truncatedIds: [] as DetectorId[],
         error:
           error instanceof InputTooLarge
             ? t(
@@ -137,6 +139,19 @@ export default function PiiMask({ l }: ToolProps) {
               </button>
             </Row>
             {outcome.error ? <Note error>{outcome.error}</Note> : null}
+            {outcome.truncatedIds.length > 0 ? (
+              <Note error>
+                {t(
+                  l,
+                  `命中數到 ${count(MAX_MATCHES)} 的上限,這幾類只掃到一部分就停了:${outcome.truncatedIds
+                    .map((id) => NAMES[id].zh)
+                    .join('、')}。也就是說這幾類在後面的內容裡還有沒被遮到的值,不要直接把輸出貼出去——把 log 切成幾段分別處理。`,
+                  `The ${count(MAX_MATCHES)} match budget ran out, and these categories were only scanned in part: ${outcome.truncatedIds
+                    .map((id) => NAMES[id].en)
+                    .join(', ')}. Values of those kinds further down the file are still unmasked, so do not paste this output — split the log and run it in parts.`
+                )}
+              </Note>
+            ) : null}
 
             <div className="inst-pane-label mt-6">
               <span>{t(l, '命中位置', 'WHAT WAS FOUND')}</span>

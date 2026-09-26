@@ -27,6 +27,10 @@ export const CRYPTO_NOTES: Record<string, ToolNote> = {
         en: 'Text mode caps at 4 MB; past that switch to file mode, which streams instead of holding everything.',
       },
       {
+        zh: '比對欄一次只讀一行。一整行 sha256sum / shasum 輸出(含後面的檔名)、BSD 的 SHA256 (檔名) = 雜湊、大寫、sha256: 前綴、空格或冒號分組都認得,但整份 SHA256SUMS 檔案貼進來不會逐列核對——那是 E06 的工作。',
+        en: 'The compare box reads one line. A whole sha256sum or shasum line with its filename, the BSD "SHA256 (file) = hash" form, upper case, a sha256: prefix and grouped digests are all understood, but a whole SHA256SUMS file is not checked row by row — that is what E06 does.',
+      },
+      {
         zh: '這裡算的是純摘要,沒有密鑰。要對 webhook 簽章做除錯請用 E05 的 HMAC;要拿官方公布的 checksum 逐項核對,E06 是為那個流程做的。',
         en: 'These are keyless digests. For a webhook signature use E05 (HMAC); to check a file against a published checksum, E06 is built for that flow.',
       },
@@ -40,16 +44,16 @@ export const CRYPTO_NOTES: Record<string, ToolNote> = {
   'aes-encrypt': {
     body: [
       {
-        zh: '密碼學本身是這個工具最簡單的部分:crypto.subtle 提供 AES-256-GCM,GCM 是認證加密,密碼錯或位元被翻過都會直接失敗,不會吐出一堆看似合理的垃圾明文。難的是外面那一圈。第一件是密碼不等於金鑰——它必須被慢慢地拉長,否則 GPU 一秒可以對著密文試幾十億個候選。這裡用 PBKDF2-HMAC-SHA256 跑 600,000 次迭代,那是 OWASP 2023 對這個組合給的數字。PBKDF2 不是好的 KDF,Argon2id 才是,但 WebCrypto 沒有 Argon2id,而這個站不能為了它載入 wasm(工具區的規格是零網路出口、一個工具一個小 chunk),所以成本只能花在唯一能花的地方:迭代次數。換算下來,一次迭代是兩次 SHA-256 壓縮,2024 年代的 GPU 大約每秒一百億次壓縮,對著這個容器每秒約八千個猜測。',
-        en: 'The cipher is the easy part — subtle does AES-256-GCM and GCM fails loudly. The work is around it: a password is not a key, so it is stretched with PBKDF2-HMAC-SHA256 at 600,000 iterations (OWASP 2023). Argon2id would be better but is not in WebCrypto, and loading wasm is off the table here, so the cost goes into iterations: roughly 8,000 offline guesses a second on a 2024 GPU.',
+        zh: '密碼學本身是這個工具最簡單的部分:crypto.subtle 提供 AES-256-GCM,GCM 是認證加密,密碼錯或位元被翻過都會直接失敗,不會吐出一堆看似合理的垃圾明文。難的是外面那一圈。第一件是密碼不等於金鑰——它必須被慢慢地拉長,否則 GPU 一秒可以對著密文試幾十億個候選。這裡用 PBKDF2-HMAC-SHA256 跑 600,000 次迭代,那是 OWASP 2023 對這個組合給的數字。PBKDF2 不是好的 KDF,Argon2id 才是,但 WebCrypto 沒有 Argon2id,而這個站不能為了它載入 wasm(工具區的規格是零網路出口、一個工具一個小 chunk),所以成本只能花在唯一能花的地方:迭代次數。換算下來,一次迭代是兩次 SHA-256 壓縮(HMAC 的內外兩塊)。攻擊者這樣算:hashcat 自己的 benchmark 量到單張 RTX 4090 每秒約 2.2e10 次 SHA-256,取整成四張卡一台機器每秒 1e11 次壓縮,對著這個容器就是每秒約八萬三千個猜測。E01 的破解時間用的是同一個數字、同一個單位,兩頁的數字可以直接放在一起看。',
+        en: 'The cipher is the easy part — subtle does AES-256-GCM and GCM fails loudly. The work is around it: a password is not a key, so it is stretched with PBKDF2-HMAC-SHA256 at 600,000 iterations (OWASP 2023). Argon2id would be better but is not in WebCrypto, and loading wasm is off the table here, so the cost goes into iterations. One iteration is two SHA-256 compressions, and the assumed attacker is 1e11 compressions a second — four RTX 4090s at hashcat\'s own benchmark — which leaves about 83,000 offline guesses a second. E01\'s crack times assume the same attacker.',
       },
       {
         zh: '第二件是 salt 與 IV 每次都必須是新的。salt 重複用,一次導出就能攻擊所有訊息;GCM 的 (key, IV) 重複用更糟,它會洩漏兩份明文的 XOR,還會洩漏認證用的子金鑰,整個完整性保證就沒了。所以 16 位元組的 salt 與 12 位元組的 IV 每則訊息都從 CSPRNG 重抽——不是 Math.random,這兩個值就是「同一段輸入永遠不會加密成同一串位元組」的全部原因。12 位元組是 GCM 規格本身定的 IV 長度,不是隨便選的。',
         en: 'Salt and IV are fresh per message from the CSPRNG: a reused salt attacks every message with one derivation, and a reused (key, IV) pair in GCM leaks the XOR of two plaintexts and the authentication subkey. That randomness is the whole reason the same input never encrypts to the same bytes twice.',
       },
       {
-        zh: '第三件是參數得跟著密文走,而且得被認證。輸出前面是 40 位元組的檔頭:5 位元組的 ASCII 標記 SPENC、版本、KDF 編號、cipher 編號、大端序 uint32 的迭代次數、salt、IV,然後才是密文與 GCM 附在尾端的 16 位元組 tag。這個檔頭會作為 additional authenticated data 交給 GCM,所以把檔案裡的迭代次數改掉,結果是解密失敗,而不是安靜地導出另一把金鑰、再報一個看不懂的錯。參數全部明文放著是刻意的:有了 salt、IV 與迭代次數,任何語言的 crypto 函式庫用十幾行就能把同樣的解密重做出來,輸出不是黑盒子。',
-        en: 'The 40-byte header — magic, version, KDF id, cipher id, big-endian iteration count, salt, IV — travels with the ciphertext and is fed to GCM as additional authenticated data, so editing the iteration count fails authentication instead of quietly deriving a different key. The parameters sit in the clear on purpose: anyone can reproduce the decryption in a dozen lines.',
+        zh: '第三件是參數得跟著密文走,而且得被認證。輸出前面是 40 位元組的檔頭:5 位元組的 ASCII 標記 SPENC、版本、KDF 編號、cipher 編號、大端序 uint32 的迭代次數、salt、IV,然後才是密文與 GCM 附在尾端的 16 位元組 tag。這個檔頭會作為 additional authenticated data 交給 GCM,所以把檔案裡的迭代次數改掉,結果是解密失敗,而不是安靜地導出另一把金鑰、再報一個看不懂的錯。參數全部明文放著是刻意的:有了 salt、IV 與迭代次數,任何語言的 crypto 函式庫用十幾行就能把同樣的解密重做出來,輸出不是黑盒子。讀檔時那個迭代次數會先被檢查落在格式允許的 1,000 到 5,000,000 之間;超出範圍的訊息講的是「這個檔的檔頭壞了」,不是「你的輸入太小」——那個數字不是你打的。',
+        en: 'The 40-byte header — magic, version, KDF id, cipher id, big-endian iteration count, salt, IV — travels with the ciphertext and is fed to GCM as additional authenticated data, so editing the iteration count fails authentication instead of quietly deriving a different key. The parameters sit in the clear on purpose: anyone can reproduce the decryption in a dozen lines. A count outside the 1,000-5,000,000 range the format allows is reported as a damaged header, not as advice about a number you never typed.',
       },
       {
         zh: '解密失敗時只有一個訊息:「認證失敗——密碼錯誤,或資料被改過」。GCM 的所有失敗模式在 WebCrypto 裡都是同一個 DOMException,而這剛好也是應該交回去的資訊量。如果去區分「密碼錯」與「資料被動過」,那就是自己造一個 oracle 給攻擊者用。文字輸出包在 64 欄一行的 base64 與 BEGIN/END 標記之間,是為了活著穿過郵件與聊天軟體的自動換行;讀回來時也接受裸的 base64,因為人會只貼中間那一段。',
@@ -83,7 +87,7 @@ export const CRYPTO_NOTES: Record<string, ToolNote> = {
         en: 'Second is "at least one of each type". Most generators offer it and still report length × log2(alphabet), which is the figure for uniform draws over the whole alphabet — the constraint forbids some strings, so the truth is lower. This one rejects and redraws the whole password rather than patching a position, because patching skews whichever position got patched.',
       },
       {
-        zh: '熵因此是對那個較小的集合算的:長度 × log2(字母表) + log2(P(合格)),而 P 用排容原理跑遍 2ᵏ 個子集的遮罩算出來(k 是選用的字元類數,四類以內所以窮舉很便宜)。第二項永遠是零或負數——限制從來不會增加強度,它只會減少可能的字串數量,這正是別人省略的那一項。「避開易混淆字元」也一樣誠實處理:拿掉 Il1O0oB8S5Z2 會讓字母表變小,熵就跟著降,頁面上直接顯示降下來的數字。破解時間用 2^(bits−1) / 1e11 估,假設是離線、快雜湊、商用 GPU;強度只分四段而不給一個百分制分數,60 bit 附近是離線攻擊不再是週末專案的門檻,80 bit 對可能被 dump 的東西算舒適,過了 120 bit 密碼已經不是系統裡最弱的那一環。',
+        zh: '熵因此是對那個較小的集合算的:長度 × log2(字母表) + log2(P(合格)),而 P 用排容原理跑遍 2ᵏ 個子集的遮罩算出來(k 是選用的字元類數,四類以內所以窮舉很便宜)。第二項永遠是零或負數——限制從來不會增加強度,它只會減少可能的字串數量,這正是別人省略的那一項。「避開易混淆字元」也一樣誠實處理:拿掉 Il1O0oB8S5Z2 會讓字母表變小,熵就跟著降,頁面上直接顯示降下來的數字。破解時間用 2^(bits−1) / 1e11 估:離線、無 salt 的快雜湊,一次猜測一次 SHA-256 壓縮,每秒 1e11 次壓縮大約是四張 RTX 4090(hashcat 自己量到單張約 2.2e10 次/秒)。E07 的密語建議換算用的是同一個攻擊者,只是它還要再除掉 PBKDF2 的兩次壓縮乘以迭代次數;強度只分四段而不給一個百分制分數,60 bit 附近是離線攻擊不再是週末專案的門檻,80 bit 對可能被 dump 的東西算舒適,過了 120 bit 密碼已經不是系統裡最弱的那一環。',
         en: 'So the entropy is computed for that smaller set — length × log2(alphabet) + log2(P(allowed)) — with P from inclusion–exclusion over 2^k subset masks. The second term is never positive: the constraint cannot add strength, and that is the term other generators omit. Dropping look-alike characters shrinks the alphabet and the reported number drops with it.',
       },
       {
@@ -93,8 +97,8 @@ export const CRYPTO_NOTES: Record<string, ToolNote> = {
     ],
     limits: [
       {
-        zh: '重抽最多一萬次。如果限制實際上難以滿足(例如長度 4 要同時塞四類字元、又開了避開易混淆字元),它會直接報錯要你放寬,而不是安靜地交出一個不合格或被補過的密碼。',
-        en: 'Rejection gives up after 10,000 attempts and raises rather than quietly handing back a patched or non-conforming password when the constraints are effectively impossible.',
+        zh: '重抽最多一萬次。如果限制實際上難以滿足(例如長度 4 要同時塞四類字元、又開了避開易混淆字元),它會直接報錯要你放寬,而不是安靜地交出一個不合格或被補過的密碼。四類字元全部取消勾選也是同一個原則:那不是「預設小寫」,而是沒有東西可以抽,所以產生鈕直接停用並說明,不會給你一串看不出是怎麼來的小寫字母。',
+        en: 'Rejection gives up after 10,000 attempts and raises rather than quietly handing back a patched or non-conforming password when the constraints are effectively impossible. Unselecting all four character types is treated the same way — there is nothing to draw from, so the button is disabled and says so, instead of falling back to lowercase.',
       },
       {
         zh: '這裡的熵描述的是產生器,不是你自己想的密碼——只要不是這個分佈抽出來的,這個數字就不適用。要評估手打的密碼請用 E03,它會去比對常見密碼、鍵盤序列與替換字母的老把戲。',

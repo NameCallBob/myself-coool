@@ -27,6 +27,7 @@ import {
   riskNotes,
   toSegments,
   type FlagKey,
+  type Span,
   type WorkerValue,
 } from './logic';
 
@@ -122,7 +123,10 @@ export default function RegexTester({ l }: ToolProps) {
     };
   }, [idle, pattern, flags, subject, substituting, template]);
 
-  const segments = useMemo(() => toSegments(subject, value?.outcome.hits ?? []), [subject, value]);
+  const segments = useMemo(
+    () => toSegments(subject, value?.outcome.hits ?? [], value?.outcome.truncated ?? false),
+    [subject, value]
+  );
   const hits = value?.outcome.hits ?? [];
 
   const timedOut = failure !== null && failure.startsWith('timeout');
@@ -304,7 +308,15 @@ export default function RegexTester({ l }: ToolProps) {
               ) : (
                 segments.map((segment, index) =>
                   segment.hit === null ? (
-                    <span key={index}>{segment.text}</span>
+                    // The tail past the match limit was never looked at. It is
+                    // dimmed *and* named in the note below, because "not
+                    // scanned" and "no match" must not read the same.
+                    <span
+                      key={index}
+                      style={segment.unscanned ? { color: 'var(--fg-faint)' } : undefined}
+                    >
+                      {segment.text}
+                    </span>
                   ) : (
                     <mark
                       key={index}
@@ -323,6 +335,16 @@ export default function RegexTester({ l }: ToolProps) {
                 )
               )}
             </div>
+
+            {segments.some((segment) => segment.unscanned) ? (
+              <Note>
+                {t(
+                  l,
+                  `命中滿 ${count(MATCH_LIMIT)} 筆就停止掃描了,所以上面淡色那一段並沒有被比對過——那不是「沒有命中」,是「還沒看」。要看完整結果請縮小測試文字,或把樣式寫得更精確。`,
+                  `The scan stopped at ${count(MATCH_LIMIT)} matches, so the dimmed run above was never examined — that is "not scanned", not "no match". Shorten the subject or tighten the pattern to see the rest.`
+                )}
+              </Note>
+            ) : null}
 
             {hits.length > 0 ? (
               <>
@@ -349,9 +371,16 @@ export default function RegexTester({ l }: ToolProps) {
                     align={['right', 'right', 'left', 'left']}
                     rows={hits.slice(0, 200).map((hit, index) => {
                       const at = lineColumn(subject, hit.index);
-                      const named = hit.named.map((group) => `${group.name}=${group.value ?? '—'}`);
+                      // Under the d flag the engine also reports where each
+                      // group sat; `at` is appended only when it did.
+                      const spanText = (span: Span | null | undefined) =>
+                        span ? ` @${span[0]}–${span[1]}` : '';
+                      const named = hit.named.map(
+                        (group) => `${group.name}=${group.value ?? '—'}${spanText(group.span)}`
+                      );
                       const numbered = hit.groups.map(
-                        (group, position) => `$${position + 1}=${group ?? '—'}`
+                        (group, position) =>
+                          `$${position + 1}=${group ?? '—'}${spanText(hit.spans?.[position])}`
                       );
                       return [
                         String(index + 1),

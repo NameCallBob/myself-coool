@@ -204,6 +204,15 @@ export type UrlParts = {
   path: string;
   query: string;
   fragment: string;
+  /**
+   * Whether the delimiter was written at all. An empty string cannot say the
+   * difference between `example.com/?` and `example.com/`, or between
+   * `file:///etc` and `file:/etc`, and reassembly needs it: these are different
+   * strings, and a tool that takes a URL apart has to put the same one back.
+   */
+  hasAuthority: boolean;
+  hasQuery: boolean;
+  hasFragment: boolean;
   /** No scheme and no authority: this is a relative reference, not a URL. */
   relative: boolean;
 };
@@ -213,8 +222,16 @@ const URL_RE = /^(?:([^:/?#]+):)?(?:\/\/([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*
 
 export function splitUrl(url: string): UrlParts {
   const match = URL_RE.exec(url.trim());
-  // The expression matches every string, including the empty one.
-  const [, scheme = '', authority = '', path = '', query = '', fragment = ''] = match ?? [];
+  // The expression matches every string, including the empty one. A group that
+  // did not participate is `undefined`, which is how "no `?` at all" is told
+  // apart from "a `?` with nothing after it".
+  const groups = match ?? [];
+  const scheme: string = groups[1] ?? '';
+  const rawAuthority: string | undefined = groups[2];
+  const path: string = groups[3] ?? '';
+  const rawQuery: string | undefined = groups[4];
+  const rawFragment: string | undefined = groups[5];
+  const authority = rawAuthority ?? '';
 
   let userinfo = '';
   let rest = authority;
@@ -234,7 +251,12 @@ export function splitUrl(url: string): UrlParts {
       if (rest[close + 1] === ':') port = rest.slice(close + 2);
     }
   } else {
-    const colon = rest.lastIndexOf(':');
+    // The FIRST colon, not the last: a reg-name has no colon in it, so
+    // everything from there on belongs to the port. `lastIndexOf` would read
+    // `exam:ple:x` as the host `exam:ple` with port `x`, which looks like a
+    // hostname somebody owns; this way the debris stays in the port, where
+    // `isValidPort` can call it what it is.
+    const colon = rest.indexOf(':');
     if (colon !== -1) {
       host = rest.slice(0, colon);
       port = rest.slice(colon + 1);
@@ -248,23 +270,49 @@ export function splitUrl(url: string): UrlParts {
     host,
     port,
     path,
-    query,
-    fragment,
+    query: rawQuery ?? '',
+    fragment: rawFragment ?? '',
+    hasAuthority: rawAuthority !== undefined,
+    hasQuery: rawQuery !== undefined,
+    hasFragment: rawFragment !== undefined,
     relative: scheme === '' && authority === '',
   };
 }
 
-/** Rebuilds a URL from parts, so an edited query can be put back. */
+/**
+ * Whether `port` is a port and not debris.
+ *
+ * The splitter cuts without validating, which is its job — but a host cannot
+ * contain a colon, so whatever lands after the first one is either digits or a
+ * sign that the authority is broken. Empty counts as valid: no port given.
+ */
+export function isValidPort(port: string): boolean {
+  if (port === '') return true;
+  if (!/^[0-9]+$/.test(port)) return false;
+  return Number(port) <= 65535;
+}
+
+/**
+ * Rebuilds a URL from parts, so an edited query can be put back.
+ *
+ * A delimiter is written when there is something to put after it *or* when the
+ * parts say it was there to begin with: `hasQuery` on an empty query still
+ * earns its `?`. Without that, `https://example.com/?` and `file:///etc/hosts`
+ * come back one character short of what was handed in — and the emptied query
+ * table would silently drop the `?` the caller is comparing against.
+ */
 export function joinUrl(parts: Partial<UrlParts>): string {
   const authority =
     parts.authority ??
     `${parts.userinfo ? `${parts.userinfo}@` : ''}${parts.host ?? ''}${parts.port ? `:${parts.port}` : ''}`;
+  const query = parts.query ?? '';
+  const fragment = parts.fragment ?? '';
   let out = '';
   if (parts.scheme) out += `${parts.scheme}:`;
-  if (authority) out += `//${authority}`;
+  if (authority !== '' || parts.hasAuthority) out += `//${authority}`;
   out += parts.path ?? '';
-  if (parts.query) out += `?${parts.query}`;
-  if (parts.fragment) out += `#${parts.fragment}`;
+  if (query !== '' || parts.hasQuery) out += `?${query}`;
+  if (fragment !== '' || parts.hasFragment) out += `#${fragment}`;
   return out;
 }
 
@@ -317,11 +365,16 @@ export type BuildOptions = { plusAsSpace?: boolean; mode?: Mode };
  * every server-side query parser expects; `rfc3986` is there for the case
  * where the query is going into a signature base string and `+` would be
  * read as a literal plus.
+ *
+ * A row with nothing in either half is dropped only when it has no `=` either:
+ * that is a blank row nobody filled in. `?=` is not blank — it is a key and a
+ * value that both happen to be empty, it turns up in real logs, and dropping it
+ * meant this pair of functions could not reproduce its own input.
  */
 export function buildQuery(pairs: readonly Pair[], options: BuildOptions = {}): string {
   const mode = options.mode ?? (options.plusAsSpace === false ? 'rfc3986' : 'form');
   return pairs
-    .filter((pair) => pair.key !== '' || pair.value !== '')
+    .filter((pair) => pair.key !== '' || pair.value !== '' || pair.hasEquals)
     .map((pair) => {
       const key = percentEncode(pair.key, mode);
       if (!pair.hasEquals && pair.value === '') return key;
@@ -348,6 +401,14 @@ export function duplicateKeys(pairs: readonly Pair[]): string[] {
  * Double encoding is the most common percent-encoding bug there is: `%2520`
  * is a literal `%20` that some layer escaped a second time. Counting the
  * rounds it takes to reach a fixed point names the problem outright.
+ *
+ * It decodes without `plusAsSpace` on purpose, and that is not an inconsistency
+ * with the decode panel's switch: reading `+` as a space swaps one ASCII byte
+ * (0x2B) for another (0x20), and neither is `%`, a hex digit, a UTF-8 lead byte
+ * or a continuation byte. So every round sees the same escapes and the same
+ * UTF-8 validity either way, and the count comes out identical — only the text
+ * along the way differs, and that text is never shown. The test sweeps every
+ * string up to four characters over `%+2B5C3a` to hold that claim down.
  */
 export function encodingRounds(text: string, limit = 5): number {
   let current = text;

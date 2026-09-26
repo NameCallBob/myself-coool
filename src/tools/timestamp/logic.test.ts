@@ -181,6 +181,37 @@ test('impossible dates are rejected rather than rolled over', () => {
   assert.equal(parseIso8601('not a date', 'utc').kind, 'none');
 });
 
+test('an ISO date past the Date range says out of range, not unreadable', () => {
+  // parseUnix answers a too-large *number* with kind 'unix' plus an
+  // out-of-range note. The same instant written as ISO has to be reported the
+  // same way; saying "cannot be read" instead blames the syntax for a
+  // magnitude problem.
+  const far = parseIso8601('275760-09-14T00:00:00Z', 'utc');
+  assert.equal(far.kind, 'iso8601');
+  assert.ok(far.notes.includes('out-of-range'));
+  assert.equal(inRange(far.ms), false);
+
+  const early = parseIso8601('-271821-04-19T00:00:00Z', 'utc');
+  assert.equal(early.kind, 'iso8601');
+  assert.ok(early.notes.includes('out-of-range'));
+
+  // A year so large the arithmetic itself gives up is still out of range, not
+  // unparseable.
+  const absurd = parseIso8601('999999-12-31T00:00:00Z', 'utc');
+  assert.equal(absurd.kind, 'iso8601');
+  assert.ok(absurd.notes.includes('out-of-range'));
+
+  // The boundaries themselves are in range and carry no note.
+  const edge = parseIso8601('275760-09-13T00:00:00Z', 'utc');
+  assert.equal(edge.kind, 'iso8601');
+  assert.equal(edge.ms, MAX_MS);
+  assert.ok(!edge.notes.includes('out-of-range'));
+
+  // Nonsense is still nonsense: only the magnitude case changed.
+  assert.equal(parseIso8601('2023-02-29T00:00:00Z', 'utc').kind, 'none');
+  assert.equal(parseAny('275760-09-14T00:00:00Z', 'auto', 'utc').kind, 'iso8601');
+});
+
 test('29 February is accepted in a leap year', () => {
   assert.equal(parseIso8601('2024-02-29T00:00:00Z', 'utc').ms, Date.UTC(2024, 1, 29));
 });
@@ -343,6 +374,28 @@ test('day of year is right on both sides of a leap day', () => {
   assert.equal(breakdown(Date.UTC(2023, 11, 31), 'utc')?.dayOfYear, 365);
   assert.equal(breakdown(Date.UTC(2024, 0, 1), 'utc')?.dayOfYear, 1);
   assert.equal(breakdown(Date.UTC(2024, 2, 1), 'utc')?.dayOfYear, 61);
+});
+
+test('a gap under a second is reported in milliseconds, not as zero seconds', () => {
+  // The rest of this tool argues about nanoseconds; "0 秒" for a 900 ms gap is
+  // the one place it threw precision away.
+  assert.deepEqual(elapsed(0, 900), [{ unit: 'millisecond', value: 900 }]);
+  assert.deepEqual(elapsed(900, 0), [{ unit: 'millisecond', value: 900 }]);
+  assert.deepEqual(elapsed(0, 1), [{ unit: 'millisecond', value: 1 }]);
+  assert.deepEqual(elapsed(0, 1900), [
+    { unit: 'second', value: 1 },
+    { unit: 'millisecond', value: 900 },
+  ]);
+  // Sub-millisecond input is floored, not rounded up into a whole millisecond.
+  assert.deepEqual(elapsed(0, 999.5), [{ unit: 'millisecond', value: 999 }]);
+  // Two identical instants are zero seconds apart, which is worth saying plainly.
+  assert.deepEqual(elapsed(0, 0), [{ unit: 'second', value: 0 }]);
+  // Past a minute the millisecond tail is noise, so the old shape stands.
+  assert.deepEqual(elapsed(0, 86_460_500), [
+    { unit: 'day', value: 1 },
+    { unit: 'minute', value: 1 },
+  ]);
+  assert.deepEqual(elapsed(0, 1000), [{ unit: 'second', value: 1 }]);
 });
 
 test('elapsed breaks a gap into whole units, largest first', () => {

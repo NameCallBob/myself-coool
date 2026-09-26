@@ -114,7 +114,11 @@ export default function CaseConvert({ l }: ToolProps) {
             </div>
             <Row>
               <Check2
-                label={t(l, '保留連續大寫(HTTP 不變成 Http)', 'keep runs of capitals (HTTP, not Http)')}
+                label={t(
+                  l,
+                  '保留原有大寫(HTTP 不變成 Http,iPhone 不變成 Iphone)',
+                  'keep the capitals as typed (HTTP not Http, iPhone not Iphone)'
+                )}
                 checked={preserveAcronyms}
                 onChange={setPreserveAcronyms}
               />

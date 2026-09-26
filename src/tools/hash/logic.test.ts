@@ -163,3 +163,29 @@ test('pasted digests are normalised the way people paste them', () => {
   assert.equal(normalizeDigest('de:ad:be:ef'), 'deadbeef');
   assert.equal(normalizeDigest(''), '');
 });
+
+test('a whole sha256sum output line normalises to just the digest', () => {
+  const empty = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  // GNU coreutils: digest, two spaces, filename. The form people actually copy.
+  assert.equal(normalizeDigest(`${empty}  ubuntu-24.04.iso`), empty);
+  // Binary mode marks the filename with an asterisk.
+  assert.equal(normalizeDigest(`${empty} *ubuntu-24.04.iso`), empty);
+  // Some tools print a single space, and filenames contain spaces.
+  assert.equal(normalizeDigest(`${empty} ubuntu 24.04 desktop.iso`), empty);
+  // Upper case with a filename, and a trailing newline from the paste.
+  assert.equal(normalizeDigest(`${empty.toUpperCase()}  ubuntu.iso\n`), empty);
+  // coreutils escapes a name containing a backslash and flags the line with one.
+  assert.equal(normalizeDigest(`\\${empty}  dir\\\\file.iso`), empty);
+  // BSD / macOS shasum -a 256 --tag, and openssl dgst, put the name first.
+  assert.equal(normalizeDigest(`SHA256 (ubuntu-24.04.iso) = ${empty}`), empty);
+  assert.equal(normalizeDigest(`SHA2-256(ubuntu-24.04.iso)= ${empty}`), empty);
+  assert.equal(normalizeDigest(`MD5 (x.txt) = D41D8CD98F00B204E9800998ECF8427E`), 'd41d8cd98f00b204e9800998ecf8427e');
+});
+
+test('grouped digests are still joined, not mistaken for a filename', () => {
+  const empty = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  const grouped = (empty.match(/.{8}/g) as string[]).join(' ');
+  assert.equal(normalizeDigest(grouped), empty);
+  assert.equal(normalizeDigest(`sha256: ${grouped}`), empty);
+  assert.equal(normalizeDigest((empty.match(/.{4}/g) as string[]).join(':')), empty);
+});

@@ -527,15 +527,54 @@ export function algosForHexLength(length: number): Algo[] {
   return ALGOS.filter((algo) => DIGEST_BYTES[algo] * 2 === length);
 }
 
+/** Drops the separators people put inside a digest, and lower-cases it. */
+const join = (text: string) => text.replace(/[\s:]/g, '').toLowerCase();
+
+/** `md5:`, `SHA256 =`, `sha-512/256:` — the prefix people paste in front. */
+const ALGO_PREFIX = /^(?:md5|sha-?1|sha-?2?-?(?:224|256|384|512)|sha512-?\/?2?(?:24|56)?)\s*[:=]\s*/i;
+
 /**
  * Compares a pasted digest against a computed one, tolerating the shapes
- * checksums arrive in: upper case, `sha256:` prefixes, spaces every four
- * characters, a trailing filename.
+ * checksums arrive in:
+ *
+ *   upper case                `E3B0C442…`
+ *   an algorithm prefix       `sha256: e3b0c442…`
+ *   groups                    `e3b0c442 98fc1c14 …` or `e3:b0:c4:42…`
+ *   GNU coreutils output      `e3b0c442…  ubuntu-24.04.iso`  (` *name` in
+ *                             binary mode, and a leading `\` when the name
+ *                             had to be escaped)
+ *   BSD / openssl output      `SHA256 (ubuntu-24.04.iso) = e3b0c442…`
+ *
+ * The last two are what `sha256sum`, `shasum --tag` and `openssl dgst` print,
+ * which makes them the forms most likely to be copied straight in. Dropping a
+ * filename matters: left in, it turns a correct download into a mismatch that
+ * reads as "the file is broken" rather than "the tool misread the line".
+ *
+ * Anything this cannot recognise comes back with separators stripped, so it
+ * simply fails to match instead of being silently reinterpreted.
  */
 export function normalizeDigest(text: string): string {
-  return text
-    .trim()
-    .replace(/^(?:md5|sha-?1|sha-?2?-?(?:224|256|384|512)|sha512-?\/?2?(?:24|56)?)\s*[:=]\s*/i, '')
-    .replace(/[\s:]/g, '')
-    .toLowerCase();
+  const line = text.trim();
+
+  // Tagged form. The filename may contain anything, so the digest is taken
+  // from after the last `=` rather than the name being parsed.
+  const tagged = /^[A-Za-z][A-Za-z0-9-]*\s*\(.*\)\s*=\s*([\sA-Fa-f0-9:]+)$/.exec(line);
+  if (tagged) return join(tagged[1]);
+
+  const body = line.replace(ALGO_PREFIX, '');
+
+  // Untagged form: digest, separator, filename. Taken only when the first token
+  // is a whole digest's worth of hex and what follows is not simply more hex —
+  // otherwise `e3b0c442 98fc1c14 …` would lose everything after its first group
+  // to an imaginary file called 98fc1c14.
+  const untagged = /^\\?([A-Fa-f0-9]+)(?:[ \t]+\*?|[ \t]*\*)(\S.*)$/.exec(body);
+  if (
+    untagged &&
+    algosForHexLength(untagged[1].length).length > 0 &&
+    /[^\sA-Fa-f0-9:]/.test(untagged[2])
+  ) {
+    return untagged[1].toLowerCase();
+  }
+
+  return join(body);
 }

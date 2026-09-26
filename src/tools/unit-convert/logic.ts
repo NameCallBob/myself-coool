@@ -334,17 +334,46 @@ export function convertAll(dim: DimensionId, from: string, value: number): Conve
  * Parses what a person types into a number field: thousands separators, a
  * leading +, full-width digits pasted from a Chinese-language page, and
  * scientific notation all appear in real input.
+ *
+ * Separators are only accepted where a thousands separator belongs — between
+ * digits of the integer part, in groups of three. Deleting every separator
+ * first was simpler and read "1 2" as twelve: a fat-fingered space turned two
+ * keystrokes into a number nobody asked for, and the conversion below it looked
+ * perfectly healthy. Grouping that does not check out is refused instead,
+ * because a wrong amount is worse than an empty result.
  */
+const SEPARATOR = /[,\s_、]/g;
+const HAS_SEPARATOR = /[,\s_、]/;
+
+/** `1 234 567`, `1,234`, `1_000`: one to three digits, then groups of three. */
+const GROUPED = /^\d{1,3}(?:[,\s_、]\d{3})+$/;
+
 export function parseAmount(text: string): number {
   const normalised = text
     .trim()
     .replace(/[０-９]/g, (d) => String(d.charCodeAt(0) - 0xff10))
-    .replace(/[,\s_、]/g, '')
     .replace(/[．。]/g, '.')
+    // Every space a paste can carry — NBSP, the en-to-hair range, ideographic —
+    // becomes a plain one so the grouping rule sees them all alike.
+    .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, ' ')
+    .replace(/[，﹐､]/g, ',')
     .replace(/^\+/, '');
   if (normalised === '' || normalised === '-') return Number.NaN;
-  if (!/^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(normalised)) return Number.NaN;
-  return Number(normalised);
+
+  const sign = normalised.startsWith('-') ? '-' : '';
+  const body = sign === '' ? normalised : normalised.slice(1);
+
+  // Split off the fraction and the exponent; separators may appear in neither.
+  const shape = /^([\d,\s_、]*)(\.\d*)?(e[+-]?\d+)?$/i.exec(body);
+  if (!shape) return Number.NaN;
+  const [, whole, fraction = '', exponent = ''] = shape;
+
+  const wellFormed = HAS_SEPARATOR.test(whole) ? GROUPED.test(whole) : /^\d*$/.test(whole);
+  if (!wellFormed) return Number.NaN;
+
+  const digits = `${sign}${whole.replace(SEPARATOR, '')}${fraction}${exponent}`;
+  if (!/^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(digits)) return Number.NaN;
+  return Number(digits);
 }
 
 /**

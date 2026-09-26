@@ -58,7 +58,10 @@ export const NAMING_STYLES: readonly CaseStyle[] = [
 export type Options = {
   /** Split `utf8` into `utf` + `8`. Off by default: `utf8Length` reads better. */
   splitDigits?: boolean;
-  /** Leave runs of capitals alone, so `HTTP` does not become `Http`. */
+  /**
+   * Leave the capitals a word already has alone: a run of them (`HTTP` does not
+   * become `Http`) and a capital past the first letter (`iPhone`, `McDonald`).
+   */
   preserveAcronyms?: boolean;
   /** Words title case leaves lowercase unless they are first or last. */
   smallWords?: readonly string[];
@@ -96,6 +99,22 @@ const WORDISH = /\p{L}[\p{L}\p{N}]*/gu;
 
 const ALL_CAPS = /^\p{Lu}[\p{Lu}\p{N}]+$/u;
 
+/**
+ * A capital anywhere but the front: `iPhone`, `McDonald`, `eBay`, `LaTeX`.
+ *
+ * `ALL_CAPS` cannot cover these — it wants two or more capitals and nothing
+ * else — so without a second test the only thing title case could do with
+ * `iPhone` was `Iphone`. Iterated by code point because an astral letter is two
+ * UTF-16 units and `slice(1)` would test half of one.
+ */
+function hasInnerCapital(word: string): boolean {
+  const chars = [...word];
+  for (let i = 1; i < chars.length; i += 1) {
+    if (/\p{Lu}/u.test(chars[i])) return true;
+  }
+  return false;
+}
+
 export function splitWords(input: string, options?: Options): string[] {
   const pattern = options?.splitDigits ? TOKENS_SPLIT_DIGITS : TOKENS_KEEP_DIGITS;
   pattern.lastIndex = 0;
@@ -108,9 +127,19 @@ function fold(word: string, options?: Options): string {
   return word.toLowerCase();
 }
 
-/** First letter up, rest down — except a preserved acronym, kept whole. */
+/**
+ * First letter up, rest down — except a word the caller asked to keep whole.
+ *
+ * Two shapes are kept when `preserveAcronyms` is on: a run of capitals (`HTTP`)
+ * and a word with a capital past its first letter (`iPhone`, `McDonald`). The
+ * second is not an acronym, but it is the same promise — the capitals in it were
+ * typed on purpose — and lowercasing them is the one edit a title caser cannot
+ * be forgiven for, because `Mcdonald` looks like a spelling mistake rather than
+ * a formatting choice. Nothing is added: a word already written in lower case
+ * still gets its initial capital.
+ */
 function capitalize(word: string, options?: Options): string {
-  if (options?.preserveAcronyms && ALL_CAPS.test(word)) return word;
+  if (options?.preserveAcronyms && (ALL_CAPS.test(word) || hasInnerCapital(word))) return word;
   const lower = word.toLowerCase();
   // Iterated by code point: the first "character" of an astral word is two
   // UTF-16 units, and slicing at 1 would cut a surrogate pair in half.
@@ -177,6 +206,16 @@ export function toLowerText(input: string, options?: Options): string {
   return input.replace(WORDISH, (word) => fold(word, options));
 }
 
+/**
+ * Upper case, by Unicode's own full case mapping.
+ *
+ * Deliberately `toUpperCase()` over the whole string rather than word by word:
+ * there is nothing to exempt, since a preserved acronym is already upper case.
+ * The mapping is not length-preserving and not invertible — `ß` uppercases to
+ * `SS`, the `ﬁ` ligature to `FI` — so upper and lower are not a round trip, and
+ * no amount of bookkeeping here would make them one. Keep the original if you
+ * need the text back.
+ */
 export function toUpperText(input: string): string {
   return input.toUpperCase();
 }

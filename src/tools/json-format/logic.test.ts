@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { findError, locate, parseJson, render, sortDeep, toLines } from './logic.ts';
+import { findDuplicateKeys, findError, locate, parseJson, render, sortDeep, toLines } from './logic.ts';
 
 test('valid JSON reports structure, not just success', () => {
   const outcome = parseJson('{"b":1,"a":[1,2,{"c":null}]}');
@@ -97,4 +97,86 @@ test('render honours each indent setting', () => {
 test('toLines emits one row per array element', () => {
   assert.equal(toLines([{ a: 1 }, { a: 2 }]), '{"a":1}\n{"a":2}');
   assert.equal(toLines({ a: 1 }), '{"a":1}');
+});
+
+/* ── Regressions found while writing the "how it works" note ─── */
+
+test('[15] the reported line counts the text as pasted, not a trimmed copy', () => {
+  const outcome = parseJson('\n\n\n{\n  "a": ,\n}');
+  assert.equal(outcome.ok, false);
+  if (outcome.ok) return;
+  assert.equal(outcome.error.line, 5);
+  assert.equal(outcome.error.column, 8);
+  assert.equal(outcome.error.excerpt, '  "a": ,');
+});
+
+test('[15] leading whitespace does not shift the column either', () => {
+  const outcome = parseJson('   {"a" 1}');
+  assert.equal(outcome.ok, false);
+  if (outcome.ok) return;
+  assert.equal(outcome.error.line, 1);
+  assert.equal(outcome.error.column, 9);
+  assert.equal(outcome.error.excerpt, '   {"a" 1}');
+});
+
+test('[16] keys sort by code unit, the order C02 (data-convert) also uses', () => {
+  const sorted = sortDeep({ b: 1, B: 2, a: 3, A: 4, _z: 5, Z: 6 });
+  const plain = Object.keys({ b: 1, B: 2, a: 3, A: 4, _z: 5, Z: 6 }).sort();
+  assert.deepEqual(Object.keys(sorted as object), plain);
+  assert.deepEqual(plain, ['A', 'B', 'Z', '_z', 'a', 'b']);
+});
+
+test('[17] a duplicate key is reported rather than silently dropped', () => {
+  const outcome = parseJson('{\n  "id": 1,\n  "name": "a",\n  "id": 2\n}');
+  assert.ok(outcome.ok);
+  assert.equal(outcome.duplicates.length, 1);
+  assert.equal(outcome.duplicates[0].key, 'id');
+  assert.equal(outcome.duplicates[0].path, '$');
+  assert.equal(outcome.duplicates[0].line, 4);
+  assert.equal(outcome.duplicates[0].column, 3);
+  // JSON.parse kept the last one, which is exactly why this has to be said.
+  assert.deepEqual(outcome.value, { id: 2, name: 'a' });
+});
+
+test('[17] duplicates are found at every depth and through escapes', () => {
+  assert.deepEqual(
+    findDuplicateKeys('{"a":{"x":1,"x":2}}').map((d) => `${d.path}.${d.key}`),
+    ['$.a.x']
+  );
+  assert.deepEqual(
+    findDuplicateKeys('{"rows":[{"k":1},{"k":1,"k":2}]}').map((d) => d.path),
+    ['$.rows[1]']
+  );
+  // Two spellings of the same key collide for JSON.parse, so they collide here.
+  assert.equal(findDuplicateKeys('{"a":1,"\\u0061":2}').length, 1);
+  assert.deepEqual(findDuplicateKeys('{"a":1,"b":{"a":2}}'), []);
+  assert.deepEqual(findDuplicateKeys('[1,2,3]'), []);
+  assert.deepEqual(parseJson('{"a":1}').ok ? [] : ['unexpected'], []);
+});
+
+test('[18] a deep document with a real syntax error is not blamed on its depth', () => {
+  const text = `${'['.repeat(600)}${']'.repeat(600)}x`;
+  const outcome = parseJson(text);
+  assert.equal(outcome.ok, false);
+  if (outcome.ok) return;
+  assert.equal(/nesting under/.test(outcome.error.message), false);
+  assert.match(outcome.error.message, /512/);
+  assert.equal(outcome.error.line, undefined);
+  const found = findError(text);
+  assert.ok(found);
+  assert.equal(found.depth, true);
+});
+
+test('[18] diagnosing a document full of numbers stays linear', () => {
+  const build = (n: number) => `[${Array.from({ length: n }, (_, i) => String(i * 1234567)).join(',')},]`;
+  const time = (text: string) => {
+    const started = performance.now();
+    assert.ok(findError(text));
+    return performance.now() - started;
+  };
+  time(build(1_000));
+  const small = time(build(40_000));
+  const large = time(build(160_000));
+  // Four times the input, not sixteen times the work.
+  assert.ok(large < Math.max(small, 1) * 8, `40k took ${small}ms, 160k took ${large}ms`);
 });

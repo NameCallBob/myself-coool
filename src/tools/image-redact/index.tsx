@@ -458,8 +458,8 @@ export default function ImageRedact({ l }: ToolProps) {
               t(l, '馬賽克', 'mosaic'),
               t(
                 l,
-                '每個方塊換成該方塊的平均色。平均不可逆,但它是「減少資訊」而不是「抹掉資訊」:方塊平均值還在,字體已知、字串短、方塊又小的時候,對手可以把候選字串照同樣方式平均回來比對。遮文字請用實心。',
-                'Each block becomes that block’s mean colour. A mean is not invertible, but this reduces information rather than erasing it: the block means remain, and for short strings in a known font with a small block size an attacker can average candidate renderings the same way and compare. For text, use solid.'
+                '每個方塊換成該方塊的平均色。平均不可逆,但它是「減少資訊」而不是「抹掉資訊」:方塊平均值還在,字體已知、字串短、方塊又小的時候,對手可以把候選字串照同樣方式平均回來比對。遮文字請用實心。帶透明的 PNG 上,方塊跟實心遮罩一樣寫成不透明,平均色按 alpha 加權——alpha 也拿去平均的話,方塊會變半透明,而且透明與不透明的邊界會以平均值的形式留下形狀。',
+                'Each block becomes that block’s mean colour. A mean is not invertible, but this reduces information rather than erasing it: the block means remain, and for short strings in a known font with a small block size an attacker can average candidate renderings the same way and compare. For text, use solid. On a transparent PNG the block is written opaque, like a solid mark, with the colour mean weighted by alpha: averaging alpha instead would leave a half-transparent block whose alpha channel still outlines what was under it.'
               ),
             ],
             [

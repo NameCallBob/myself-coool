@@ -158,7 +158,20 @@ export function parseContainer(data: Uint8Array): Container {
   if (cipher !== CIPHER_AES_256_GCM) throw new BadContainer(`unknown cipher id ${cipher}`);
 
   const iterations = ((data[8] << 24) | (data[9] << 16) | (data[10] << 8) | data[11]) >>> 0;
-  if (iterations < 1) throw new BadContainer('the header claims zero iterations');
+  // This number came out of a file, not out of the reader's hands, so the range
+  // check belongs here rather than being left to deriveKey, whose message ("the
+  // iteration count must be at least 1,000") is advice for whoever typed it.
+  // Anything in the 1–999 gap used to reach that message and read as a telling
+  // off for a value the reader never chose. Above the ceiling matters too: a
+  // header claiming four billion iterations would otherwise be worth hours of
+  // derivation before failing.
+  if (iterations < MIN_ITERATIONS || iterations > MAX_ITERATIONS) {
+    throw new BadContainer(
+      `the header declares ${iterations.toLocaleString('en-US')} PBKDF2 iterations, outside the ` +
+        `${MIN_ITERATIONS.toLocaleString('en-US')}–${MAX_ITERATIONS.toLocaleString('en-US')} range this ` +
+        'format allows — the file is damaged, or was not written by this tool'
+    );
+  }
 
   return {
     version,
@@ -318,10 +331,28 @@ export function containerSize(plaintextBytes: number): number {
 }
 
 /**
- * Rough offline guess rate against this container, for the passphrase advice
- * on the page. One PBKDF2-SHA256 iteration is two SHA-256 compressions, and a
- * 2024-era GPU does on the order of 1e10 of those per second.
+ * The attacker this drawer assumes, in SHA-256 compressions per second.
+ *
+ * hashcat's own benchmark puts a single RTX 4090 at roughly 2.2e10 raw SHA-256
+ * hashes a second (mode 1400, hashcat 6.2.6), and a short password is one
+ * compression per hash. 1e11 is therefore a rented box of four or five such
+ * cards, rounded to one significant figure — a well-funded individual rather
+ * than a state.
+ *
+ * E01 (password-generator) declares the identical constant and feeds it to
+ * `crackTime` as guesses per second, which for a raw fast hash is the same
+ * unit. Keep the two in step: the two pages' figures are read side by side, and
+ * they previously disagreed by a factor of ten — this file assuming one card,
+ * E01 assuming this rig, both calling it "a 2024-era commodity GPU".
  */
-export function guessesPerSecond(iterations: number, hashesPerSecond = 1e10): number {
+export const GPU_SHA256_PER_SECOND = 1e11;
+
+/**
+ * Rough offline guess rate against this container, for the passphrase advice on
+ * the page. One PBKDF2-HMAC-SHA256 iteration costs two SHA-256 compressions
+ * (the inner and outer HMAC block), so the default cost of 600,000 iterations
+ * leaves the attacker above about 83,000 passphrases a second.
+ */
+export function guessesPerSecond(iterations: number, hashesPerSecond = GPU_SHA256_PER_SECOND): number {
   return hashesPerSecond / (iterations * 2);
 }

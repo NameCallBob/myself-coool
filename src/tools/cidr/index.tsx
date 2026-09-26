@@ -48,7 +48,11 @@ function failureText(l: Loc, code: ParseFailure): string {
         'The address part does not parse. IPv4 needs four 0–255 octets with no leading zeros; IPv6 allows at most one "::".'
       );
     case 'bad-prefix':
-      return t(l, '/ 後面要是數字,或 IPv4 的點分遮罩。', 'After the slash: a number, or a dotted IPv4 mask.');
+      return t(
+        l,
+        '/ 後面要是數字(不可有前導零,寫 24 不要寫 024),或 IPv4 的點分遮罩。',
+        'After the slash: a number with no leading zeros (24, not 024), or a dotted IPv4 mask.'
+      );
     case 'prefix-range':
       return t(l, '前綴長度超過位址寬度(IPv4 最多 32,IPv6 最多 128)。', 'Prefix longer than the address width (32 for IPv4, 128 for IPv6).');
     case 'mask-not-contiguous':
@@ -73,6 +77,9 @@ function scopeText(l: Loc, id: string): string {
     documentation: ['文件用保留位址,可以安心寫在文章裡', 'reserved for documentation — safe to write down'],
     benchmark: ['網路設備效能測試保留', 'reserved for device benchmarking'],
     protocol: ['IETF 協定指派保留', 'IETF protocol assignments'],
+    'ds-lite': ['IPv4 服務延續前綴(DS-Lite,RFC 7335)', 'IPv4 service continuity prefix (DS-Lite, RFC 7335)'],
+    as112: ['AS112 黑洞伺服器(RFC 7534/7535)', 'AS112 blackhole service (RFC 7534/7535)'],
+    amt: ['多播自動隧道(AMT,RFC 7450)', 'automatic multicast tunnelling (RFC 7450)'],
     '6to4-relay': ['6to4 中繼 anycast(已廢止)', '6to4 relay anycast (deprecated)'],
     'this-network': ['本網路/未指定', 'this network / unspecified'],
     reserved: ['保留未指派', 'reserved, unassigned'],

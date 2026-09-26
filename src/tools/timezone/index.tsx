@@ -24,11 +24,11 @@ import {
   formatIsoDate,
   formatOffset,
   isValidZone,
-  nextTransition,
   parseLocalInput,
+  readTransitions,
   readZones,
   resolveZoned,
-  zoneOffset,
+  scanAnchor,
   zoneParts,
   type ZoneReading,
 } from './logic';
@@ -122,24 +122,21 @@ export default function Timezone({ l }: ToolProps) {
   const instant = resolution ? resolution.instant : now;
   const rows = useMemo(() => readZones(instant, zones, reference), [instant, zones, reference]);
 
-  const transitions = useMemo(
-    () =>
-      rows
-        .map((row) => {
-          const at = nextTransition(instant, row.zone);
-          if (at === null) return null;
-          return {
-            zone: row.zone,
-            at,
-            from: zoneOffset(at - 1000, row.zone),
-            to: zoneOffset(at, row.zone),
-            local: zoneParts(at, row.zone),
-          };
-        })
-        .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-        .sort((a, b) => a.at - b.at),
-    [rows, instant]
-  );
+  /**
+   * The transition scan, keyed on something that does not move every second.
+   *
+   * `readTransitions` is up to ninety formatter reads per zone, so the six
+   * default zones cost a couple of hundred. Keying it on `rows` — a fresh array
+   * on every tick of the clock — meant paying that every second to re-derive
+   * something that changes twice a year. The zone list is memoised separately
+   * so adding a zone still recomputes, the scan starts at the top of the hour,
+   * and anything it reports that the clock has since passed is dropped here
+   * rather than rescanned.
+   */
+  const zoneList = useMemo(() => zones.filter((zone) => isValidZone(zone)), [zones]);
+  const scanFrom = scanAnchor(instant);
+  const transitions = useMemo(() => readTransitions(scanFrom, zoneList), [scanFrom, zoneList]);
+  const upcoming = transitions.filter((entry) => entry.at > instant);
 
   const offsets = rows.map((row) => row.offset);
   const spread = offsets.length > 1 ? Math.max(...offsets) - Math.min(...offsets) : 0;
@@ -209,7 +206,11 @@ export default function Timezone({ l }: ToolProps) {
 
         {pinFailed ? (
           <Note error>
-            {t(l, '看不懂這個日期時間,格式要像 2026-09-26T14:30。', 'Could not read that date and time; it should look like 2026-09-26T14:30.')}
+            {t(
+              l,
+              '看不懂這個日期時間。格式要像 2026-09-26T14:30,年份限西元 100 到 275760 年——再遠就超出 JavaScript 的日期範圍,算不出偏移。',
+              'Could not read that date and time. It should look like 2026-09-26T14:30, with a year between 100 and 275760; past that is outside the range JavaScript dates cover, so no offset can be read.'
+            )}
           </Note>
         ) : null}
 
@@ -219,6 +220,15 @@ export default function Timezone({ l }: ToolProps) {
               l,
               `這個當地時間在 ${reference} 不存在——那天時鐘往前跳,這一小時被跳過了。下面顯示的是跳完之後的第一個時刻。`,
               `That local time does not exist in ${reference}: clocks jumped forward and the hour was skipped. Shown below is the first instant after the jump.`
+            )}
+          </Note>
+        ) : null}
+        {resolution?.kind === 'inexact' ? (
+          <Note>
+            {t(
+              l,
+              `這個當地時間在 ${reference} 找不到完全對應的時刻,而那天時鐘並沒有往前跳。1891 年以前多數地方用的是不滿一分鐘的地方平時(巴黎是 +00:09:21),這裡的偏移一律取到分鐘,所以對不回去。下面顯示的是最接近的一刻,誤差在一分鐘內。`,
+              `No instant in ${reference} formats back to that local time, and clocks did not jump that day. Before 1891 most places kept local mean time on non-integer offsets (Paris was +00:09:21) and offsets here are held to the minute, so the round trip cannot close. Shown below is the nearest instant, within a minute.`
             )}
           </Note>
         ) : null}
@@ -312,13 +322,13 @@ export default function Timezone({ l }: ToolProps) {
         </Panel>
       </div>
 
-      {transitions.length > 0 ? (
+      {upcoming.length > 0 ? (
         <div className="mt-8">
           <Panel label={t(l, '接下來一年內的偏移變更', 'OFFSET CHANGES IN THE NEXT YEAR')}>
             <Table
               head={[t(l, '時區', 'zone'), t(l, '當地時間', 'local time'), t(l, '偏移', 'offset')]}
               align={['left', 'left', 'right']}
-              rows={transitions.map((entry) => [
+              rows={upcoming.map((entry) => [
                 <span key="z" className="inst-no">
                   {entry.zone}
                 </span>,

@@ -17,8 +17,8 @@ export const ENCODE_NOTES: Record<string, ToolNote> = {
         en: 'Strict mode rejects a non-canonical tail: the last character carries 4 or 2 bits that nothing reads, so Zg== and Zh== both decode to 0x66. Harmless when reading, wrong when comparing or re-encoding tokens, and off by default because most pastes are just being read.',
       },
       {
-        zh: '換行寬度只有兩個選項,76 與 64,因為它們不是品味問題:76 是 RFC 2045 給 MIME 內容寫死的值,64 是 RFC 7468 給 PEM 寫死的值,自己挑一個數字只會讓某一端的 parser 不收。Data URI 那一側預設用 Base64,但也做了 percent-encoding 的形式;解析時 ;base64 當旗標處理,跟 charset 這類真的參數分開,而型別留空則依 RFC 2397 補回 text/plain;charset=US-ASCII。工具介面上另外寫了一句該寫的話:data URI 會讓位元組再長三分之一,而且瀏覽器無法單獨快取它——小圖示可以,照片不要。',
-        en: 'Wrap widths are 76 (RFC 2045, MIME) and 64 (RFC 7468, PEM) because both are fixed by spec, not preference. Data URIs default to base64 but the percent form is there too; ;base64 is parsed as a flag rather than a parameter, and an omitted type falls back to text/plain;charset=US-ASCII per RFC 2397.',
+        zh: '換行寬度只有兩個選項,76 與 64,因為它們不是品味問題:76 是 RFC 2045 給 MIME 內容寫死的值,64 是 RFC 7468 給 PEM 寫死的值,自己挑一個數字只會讓某一端的 parser 不收。Data URI 那一側預設用 Base64,但也做了 percent-encoding 的形式;解析時 ;base64 當旗標處理,跟 charset 這類真的參數分開,而且只認 mediatype 的最後一段——RFC 2397 的文法把這個旗標放在參數之後,瀏覽器也只剝掉結尾那一個,所以 data:text/plain;base64;charset=utf-8,... 的內容其實是 percent-encoded,中間那個 base64 只是一個沒有值的參數。percent 形式留著不編的是 RFC 2396 的 unreserved,英數加上 -_.!~*\'() 共 71 個字元,不是 RFC 3986 那 66 個——RFC 2397 指的是前者。型別留空則依 RFC 2397 補回 text/plain;charset=US-ASCII。工具介面上另外寫了一句該寫的話:data URI 會讓位元組再長三分之一,而且瀏覽器無法單獨快取它——小圖示可以,照片不要。',
+        en: 'Wrap widths are 76 (RFC 2045, MIME) and 64 (RFC 7468, PEM) because both are fixed by spec, not preference. Data URIs default to base64 but the percent form is there too. ;base64 is parsed as a flag rather than a parameter, and only as the last segment of the mediatype, which is what RFC 2397\'s grammar and browsers both do; the percent form keeps RFC 2396\'s 71 unreserved characters, not RFC 3986\'s 66. An omitted type falls back to text/plain;charset=US-ASCII per RFC 2397.',
       },
     ],
     limits: [
@@ -29,6 +29,10 @@ export const ENCODE_NOTES: Record<string, ToolNote> = {
       {
         zh: '解碼時空白會被跳過,所以一段 PEM 的內容可以整塊貼進來解。但 -----BEGIN CERTIFICATE----- 的那些連字號在 URL-safe 表裡是合法字元(值 62),連頭尾兩行一起貼不會報錯,會安靜地解出一堆垃圾。那兩行要自己刪掉。',
         en: 'Whitespace is skipped on decode, so a PEM body pastes in fine — but the dashes in -----BEGIN CERTIFICATE----- are legal URL-safe characters (value 62), so the header lines decode silently into garbage instead of erroring. Strip them yourself.',
+      },
+      {
+        zh: '解碼預設是寬鬆的,padding 有幾個不算:QQ= 少了一個 =,但那兩個資料字元指的位元組沒有歧義,寧可讀出來也不要拒收——要檢查「資料字元數加 padding 是不是四的倍數」得勾嚴格模式。位置還是每次都管:= 出現在資料前面會報錯,整串只有 = 也會報錯,因為那不是「零個位元組」的寫法,空字串才是。',
+        en: 'Lenient decoding does not count the padding: QQ= is one = short, but its two data characters name one byte unambiguously, so it is read rather than refused — the length arithmetic is a strict-mode check. Position is checked for every caller: data after = is an error, and so is a string of nothing but =, which is not how zero bytes are written (the empty string is).',
       },
       {
         zh: '它只做 Base64,不會幫你拆 JWT 的三段,也完全不驗簽章。要看 JWT 請用 D03。',
@@ -48,22 +52,22 @@ export const ENCODE_NOTES: Record<string, ToolNote> = {
         en: 'Encoding runs over UTF-8 bytes, never code units: one ideograph is three escapes. Decoding needs its own UTF-8 validator because decodeURIComponent reports a malformed escape and invalid UTF-8 as the same positionless URIError, though the fixes differ; overlongs, lone surrogates, out-of-range and truncated sequences are each recognised, and a byte-to-character map puts the caret on the offending % rather than on a byte index.',
       },
       {
-        zh: 'Query string 的分隔符收 & 也收 ;——HTML 4 推薦過 ; 整整十年,舊連結裡還有,把它當成資料而不是分隔符會安靜地把兩個參數併成一個。每一列記著原本有沒有 =,因為 ?flag 與 ?flag= 不是同一件事,重組的時候要還得回去。重複的 key 會被列出來但不會幫你合併:?a=1&a=2 在 PHP 與 Rails 是一個陣列,在 Express 與 Go 的預設是最後一個贏,這是收這段 query 的伺服器的約定,工具沒有立場替它決定,只能指給你看。重組預設走表單模式,因為那是瀏覽器實際送出的東西、也是多數後端 parser 預期的格式;會需要改成嚴格 RFC 3986 的場合通常是這段 query 要進簽章的 base string,那裡的 + 會被當成真的加號。',
-        en: 'Both & and ; separate pairs, since HTML 4 recommended ; for a decade. Each row remembers whether it had an =, because ?flag and ?flag= differ. Duplicate keys are flagged, not merged: they mean a list to PHP and Rails and last-wins to Express and Go, which is the server\'s convention to decide. Rebuilding defaults to form mode; strict RFC 3986 is there for signature base strings.',
+        zh: 'Query string 的分隔符收 & 也收 ;——HTML 4 推薦過 ; 整整十年,舊連結裡還有,把它當成資料而不是分隔符會安靜地把兩個參數併成一個。每一列記著原本有沒有 =,因為 ?flag 與 ?flag= 不是同一件事,重組的時候要還得回去;?= 也算一列,名稱與值都是空的,但那個等號是有人寫出來的。重複的 key 會被列出來但不會幫你合併:?a=1&a=2 在 PHP 與 Rails 是一個陣列,在 Express 與 Go 的預設是最後一個贏,這是收這段 query 的伺服器的約定,工具沒有立場替它決定,只能指給你看。重組預設走表單模式,因為那是瀏覽器實際送出的東西、也是多數後端 parser 預期的格式;會需要改成嚴格 RFC 3986 的場合通常是這段 query 要進簽章的 base string,那裡的 + 會被當成真的加號。',
+        en: 'Both & and ; separate pairs, since HTML 4 recommended ; for a decade. Each row remembers whether it had an =, because ?flag and ?flag= differ — and ?= is a row too, with an empty key and an empty value that somebody still wrote an equals sign for. Duplicate keys are flagged, not merged: they mean a list to PHP and Rails and last-wins to Express and Go, which is the server\'s convention to decide. Rebuilding defaults to form mode; strict RFC 3986 is there for signature base strings.',
       },
       {
-        zh: '還有一個很短的函式處理 percent-encoding 最常見的那個 bug:%2520 是某一層把已經編好的 %20 又編了一次。做法是反覆解碼直到結果不再變化,最多五輪,回報這串看起來被編過幾次。答案是 2 以上的時候,要修的是上游那段程式,不是手上這個輸入。',
-        en: 'A short routine counts how many times the input appears to have been encoded, decoding to a fixed point with a cap of five rounds. %2520 is a %20 that some layer escaped twice; an answer above one means the bug is upstream, not in the string.',
+        zh: '還有一個很短的函式處理 percent-encoding 最常見的那個 bug:%2520 是某一層把已經編好的 %20 又編了一次。做法是反覆解碼直到結果不再變化,最多五輪,回報這串看起來被編過幾次。這一輪一輪的解碼不理「+ 當空白」那個開關,結果也不會因此不同:+ 換成空白只是把一個 ASCII 位元組換成另一個,兩者都不是 %、不是十六進位數字、不是 UTF-8 的前導或續接位元組,所以每一輪看到的 escape 與合法性完全一樣,層數不變。答案是 2 以上的時候,要修的是上游那段程式,不是手上這個輸入。',
+        en: 'A short routine counts how many times the input appears to have been encoded, decoding to a fixed point with a cap of five rounds. It ignores the treat-+-as-space switch, which cannot change the count: 0x2B and 0x20 are both plain ASCII bytes, neither a %, a hex digit, nor a UTF-8 lead or continuation byte, so every round sees the same escapes. %2520 is a %20 that some layer escaped twice; an answer above one means the bug is upstream, not in the string.',
       },
     ],
     limits: [
       {
-        zh: '拆網址用的是 RFC 3986 附錄 B 裡那份規格自己印出來的正規式,它只負責切開,不負責驗證——那條式子對任何字串都會匹配成功,包括空字串。所以它不會告訴你 port 不是數字(exam:ple 會被切成 host exam 與 port ple),也不做 IDN / punycode 轉換與路徑的 dot-segment 正規化。要把網址當成網址來檢查與清理請用 J02。',
-        en: 'The splitter is the RFC 3986 Appendix B regex, which matches every string including the empty one: it separates, it does not validate. It will not object that a port is not a number, and it does no punycode conversion or path normalisation. For inspecting and cleaning URLs as URLs, use J02.',
+        zh: '拆網址用的是 RFC 3986 附錄 B 裡那份規格自己印出來的正規式,它只負責切開,不負責驗證——那條式子對任何字串都會匹配成功,包括空字串。authority 是從第一個冒號切開的(host 裡不可能有冒號),所以 exam:ple:x 會得到 host exam 與 port ple:x;port 不是十進位數字、或超過 65535 時表格下面會說一句,其餘一概不驗:不做 IDN / punycode 轉換,也不做路徑的 dot-segment 正規化。要把網址當成網址來檢查與清理請用 J02。',
+        en: 'The splitter is the RFC 3986 Appendix B regex, which matches every string including the empty one: it separates, it does not validate. The authority is cut at its first colon, since a host cannot contain one, so exam:ple:x gives host exam and port ple:x — and a port that is not decimal digits within 65535 is called out under the table. Nothing else is checked: no punycode conversion, no path normalisation. For inspecting and cleaning URLs as URLs, use J02.',
       },
       {
-        zh: '重組時空的 query 會消失:https://example.com/? 拆開再組回去就沒有那個問號,把表格裡每一列都清空也一樣。這是重組只在 query 非空時才寫 ? 的直接後果。對絕大多數伺服器來說「有 query 但是空的」與「沒有 query」沒差,但如果你在逐字比對兩個網址,它有差。',
-        en: 'An empty query is dropped when rebuilding, so https://example.com/? comes back without the question mark, as does a table whose rows you have all cleared. Most servers do not care; a string comparison does.',
+        zh: '拆開再組回去會拿到同一個字串,空的分隔符也還在:https://example.com/? 的問號、空的 #、file:/// 的空 authority、query 裡孤零零的 ?= 都留著——對絕大多數伺服器來說「有 query 但是空的」與「沒有 query」沒差,但如果你在逐字比對兩個網址,它有差。唯一還不保證還原的是連續的分隔符:a=1&&b=2 會讀成兩筆,重組時中間那個空分段就不在了,因為一列沒有名稱、沒有值、連等號都沒有時,它不代表任何參數。',
+        en: 'Splitting and rejoining returns the same string, empty delimiters included: the ? of https://example.com/?, an empty #, the empty authority of file:///, and a bare ?= in the query all survive — most servers do not care, but a string comparison does. Consecutive separators are the exception: a=1&&b=2 reads as two pairs and the empty chunk between them is gone, because a row with no key, no value and no equals sign is not a parameter.',
       },
       {
         zh: '它只處理 percent-encoding。一段同時混著 %-escape 與 &amp; 的字串,這裡只會處理前者,HTML 實體請用 B03。',

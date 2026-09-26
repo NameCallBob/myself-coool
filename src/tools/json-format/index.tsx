@@ -113,6 +113,29 @@ export default function JsonFormat({ l }: ToolProps) {
                 </span>
               </label>
             </Row>
+            {outcome.ok && outcome.duplicates.length > 0 ? (
+              <div className="mt-3">
+                <Note>
+                  {t(
+                    l,
+                    `有 ${outcome.duplicates.length} 個重複的鍵。JSON.parse 只留最後一個,所以下面的輸出比原文少了欄位:`,
+                    `${outcome.duplicates.length} duplicate key(s). JSON.parse keeps the last one, so the output below has fewer fields than the input:`
+                  )}
+                  {outcome.duplicates.slice(0, 8).map((duplicate) => (
+                    <span key={`${duplicate.path}.${duplicate.key}:${duplicate.line}`} className="block">
+                      {t(
+                        l,
+                        `　${duplicate.path} 的 "${duplicate.key}" 在第 ${duplicate.line} 行第 ${duplicate.column} 字又出現一次`,
+                        `　"${duplicate.key}" in ${duplicate.path} repeats at line ${duplicate.line}, column ${duplicate.column}`
+                      )}
+                    </span>
+                  ))}
+                  {outcome.duplicates.length > 8
+                    ? t(l, `　…另外還有 ${outcome.duplicates.length - 8} 個`, `　…and ${outcome.duplicates.length - 8} more`)
+                    : null}
+                </Note>
+              </div>
+            ) : null}
             <div className="inst-out mt-3" style={{ minHeight: '20rem' }} aria-live="polite">
               {output || (
                 <span style={{ color: 'var(--fg-faint)' }}>
@@ -134,6 +157,7 @@ export default function JsonFormat({ l }: ToolProps) {
                 { k: t(l, '陣列', 'arrays'), v: count(outcome.stats.arrays) },
                 { k: t(l, '巢狀深度', 'depth'), v: count(outcome.stats.depth) },
                 { k: t(l, '大小', 'size'), v: bytes(outcome.stats.bytes) },
+                { k: t(l, '重複鍵', 'dup keys'), v: count(outcome.duplicates.length) },
               ]
             : [{ k: t(l, '狀態', 'status'), v: failed ? t(l, '語法錯誤', 'invalid') : '—' }]
         }

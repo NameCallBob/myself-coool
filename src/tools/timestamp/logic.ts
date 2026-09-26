@@ -224,7 +224,11 @@ export function parseIso8601(text: string, assume: Zone): Parsed {
     ms = local.getTime();
   }
 
-  if (!inRange(ms)) return NONE;
+  // A date the syntax accepts but a Date cannot hold is a magnitude problem, not
+  // a syntax one — the same thing parseUnix reports for a too-large number, and
+  // it gets the same answer here. Returning NONE would make the screen say
+  // "cannot be read" about a string that was read perfectly well.
+  if (!inRange(ms)) notes.push('out-of-range');
   return { kind: 'iso8601', ms, subMs, unit: null, hadOffset, notes };
 }
 
@@ -456,9 +460,18 @@ export function breakdown(ms: number, zone: Zone): Breakdown | null {
   };
 }
 
-/** Whole units between two instants, largest first. For "3 days 4 hours ago". */
+/**
+ * Whole units between two instants, largest first. For "3 days 4 hours ago".
+ *
+ * Milliseconds are included only under a minute, and only when there are any.
+ * Below a second they are the whole answer: this tool argues about nanoseconds
+ * everywhere else, so rendering a 900 ms gap as "0 seconds" was the one place it
+ * threw away precision it had. Past a minute the tail is noise and is dropped.
+ * Anything finer than a millisecond is not here at all — these are two `Date`
+ * milliseconds, and the sub-millisecond digits live in `Parsed.subMs`.
+ */
 export function elapsed(fromMs: number, toMs: number): { unit: string; value: number }[] {
-  const total = Math.abs(toMs - fromMs);
+  const total = Math.floor(Math.abs(toMs - fromMs));
   const parts: { unit: string; value: number }[] = [];
   let rest = Math.floor(total / 1000);
   for (const [unit, size] of [
@@ -469,7 +482,12 @@ export function elapsed(fromMs: number, toMs: number): { unit: string; value: nu
   ] as [string, number][]) {
     const value = Math.floor(rest / size);
     rest -= value * size;
-    if (value > 0 || (unit === 'second' && parts.length === 0)) parts.push({ unit, value });
+    if (value > 0) parts.push({ unit, value });
   }
+  const millis = total % 1000;
+  if (millis > 0 && total < 60_000) parts.push({ unit: 'millisecond', value: millis });
+  // Nothing at all means the two instants are the same, which reads better as
+  // zero seconds than as an empty list.
+  if (parts.length === 0) parts.push({ unit: 'second', value: 0 });
   return parts;
 }

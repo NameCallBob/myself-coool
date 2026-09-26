@@ -5,6 +5,7 @@ import {
   CHARSETS,
   ImpossibleOptions,
   alphabetFor,
+  GPU_SHA256_PER_SECOND,
   crackTime,
   entropyOf,
   generate,
@@ -40,8 +41,23 @@ function lcg(seed: number) {
 test('the alphabet is the union of the chosen sets', () => {
   assert.equal(alphabetFor(opts({ sets: ['digit'] })), CHARSETS.digit);
   assert.equal(alphabetFor(opts()).length, 26 + 26 + 10);
-  // No selection is a broken UI state, not a crash: fall back to lowercase.
-  assert.equal(alphabetFor(opts({ sets: [] })), CHARSETS.lower);
+  // No selection is not silently turned into lowercase: see the test below.
+  assert.equal(alphabetFor(opts({ sets: [] })), '');
+});
+
+test('unselecting every character type is refused, not answered with lowercase', () => {
+  const none = opts({ sets: [] });
+  // The old fallback handed back a lowercase-only password for options that
+  // said "no character types at all" — the user gets something other than what
+  // the screen says they chose, and the entropy figure is for the wrong set.
+  assert.equal(alphabetFor(none), '');
+  assert.equal(entropyOf(none), 0);
+  assert.equal(satisfactionProbability(none), 0);
+  assert.equal(satisfactionProbability(opts({ sets: [], requireEach: true })), 0);
+  assert.throws(() => generate(none, sequence([0])), ImpossibleOptions);
+  assert.throws(() => generate(opts({ sets: [], requireEach: true }), sequence([0])), ImpossibleOptions);
+  // And the constraint check cannot claim a password satisfies nothing.
+  assert.equal(satisfies('abc', opts({ sets: [], requireEach: true })), false);
 });
 
 test('avoiding ambiguity removes every look-alike from the alphabet', () => {
@@ -130,4 +146,12 @@ test('every charset is free of duplicates', () => {
   // And the sets do not overlap, which inclusion–exclusion depends on.
   const all = Object.values(CHARSETS).join('');
   assert.equal(new Set(all).size, all.length, 'charsets overlap');
+});
+
+test('the default crack-time rate is the named attacker, not a loose literal', () => {
+  // E07 (aes-encrypt) assumes the same figure, in the same unit; the constant
+  // is what keeps the two pages comparable.
+  assert.equal(GPU_SHA256_PER_SECOND, 1e11);
+  assert.equal(crackTime(80), crackTime(80, GPU_SHA256_PER_SECOND));
+  assert.equal(crackTime(60), crackTime(60, GPU_SHA256_PER_SECOND));
 });

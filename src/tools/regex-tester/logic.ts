@@ -15,7 +15,15 @@
  * two execution contexts, no second copy to drift.
  */
 
-export type NamedCapture = { name: string; value: string | null };
+/** Half-open `[start, end)` in UTF-16 code units, as the `d` flag reports it. */
+export type Span = [number, number];
+
+export type NamedCapture = {
+  name: string;
+  value: string | null;
+  /** Present only under the `d` flag; null when the group did not take part. */
+  span?: Span | null;
+};
 
 export type MatchHit = {
   /** Offset in UTF-16 code units, as the engine reports it. */
@@ -25,6 +33,13 @@ export type MatchHit = {
   /** Numbered groups, 1-based in order; `null` where the group did not take part. */
   groups: (string | null)[];
   named: NamedCapture[];
+  /**
+   * Where each numbered group matched, in the same order as `groups`.
+   *
+   * Only the `d` flag makes the engine report this, so the field is absent
+   * without it rather than filled with guesses.
+   */
+  spans?: (Span | null)[];
 };
 
 export type MatchOutcome = {
@@ -58,6 +73,13 @@ export function collectMatches(
   // Group count without parsing the pattern: `X|` can never fail, so exec
   // always returns an array of 1 + (group count) entries even when X itself
   // would not have matched. The g/y flags are dropped so lastIndex plays no part.
+  //
+  // Appending the empty alternative cannot turn a valid pattern invalid, so this
+  // cannot throw where the caller's own compile check passed: the grammar's
+  // Disjunction is `Alternative | Alternative "|" Disjunction` and Alternative
+  // may be empty, which makes a trailing `|` legal after any complete pattern.
+  // Only the engine's own size limits can refuse it, and they refuse `pattern`
+  // by itself first.
   let groupCount = 0;
   const probe = new RegExp(`${pattern}|`, flags.replace(/[gy]/g, ''));
   const probed = probe.exec('');
@@ -77,6 +99,9 @@ export function collectMatches(
   const repeating = flags.includes('g') || flags.includes('y');
   const re = new RegExp(pattern, repeating ? flags : `${flags}g`);
   const wide = flags.includes('u') || flags.includes('v');
+  // The d flag is the only way to learn where a group matched. Passing it to the
+  // engine and then ignoring found.indices would make the checkbox a no-op.
+  const indexed = flags.includes('d');
 
   const hits: MatchHit[] = [];
   let truncated = false;
@@ -93,16 +118,38 @@ export function collectMatches(
     for (let i = 1; i < found.length; i += 1) {
       groups.push(found[i] === undefined ? null : found[i]);
     }
+    const marks = indexed ? found.indices : undefined;
+    let spans: (Span | null)[] | undefined;
+    if (marks) {
+      spans = [];
+      for (let i = 1; i < found.length; i += 1) {
+        const at = marks[i];
+        spans.push(at === undefined ? null : [at[0], at[1]]);
+      }
+    }
     const named: NamedCapture[] = [];
     const bag = found.groups;
     if (bag) {
       const keys = Object.keys(bag);
       for (let i = 0; i < keys.length; i += 1) {
         const value = bag[keys[i]];
-        named.push({ name: keys[i], value: value === undefined ? null : value });
+        const entry: NamedCapture = { name: keys[i], value: value === undefined ? null : value };
+        if (marks) {
+          const at = marks.groups ? marks.groups[keys[i]] : undefined;
+          entry.span = at === undefined ? null : [at[0], at[1]];
+        }
+        named.push(entry);
       }
     }
-    hits.push({ index: found.index, length: found[0].length, text: found[0], groups, named });
+    const hit: MatchHit = {
+      index: found.index,
+      length: found[0].length,
+      text: found[0],
+      groups,
+      named,
+    };
+    if (spans) hit.spans = spans;
+    hits.push(hit);
 
     if (!repeating) break;
     if (found[0].length === 0) {
@@ -246,7 +293,16 @@ export function riskNotes(pattern: string): RiskCode[] {
   return Array.from(found);
 }
 
-export type Segment = { text: string; hit: number | null };
+export type Segment = {
+  text: string;
+  hit: number | null;
+  /**
+   * The run after the match limit stopped the scan. It is not "text with no
+   * match" — nothing ever looked at it — and the caller has to say so, or the
+   * reader concludes the rest of the subject is clean.
+   */
+  unscanned?: true;
+};
 
 /**
  * The subject cut into alternating plain and matched runs, for rendering.
@@ -255,8 +311,17 @@ export type Segment = { text: string; hit: number | null };
  * the highlighter must never be the thing that interprets it. Zero-length
  * matches produce no segment — there is nothing to paint — so the caller reads
  * their positions from the hit list instead.
+ *
+ * `truncated` is the outcome's own flag. When it is set the tail past the last
+ * hit is marked `unscanned`, because a truncated scan never reached it: painting
+ * that run like ordinary unmatched text would claim a no-match the engine never
+ * reported.
  */
-export function toSegments(input: string, hits: readonly MatchHit[]): Segment[] {
+export function toSegments(
+  input: string,
+  hits: readonly MatchHit[],
+  truncated = false
+): Segment[] {
   const out: Segment[] = [];
   let cursor = 0;
   for (let i = 0; i < hits.length; i += 1) {
@@ -269,7 +334,11 @@ export function toSegments(input: string, hits: readonly MatchHit[]): Segment[] 
     out.push({ text: input.slice(hit.index, hit.index + hit.length), hit: i });
     cursor = hit.index + hit.length;
   }
-  if (cursor < input.length) out.push({ text: input.slice(cursor), hit: null });
+  if (cursor < input.length) {
+    const tail: Segment = { text: input.slice(cursor), hit: null };
+    if (truncated) tail.unscanned = true;
+    out.push(tail);
+  }
   return out;
 }
 

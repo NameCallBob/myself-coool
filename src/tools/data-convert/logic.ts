@@ -28,7 +28,14 @@ export type Format = 'json' | 'yaml' | 'toml' | 'xml' | 'csv' | 'query';
 
 export const FORMATS: Format[] = ['json', 'yaml', 'toml', 'xml', 'csv', 'query'];
 
-/** Input ceiling. Everything here is O(n) but the UI re-parses on every keystroke. */
+/**
+ * Input ceiling, counted in UTF-16 code units — `text.length`, which is O(1) to
+ * check on every keystroke. It is deliberately not a byte count: measuring
+ * UTF-8 bytes would mean walking the whole string on each keystroke, and the
+ * point of the ceiling is to stay cheap. The message says "characters" for the
+ * same reason, because a document at this length is 512 KB of ASCII but about
+ * 1.5 MB of UTF-8 Chinese, and quoting KB would be wrong for one of them.
+ */
 export const MAX_INPUT = 512 * 1024;
 
 /** Nesting ceiling, so a pathological input cannot blow the JS stack. */
@@ -1792,9 +1799,18 @@ export function stringifyCsv(value: Json, options: StringifyOptions = {}): strin
     return `${(value as Json[][]).map((row) => row.map((cell) => csvCell(cell, delimiter)).join(delimiter)).join('\n')}\n`;
   }
   if (value.every(isPlainObject)) {
+    // The column union is collected with a Set rather than `names.includes`:
+    // with a list this loop is O(rows x columns squared), which a 300-column
+    // table inside the 512 K ceiling turns into hundreds of milliseconds on
+    // every keystroke. Order still follows first appearance.
     const names: string[] = [];
+    const seen = new Set<string>();
     for (const row of value as Obj[]) {
-      for (const key of Object.keys(row)) if (!names.includes(key)) names.push(key);
+      for (const key of Object.keys(row)) {
+        if (seen.has(key)) continue;
+        seen.add(key);
+        names.push(key);
+      }
     }
     const lines = (value as Obj[]).map((row) =>
       names.map((key) => csvCell(Object.prototype.hasOwnProperty.call(row, key) ? row[key] : null, delimiter)).join(delimiter)
@@ -1907,18 +1923,50 @@ function countNumericKeys(target: Obj): number {
   return Object.keys(target).filter((key) => /^\d+$/.test(key)).length;
 }
 
-function normalizeQueryArrays(value: Json, depth: number): Json {
-  guardDepth(depth, 'query');
-  if (Array.isArray(value)) return value.map((item) => normalizeQueryArrays(item, depth + 1));
-  if (!isPlainObject(value)) return value;
-  const keys = Object.keys(value);
-  const numeric =
+/**
+ * Whether a map's keys are exactly 0..n-1, which is the rule for reading it back
+ * as a list. Shared with the round-trip warning below so the two can never
+ * disagree about which maps disappear.
+ */
+function readsBackAsArray(keys: string[]): boolean {
+  return (
     keys.length > 0 &&
     keys.every((key) => /^\d+$/.test(key)) &&
     keys
       .map(Number)
       .sort((a, b) => a - b)
-      .every((n, i) => n === i);
+      .every((n, i) => n === i)
+  );
+}
+
+/**
+ * Maps that a query string cannot bring back as maps.
+ *
+ * `{"a":{"0":"x"}}` serializes to `a[0]=x`, and reading that gives `{a:["x"]}`.
+ * The bracket form has no way to say "a map with the key 0", so this is a limit
+ * of the format rather than something to fix — but it is a value changing shape
+ * on the way through, which is exactly the kind of thing that must not be
+ * silent. Fires only for the maps that actually change; `a[]` style lists, and
+ * maps whose numeric keys have gaps, come back as they went in.
+ */
+export function queryRoundTripWarnings(value: Json, path = '$'): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, i) => queryRoundTripWarnings(item, `${path}[${i}]`));
+  }
+  if (!isPlainObject(value)) return [];
+  const keys = Object.keys(value);
+  const here = readsBackAsArray(keys)
+    ? [`${path} 的鍵剛好是 0 到 ${keys.length - 1},寫成 query string 之後再讀回來會變成陣列,不會是原來的物件。`]
+    : [];
+  return [...here, ...keys.flatMap((key) => queryRoundTripWarnings(value[key], `${path}.${key}`))];
+}
+
+function normalizeQueryArrays(value: Json, depth: number): Json {
+  guardDepth(depth, 'query');
+  if (Array.isArray(value)) return value.map((item) => normalizeQueryArrays(item, depth + 1));
+  if (!isPlainObject(value)) return value;
+  const keys = Object.keys(value);
+  const numeric = readsBackAsArray(keys);
   if (numeric) {
     return keys
       .map(Number)
@@ -1974,7 +2022,8 @@ export function stringifyQuery(value: Json, options: StringifyOptions = {}): str
 export function parse(text: string, format: Format, options: ParseOptions = {}): ParseResult {
   if (text.length > MAX_INPUT) {
     throw new ConvertError(
-      `輸入 ${Math.round(text.length / 1024)} KB,超過 ${Math.round(MAX_INPUT / 1024)} KB 上限。` +
+      `輸入 ${text.length} 個字元,超過 ${MAX_INPUT} 字元的上限。` +
+        '上限算的是字元數而不是位元組:一份全中文的文件到這個長度,存成 UTF-8 大約是 1.5 MB。' +
         '這是為了讓每次按鍵都重算還不會卡住,超過的部分請分批處理。',
       format
     );
@@ -2005,7 +2054,10 @@ export function convert(
   options: ParseOptions & StringifyOptions = {}
 ): ConvertResult {
   const parsed = parse(text, from, options);
-  return { text: stringify(parsed.value, to, options), value: parsed.value, warnings: parsed.warnings };
+  const out = stringify(parsed.value, to, options);
+  const warnings =
+    to === 'query' ? [...parsed.warnings, ...queryRoundTripWarnings(parsed.value)] : parsed.warnings;
+  return { text: out, value: parsed.value, warnings };
 }
 
 /* ── Measurements ─────────────────────────── */

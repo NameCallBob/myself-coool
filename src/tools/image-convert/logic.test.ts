@@ -258,6 +258,27 @@ test('advanceQualitySearch climbs to the top of the grid when the budget is gene
   assert.ok(state.best !== null && state.best.bytes <= 5_000_000);
 });
 
+test('the reported quality is at most one percent below the best that would fit', () => {
+  // The convergence rule is "stop when the bracket is two percent wide", which
+  // leaves at most one untried percent between the best measured fit and the
+  // lowest measured overshoot. So the honest claim about the number the UI shows
+  // is "the highest quality that fits, give or take one percent" — one, not two.
+  // Swept over every threshold a monotone encoder can have.
+  let worst = 0;
+  for (let cut = 5; cut <= 99; cut += 1) {
+    const encoder = (q: number) => (Math.round(q * 100) <= cut ? 1000 : 1001);
+    const { state } = runSearch(1000, encoder);
+    assert.ok(state.best !== null, `the budget is reachable at ${cut}%`);
+    const got = Math.round(state.best.quality * 100);
+    assert.ok(got <= cut, `${got}% was reported but only ${cut}% and below fit`);
+    worst = Math.max(worst, cut - got);
+  }
+  assert.equal(worst, 1);
+  // The one exception is a budget nothing overshoots, where the bracket closes
+  // against a ceiling that was never measured: that lands on 0.98, and the test
+  // above pins it.
+});
+
 test('advanceQualitySearch reports an unreachable budget as a miss, not a near miss', () => {
   // The floor of this encoder is 72 500 bytes; the budget is under that.
   const { state, probes } = runSearch(40_000, fakeEncoder);

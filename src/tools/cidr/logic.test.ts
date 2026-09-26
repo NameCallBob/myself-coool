@@ -21,6 +21,7 @@ import {
   rangeToCidrs,
   reversePointer,
   reverseZone,
+  specialBlocks,
   split,
   subnetCount,
 } from './logic.ts';
@@ -185,6 +186,21 @@ test('parseCidr failures are named', () => {
   assert.deepEqual(parseCidr('2001:db8::/255.255.0.0'), { ok: false, code: 'mask-on-ipv6' });
 });
 
+test('a leading zero in the prefix length is refused, like one in an octet', () => {
+  assert.deepEqual(parseCidr('1.2.3.0/024'), { ok: false, code: 'bad-prefix' });
+  assert.deepEqual(parseCidr('1.2.3.0/00'), { ok: false, code: 'bad-prefix' });
+  assert.deepEqual(parseCidr('2001:db8::/048'), { ok: false, code: 'bad-prefix' });
+  // A bare zero is still a prefix length, and a plain one still parses.
+  assert.deepEqual(parseCidr('0.0.0.0/0'), {
+    ok: true,
+    cidr: { family: 4, addr: BigInt(0), prefix: 0 },
+  });
+  assert.deepEqual(parseCidr('1.2.3.0/24'), {
+    ok: true,
+    cidr: { family: 4, addr: parseIPv4('1.2.3.0')!, prefix: 24 },
+  });
+});
+
 test('cidrToString', () => {
   assert.equal(cidrToString({ family: 4, addr: BigInt(3232235776), prefix: 24 }), '192.168.1.0/24');
   assert.equal(cidrToString({ family: 6, addr: BigInt(0), prefix: 0 }), '::/0');
@@ -293,6 +309,40 @@ test('special-purpose blocks are matched longest-prefix-first', () => {
   assert.equal(classify(4, parseIPv4('255.255.255.255')!).id, 'broadcast');
   assert.equal(classify(4, parseIPv4('203.0.113.9')!).id, 'documentation');
   assert.equal(classify(4, parseIPv4('8.8.8.8')!).id, 'global-unicast');
+});
+
+test('the special-purpose table is parsed once at load, not per classify call', () => {
+  const v4 = specialBlocks(4);
+  const v6 = specialBlocks(6);
+  // Same array object every time: nothing is rebuilt, so nothing is re-parsed.
+  assert.equal(specialBlocks(4), v4);
+  assert.equal(specialBlocks(6), v6);
+  assert.equal(v4.length, 20, 'every IPv4 row survived parsing');
+  assert.equal(v6.length, 12, 'every IPv6 row survived parsing');
+  // Each row carries its own parsed form, and it round-trips to the text it
+  // came from — which is also how a typo in the table would show up.
+  for (const entry of [...v4, ...v6]) {
+    assert.equal(cidrToString(entry.cidr), entry.block);
+  }
+});
+
+test('IANA entries the first cut of the table missed', () => {
+  // AS112 is delegated in two places: one inside the old 192.31.196.0/24 block
+  // and one standalone at 192.175.48.0/24 (RFC 7535, RFC 7534).
+  assert.equal(classify(4, parseIPv4('192.31.196.1')!).id, 'as112');
+  assert.equal(classify(4, parseIPv4('192.175.48.1')!).id, 'as112');
+  // Automatic Multicast Tunneling, RFC 7450.
+  assert.equal(classify(4, parseIPv4('192.52.193.1')!).id, 'amt');
+  // 192.0.0.0/29 is the IPv4 service continuity prefix (DS-Lite, RFC 7335) and
+  // sits inside the /24 of IETF protocol assignments, so it wins on length.
+  const dsLite = classify(4, parseIPv4('192.0.0.1')!);
+  assert.equal(dsLite.id, 'ds-lite');
+  assert.equal(dsLite.block, '192.0.0.0/29');
+  assert.equal(classify(4, parseIPv4('192.0.0.8')!).id, 'protocol');
+  // The addresses next door are still nothing in particular.
+  assert.equal(classify(4, parseIPv4('192.31.195.1')!).id, 'global-unicast');
+  assert.equal(classify(4, parseIPv4('192.52.194.1')!).id, 'global-unicast');
+  assert.equal(classify(4, parseIPv4('192.175.49.1')!).id, 'global-unicast');
 });
 
 test('2001:db8::1 is documentation, not Teredo', () => {
@@ -447,8 +497,23 @@ test('counts stay readable at both ends', () => {
   assert.equal(formatBigCount(BigInt(0)), '0');
   assert.equal(formatBigCount(BigInt(254)), '254');
   assert.equal(formatBigCount(BigInt(4294967296)), '4,294,967,296');
-  assert.equal(formatBigCount(BigInt(1) << BigInt(64)), '1.844e19');
+  assert.equal(formatBigCount(BigInt(1) << BigInt(64)), '1.845e19');
   assert.equal(formatBigCount(-BigInt(1)), '—');
+});
+
+test('the mantissa is rounded, not chopped', () => {
+  // 2^64 = 18446744073709551616. Chopping gives 1.844e19 and throws away the 6
+  // that carries the fourth digit up.
+  assert.equal(formatBigCount(BigInt(1) << BigInt(64)), '1.845e19');
+  // 2^128 = 340282366920938463463374607431768211456.
+  assert.equal(formatBigCount(BigInt(1) << BigInt(128)), '3.403e38');
+  // A carry that runs off the end bumps the exponent instead of printing 10.000.
+  assert.equal(formatBigCount(BigInt('9999600000000000')), '1.000e16');
+  // Rounding down still happens.
+  assert.equal(formatBigCount(BigInt('1844400000000000000')), '1.844e18');
+  // The switch to scientific form is at the sixteenth digit, either side of it.
+  assert.equal(formatBigCount(BigInt('999999999999999')), '999,999,999,999,999');
+  assert.equal(formatBigCount(BigInt('1000000000000000')), '1.000e15');
 });
 
 test('powerLabel', () => {

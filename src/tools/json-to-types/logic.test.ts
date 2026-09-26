@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   DEFAULT_EMIT,
   MAX_FIELDS,
+  MAX_MEMBERS,
   SampleTooBig,
   countFields,
   emitGo,
@@ -221,4 +222,63 @@ test('generate() reports parse failures and emits every target', () => {
 test('a tab indent is available for people who use one', () => {
   const code = emitTypeScript(infer({ a: 1 }), { ...DEFAULT_EMIT, indent: 0 });
   assert.match(code, /\ta: number;/);
+});
+
+/* ── Regressions found while writing the "how it works" note ─── */
+
+test('[25] a long array of small records infers rather than hitting the ceiling', () => {
+  const rows = Array.from({ length: 3_000 }, (_, i) => ({ id: i, name: 'x' }));
+  const schema = infer(rows);
+  assert.equal(schemaKey(schema), '[{id:int,name:string}]');
+  assert.equal(countFields(schema), 2);
+  const out = generate(JSON.stringify(rows), 'ts');
+  assert.ok(out.ok);
+  if (out.ok) assert.equal(out.fields, 2);
+});
+
+test('[25] the ceilings bound the work and name what they counted', () => {
+  // One object wider than the distinct-member ceiling is still refused.
+  const wide = Object.fromEntries(Array.from({ length: MAX_FIELDS + 10 }, (_, i) => [`k${i}`, i]));
+  assert.throws(() => infer(wide), SampleTooBig);
+
+  // So is an array whose records share no keys: merging those is what costs,
+  // and the merged object crosses the same ceiling.
+  const heterogeneous = Array.from({ length: MAX_FIELDS + 10 }, (_, i) => ({ [`k${i}`]: i }));
+  const started = performance.now();
+  assert.throws(() => infer(heterogeneous), SampleTooBig);
+  const elapsed = performance.now() - started;
+  assert.ok(elapsed < 3_000, `refusing took ${elapsed.toFixed(0)}ms`);
+
+  // Sheer length is bounded separately, and by a number that counts occurrences.
+  const many = Array.from({ length: MAX_MEMBERS + 10 }, () => ({ a: 1 }));
+  assert.throws(() => infer(many), SampleTooBig);
+  assert.match(new SampleTooBig('fields').message, /5,?000|5000/);
+  assert.match(new SampleTooBig('members').message, /read/);
+});
+
+test('[26] shapes are deduplicated by structure, which shares one name (a trade-off)', () => {
+  // Documented rather than fixed: naming by key instead would emit one
+  // identical interface per key, and a shape used in fifty places fifty times.
+  const code = ts({ from: { lat: 0, lng: 0 }, to: { lat: 0, lng: 0 } });
+  assert.match(code, /export interface From \{/);
+  assert.match(code, /to: From;/);
+  assert.equal(code.match(/lat: number;/g)?.length, 1);
+});
+
+test('[27] the integer guess is reported only where the output encodes it', () => {
+  const schema = infer({ total: 1 });
+  // TypeScript writes `number` whether the sample was 1 or 1.0, so there is no
+  // guess in the output and nothing to warn about.
+  assert.deepEqual(warningsFor(schema, 'ts'), []);
+  for (const target of ['go', 'py', 'zod'] as const) {
+    assert.deepEqual(warningsFor(schema, target), ['integer-guess'], target);
+  }
+  const tsOut = generate('{"total":1}', 'ts');
+  assert.ok(tsOut.ok && tsOut.warnings.length === 0);
+  const goOut = generate('{"total":1}', 'go');
+  assert.ok(goOut.ok && goOut.warnings.includes('integer-guess'));
+  // The other three are about the sample, not the target, and stay put.
+  assert.deepEqual(warningsFor(infer({ tags: [] }), 'ts'), ['empty-array']);
+  assert.deepEqual(warningsFor(infer({ note: null }), 'ts'), ['always-null']);
+  assert.ok(warningsFor(infer([{ v: 1 }, { v: 'x' }]), 'ts').includes('mixed-union'));
 });

@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CITY_ZONES,
+  MAX_INSTANT,
+  MAX_WALL_INSTANT,
   allZones,
   civilFromDayNumber,
   dayNumber,
@@ -13,8 +15,10 @@ import {
   isValidZone,
   nextTransition,
   parseLocalInput,
+  readTransitions,
   readZones,
   resolveZoned,
+  scanAnchor,
   weekdayOf,
   zoneAbbrev,
   zoneOffset,
@@ -291,4 +295,140 @@ test('a half-hour clock change and a skipped whole day are handled like any othe
   const nepal = resolveZoned({ year: 2026, month: 6, day: 1, hour: 9, minute: 0, second: 0 }, 'Asia/Kathmandu');
   assert.equal(nepal.kind, 'exact');
   assert.equal(nepal.offset, 345);
+});
+
+test('the transition scan is anchored to the hour, because it is the expensive part', () => {
+  // The scan is what the table costs: `nextTransition` walks a week at a time
+  // to a 400-day horizon, so a zone that never shifts costs 59 formatter reads
+  // and six zones cost a few hundred. Offsets change twice a year, so the
+  // scan's starting point is quantised to the hour — a clock ticking once a
+  // second must not be able to key this work.
+  const base = Date.UTC(2026, 9, 20, 13, 17, 42);
+  assert.equal(scanAnchor(base), Date.UTC(2026, 9, 20, 13, 0, 0));
+  assert.equal(scanAnchor(base + 1000), scanAnchor(base));
+  assert.equal(scanAnchor(base + 42 * 60_000), scanAnchor(base));
+  assert.notEqual(scanAnchor(base + 3_600_000), scanAnchor(base));
+  assert.equal(scanAnchor(0), 0);
+
+  const zones = ['Europe/Berlin', 'Asia/Taipei', 'UTC', 'America/New_York'];
+  const rows = readTransitions(scanAnchor(base), zones);
+  // Taipei and UTC never shift, so they are absent rather than listed as null.
+  assert.deepEqual(rows.map((row) => row.zone), ['Europe/Berlin', 'America/New_York']);
+  const berlin = rows[0];
+  assert.equal(berlin.at, nextTransition(scanAnchor(base), 'Europe/Berlin'));
+  assert.equal(berlin.at, Date.UTC(2026, 9, 25, 1, 0, 0));
+  assert.equal(berlin.from, 120);
+  assert.equal(berlin.to, 60);
+  assert.equal(formatCivil(berlin.local), '2026-10-25 02:00');
+  // Sorted by the instant of the change, earliest first.
+  assert.ok(rows[0].at < rows[1].at);
+  // Invalid zones are dropped the way readZones drops them, not thrown at.
+  assert.deepEqual(readTransitions(scanAnchor(base), ['Nowhere/Nothing']), []);
+
+  // And the cost, measured: this is why the anchor exists.
+  const proto = Intl.DateTimeFormat.prototype;
+  const original = proto.formatToParts;
+  let reads = 0;
+  proto.formatToParts = function patched(this: Intl.DateTimeFormat, date?: Date | number) {
+    reads += 1;
+    return original.call(this, date);
+  };
+  try {
+    readTransitions(scanAnchor(base), zones);
+  } finally {
+    proto.formatToParts = original;
+  }
+  assert.ok(reads > 150, `the scan costs ${reads} formatter reads, so it must not run per tick`);
+});
+
+test('a wall clock outside the representable range is refused, not turned into NaN', () => {
+  // The year pattern accepts four to six digits, and `Date.UTC` runs out at
+  // ±8.64e15 ms. Past that `new Date(instant)` is invalid, and formatToParts
+  // either throws (V8) or returns no year at all, which used to read back as
+  // NaN through every column.
+  assert.equal(parseLocalInput('999999-01-01T00:00'), null);
+  assert.equal(parseLocalInput('-271821-01-01T00:00'), null);
+  // Year 0-99 would be silently relocated: Date.UTC maps them into 1900-1999,
+  // so 0001 came back as 1901 and the round-trip check still passed.
+  assert.equal(parseLocalInput('0001-06-15T12:00'), null);
+  assert.equal(parseLocalInput('0099-06-15T12:00'), null);
+  // A BC year reads back positive from a formatter with no era (-500 -> 501).
+  assert.equal(parseLocalInput('-000500-06-15T12:00'), null);
+  // The edges that do work still work.
+  assert.equal(parseLocalInput('0100-06-15T12:00')?.year, 100);
+  assert.equal(parseLocalInput('275760-01-01T00:00')?.year, 275760);
+  assert.equal(parseLocalInput('275761-01-01T00:00'), null);
+  assert.equal(parseLocalInput('9999-12-31T23:59')?.year, 9999);
+
+  // And the chokepoint itself refuses loudly rather than leaking NaN.
+  assert.throws(() => zoneParts(Number.NaN, 'Asia/Taipei'), RangeError);
+  assert.throws(() => zoneParts(MAX_INSTANT + 1, 'Asia/Taipei'), RangeError);
+  assert.throws(() => zoneParts(-MAX_INSTANT - 1, 'Asia/Taipei'), RangeError);
+  assert.equal(zoneParts(MAX_INSTANT, 'UTC').year, 275760);
+
+  // Nothing downstream may walk off the end either: the 400-day horizon is
+  // clamped, so scanning from the last usable wall clock stays inside the range
+  // instead of probing an invalid date and reading NaN as a transition.
+  assert.equal(nextTransition(MAX_WALL_INSTANT, 'Europe/Berlin'), null);
+  assert.equal(nextTransition(MAX_WALL_INSTANT - 5 * 86_400_000, 'Pacific/Auckland'), null);
+  const late = resolveZoned(parseLocalInput('275760-01-01T00:00')!, 'Asia/Taipei');
+  assert.equal(late.kind, 'exact');
+  assert.equal(nextTransition(late.instant, 'Asia/Taipei'), null);
+  // And an eastern zone read at the hard edge says so rather than answering NaN.
+  assert.throws(() => zoneOffset(MAX_INSTANT, 'Asia/Taipei'), RangeError);
+});
+
+test('an unrepresentable wall clock is not called a gap', () => {
+  // Paris kept local mean time +00:09:21 until 1891. `zoneOffset` rounds to
+  // the minute, so no candidate ever formats back to an exact 12:00:00 and the
+  // resolver found zero matches — which it used to report as 'gap', a claim
+  // that clocks jumped that day. They did not: the offset a day either side is
+  // identical, so there is no transition to straddle.
+  const paris = resolveZoned({ year: 1850, month: 6, day: 15, hour: 12, minute: 0, second: 0 }, 'Europe/Paris');
+  assert.equal(paris.kind, 'inexact');
+  assert.equal(zoneOffset(Date.UTC(1850, 5, 14, 12), 'Europe/Paris'), zoneOffset(Date.UTC(1850, 5, 16, 12), 'Europe/Paris'));
+  // The nearest instant is still returned, and it is within a minute.
+  assert.ok(Math.abs(paris.instant - Date.UTC(1850, 5, 15, 11, 50, 39)) < 60_000);
+  for (const [zone, year] of [['America/New_York', 1850], ['Asia/Tokyo', 1880], ['Asia/Kolkata', 1880]] as const) {
+    assert.equal(
+      resolveZoned({ year, month: 6, day: 15, hour: 12, minute: 0, second: 0 }, zone).kind,
+      'inexact',
+      zone
+    );
+  }
+  // Real gaps keep their name: those do straddle a transition.
+  assert.equal(
+    resolveZoned({ year: 2024, month: 3, day: 10, hour: 2, minute: 30, second: 0 }, 'America/New_York').kind,
+    'gap'
+  );
+  assert.equal(
+    resolveZoned({ year: 2011, month: 12, day: 30, hour: 12, minute: 0, second: 0 }, 'Pacific/Apia').kind,
+    'gap'
+  );
+});
+
+test('the DST flag is an inference, and Morocco is where the inference bends', () => {
+  // A documented limitation rather than a fix: nothing in Intl exposes a DST
+  // flag, so this compares January with July. Morocco keeps +01 all year and
+  // falls back to +00 for Ramadan, which drifts about eleven days earlier each
+  // year; in years where Ramadan covers 1 January the January probe reads +00
+  // and every non-Ramadan day is then flagged as summer time.
+  const year = [2028, 2029, 2030, 2031, 2032, 2033, 2046, 2047, 2048, 2049].find(
+    (y) =>
+      zoneOffset(Date.UTC(y, 0, 1, 12), 'Africa/Casablanca') !==
+      zoneOffset(Date.UTC(y, 6, 1, 12), 'Africa/Casablanca')
+  );
+  if (year !== undefined) {
+    const january = zoneOffset(Date.UTC(year, 0, 1, 12), 'Africa/Casablanca');
+    const july = zoneOffset(Date.UTC(year, 6, 1, 12), 'Africa/Casablanca');
+    const onPlusOne = january > july ? Date.UTC(year, 0, 1, 12) : Date.UTC(year, 6, 1, 12);
+    // IANA models those +01 months as DST over a +00 standard offset, so the
+    // flag agrees with the zone database even though it reads oddly on screen.
+    assert.equal(isDaylight(onPlusOne, 'Africa/Casablanca'), true);
+  }
+  // Dublin is the same shape mirrored: IANA calls its winter the shifted
+  // offset, this flag calls its summer one. Any rule that unflags Morocco
+  // unflags Dublin's summer too, which is why the heuristic stays.
+  assert.equal(isDaylight(Date.UTC(2026, 6, 15, 12), 'Europe/Dublin'), true);
+  assert.equal(isDaylight(Date.UTC(2026, 0, 15, 12), 'Europe/Dublin'), false);
 });

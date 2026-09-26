@@ -108,8 +108,8 @@ export default function UnitConvert({ l }: ToolProps) {
               invalid={amount.trim() !== '' && Number.isNaN(value)}
               hint={t(
                 l,
-                '可以貼千分位、全形數字或 1.5e3 這種寫法。',
-                'Thousands separators, full-width digits and 1.5e3 all parse.'
+                '可以貼千分位、全形數字或 1.5e3 這種寫法。逗號與空白只認三位一組的千分位,「1 2」會被當成打錯而不是 12。',
+                'Thousands separators, full-width digits and 1.5e3 all parse. A comma or space is only read as grouping in threes, so "1 2" is refused rather than read as 12.'
               )}
             />
             <Select

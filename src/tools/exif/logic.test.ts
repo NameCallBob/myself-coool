@@ -13,6 +13,8 @@ import {
   scanPngChunks,
   stripMetadata,
   tagName,
+  u16be,
+  u32be,
   type Entry,
 } from './logic.ts';
 
@@ -189,6 +191,25 @@ test('the declared ceilings are the ones the reader enforces', () => {
   assert.match(report.warnings.join('\n'), /larger than/);
 });
 
+/* ── byte readers ────────────────────────────────────────────────────── */
+
+test('the big-endian readers refuse to read past the end of the buffer', () => {
+  const data = new Uint8Array([0x12, 0x34, 0x56, 0x78]);
+  assert.equal(u16be(data, 0), 0x1234);
+  assert.equal(u16be(data, 2), 0x5678);
+  assert.equal(u32be(data, 0), 0x12345678);
+  // The high byte is not a sign bit: this is a length, not a negative number.
+  assert.equal(u32be(new Uint8Array([0xff, 0xff, 0xff, 0xff]), 0), 4294967295);
+  // A short read is the dangerous case, because it is not visibly wrong: the
+  // missing bytes read as `undefined`, which ORs in as zero, so a u16 at byte 3
+  // came back as 0x7800 — a number that looks exactly like a segment length.
+  assert.throws(() => u16be(data, 3), /past the end/);
+  assert.throws(() => u16be(data, 4), /past the end/);
+  assert.throws(() => u16be(data, -1), /past the end/);
+  assert.throws(() => u32be(data, 1), /past the end/);
+  assert.throws(() => u32be(data, 4), /past the end/);
+});
+
 /* ── JPEG segments ───────────────────────────────────────────────────── */
 
 test('the segment chain is read up to the scan, fill bytes included', () => {
@@ -308,6 +329,36 @@ test('an IFD that links to itself stops instead of looping', () => {
   const parsed = parseTiffBlock(block);
   assert.equal(parsed.ifds.length, 1);
   assert.match(parsed.warnings.join('\n'), /links back to itself/);
+});
+
+test('a truncated IFD does not invent an IFD1 from the wrong offset', () => {
+  // 42 bytes by hand. IFD0 claims 100 entries; the block only has room for two,
+  // so the next-IFD pointer belongs at 8 + 2 + 100*12 — past the end, meaning
+  // there is no IFD1. Reading it at 8 + 2 + 2*12 instead lands on byte 34, which
+  // here holds 38: the offset of a plausible-looking table that is not an IFD.
+  const block = new Uint8Array(42);
+  const view = new DataView(block.buffer);
+  block[0] = 0x49;
+  block[1] = 0x49;
+  view.setUint16(2, 42, true);
+  view.setUint32(4, 8, true); // IFD0 at byte 8
+  view.setUint16(8, 100, true); // …declaring a hundred entries
+  const entry = (at: number, tag: number, value: number) => {
+    view.setUint16(at, tag, true);
+    view.setUint16(at + 2, 3, true); // SHORT
+    view.setUint32(at + 4, 1, true);
+    view.setUint16(at + 8, value, true);
+  };
+  entry(10, 0x0112, 6); // Orientation
+  entry(22, 0x0128, 2); // ResolutionUnit
+  view.setUint32(34, 38, true); // the bogus pointer the short read would follow
+  view.setUint16(38, 1, true); // and the table it points at
+
+  const parsed = parseTiffBlock(block);
+  assert.deepEqual(parsed.ifds.map((i) => i.name), ['ifd0']);
+  assert.deepEqual(parsed.ifds[0].entries.map((e) => e.tag), [0x0112, 0x0128]);
+  assert.match(parsed.warnings.join('\n'), /IFD at offset 8 declares 100 entries; read 2/);
+  assert.doesNotMatch(parsed.warnings.join('\n'), /offset 38/);
 });
 
 test('an unknown value type is skipped rather than mis-sized', () => {

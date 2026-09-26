@@ -169,8 +169,8 @@ export default function DataConvert({ l }: ToolProps) {
               label={t(l, `${LABEL[from]} 輸入`, `${LABEL[from]} in`)}
               hint={t(
                 l,
-                `上限 ${Math.round(MAX_INPUT / 1024)} KB。每次按鍵都重算,不用按送出。`,
-                `Up to ${Math.round(MAX_INPUT / 1024)} KB. Recomputed on every keystroke — there is no submit.`
+                `上限 ${count(MAX_INPUT)} 個字元(算字元不算位元組,全中文大約是 1.5 MB)。每次按鍵都重算,不用按送出。`,
+                `Up to ${count(MAX_INPUT)} characters — counted in characters, not bytes, so a Chinese document reaches it at about 1.5 MB. Recomputed on every keystroke; there is no submit.`
               )}
               value={text}
               onChange={setText}
@@ -381,8 +381,8 @@ export default function DataConvert({ l }: ToolProps) {
               ),
               t(
                 l,
-                '值一律是字串(這一層沒有型別)。同一個鍵同時當值和容器會報錯。',
-                'Values are always strings — the format has no types. Using one key as both a value and a container is an error.'
+                '值一律是字串(這一層沒有型別)。同一個鍵同時當值和容器會報錯。鍵剛好是 0 到 n-1 的物件寫出去之後會被讀回成陣列,轉換時會提示。',
+                'Values are always strings — the format has no types. Using one key as both a value and a container is an error. A map whose keys are exactly 0..n-1 reads back as a list, and the conversion says so.'
               ),
             ],
           ]}

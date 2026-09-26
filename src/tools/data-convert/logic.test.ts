@@ -13,6 +13,7 @@ import {
   parseToml,
   parseXml,
   parseYaml,
+  queryRoundTripWarnings,
   shape,
   sortDeep,
   stringify,
@@ -732,4 +733,77 @@ test('a key named __proto__ stays a key and never touches the prototype', () => 
   }
   const csv = parseCsv('__proto__\n1\n').value as { [key: string]: Json }[];
   assert.ok(Object.prototype.hasOwnProperty.call(csv[0], '__proto__'));
+});
+
+/* ── Regressions found while writing the "how it works" note ─── */
+
+test('[16] key sorting is code-unit order, the same rule C01 (json-format) uses', () => {
+  const sorted = sortDeep({ b: 1, B: 2, a: 3, A: 4, _z: 5, Z: 6 });
+  assert.deepEqual(Object.keys(sorted as object), ['A', 'B', 'Z', '_z', 'a', 'b']);
+  // Not a locale collation: 'B' sorts before 'a' because 0x42 < 0x61.
+  assert.equal(stringifyJson({ b: 1, A: 2 }, { sortKeys: true, indent: 0 }), '{"A":2,"b":1}');
+});
+
+test('[19] a wide table costs no more than a tall one with the same cell count', () => {
+  const build = (rows: number, cols: number): Json => {
+    const row: { [key: string]: Json } = {};
+    for (let c = 0; c < cols; c += 1) row[`column_${c}`] = 'v';
+    return Array.from({ length: rows }, () => ({ ...row }));
+  };
+  const time = (value: Json) => {
+    const started = performance.now();
+    assert.ok(stringifyCsv(value).length > 0);
+    return performance.now() - started;
+  };
+  time(build(50, 50));
+  const tall = time(build(2_000, 300));
+  const wide = time(build(300, 2_000));
+  // Same 600,000 cells either way. Collecting the column union with
+  // Array.includes makes the wide one several times more expensive.
+  assert.ok(wide < Math.max(tall, 1) * 2.5, `tall ${tall.toFixed(0)}ms, wide ${wide.toFixed(0)}ms`);
+});
+
+test('[20] the input ceiling is reported in the unit it actually measures', () => {
+  const huge = '中'.repeat(MAX_INPUT + 1);
+  assert.throws(
+    () => parse(huge, 'json'),
+    (error: unknown) => {
+      assert.ok(error instanceof ConvertError);
+      // The check counts UTF-16 code units, so the message must not report the
+      // input's size in KB: this input is 512 K characters, which is about
+      // 1.5 MB of UTF-8, not the 513 KB the old wording claimed.
+      assert.match(error.message, /字元/);
+      assert.equal(/KB/.test(error.message), false);
+      assert.ok(error.message.includes(String(MAX_INPUT)));
+      assert.ok(error.message.includes(String(huge.length)));
+      return true;
+    }
+  );
+});
+
+test('[21] a map with keys 0..n-1 cannot survive a query round trip, and says so', () => {
+  const result = convert('{"a":{"0":"x"}}', 'json', 'query');
+  assert.equal(result.text, 'a[0]=x');
+  assert.equal(result.warnings.length, 1);
+  assert.match(result.warnings[0], /陣列/);
+  // The warning is true: reading it back gives a list, not the original map.
+  assert.deepEqual(parseQuery(result.text).value, { a: ['x'] });
+
+  // The root itself counts.
+  assert.equal(convert('{"0":"a","1":"b"}', 'json', 'query').warnings.length, 1);
+
+  // A map whose numeric keys are not 0..n-1 round-trips, so it stays quiet.
+  const quiet = convert('{"a":{"1":"x"}}', 'json', 'query');
+  assert.deepEqual(quiet.warnings, []);
+  assert.deepEqual(parseQuery(quiet.text).value, { a: { 1: 'x' } });
+  // So does an ordinary document.
+  assert.deepEqual(convert('{"a":["x","y"],"b":{"c":"1"}}', 'json', 'query').warnings, []);
+
+  // The predicate itself, including a nested map and a map inside a list.
+  assert.equal(queryRoundTripWarnings({ a: { 0: 'x', 1: 'y' } }).length, 1);
+  assert.match(queryRoundTripWarnings({ a: { 0: 'x' } })[0], /\$\.a/);
+  assert.equal(queryRoundTripWarnings([{ 0: 'x' }])[0].startsWith('$[0] '), true);
+  assert.deepEqual(queryRoundTripWarnings({ a: { 2: 'x' } }), []);
+  assert.deepEqual(queryRoundTripWarnings('plain'), []);
+  assert.deepEqual(queryRoundTripWarnings({}), []);
 });

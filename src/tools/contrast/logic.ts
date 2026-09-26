@@ -250,7 +250,13 @@ export function parseColor(input: string): Color | null {
     const a = num(parts[1], 0.4);
     const b = num(parts[2], 0.4);
     if (li === null || a === null || b === null) return null;
-    return { rgb: clip(oklabToRgb({ l: li, a, b })), alpha };
+    // The rectangular form of the same colour, so it goes down the same route
+    // as oklch(): reduce chroma, do not clip. Clipping an out-of-gamut value
+    // moves the hue and the lightness, and then the ratio printed on screen
+    // belongs to a colour nobody asked about.
+    const c = Math.hypot(a, b);
+    const h = c < 1e-7 ? 0 : ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+    return { rgb: toGamut({ l: li, c, h }), alpha };
   }
   return null;
 }
@@ -374,6 +380,7 @@ export function apcaLc(text: Rgb, background: Rgb): number {
 
 export type ApcaBand =
   | 'invisible'
+  | 'discernible'
   | 'non-text'
   | 'large-only'
   | 'sub-body'
@@ -386,6 +393,15 @@ export type ApcaBand =
  * These are guidance from the APCA documentation, not a conformance test —
  * APCA's real interface is a lookup table over font size and weight, and
  * quoting a band is an honest summary of it rather than a pretend verdict.
+ *
+ * The thresholds are the six levels APCA publishes, and the two at the bottom
+ * are easy to run together and must not be: Lc 30 is the absolute minimum for
+ * any text at all (placeholder, disabled) and also the minimum for solid,
+ * semantic non-text such as an icon that has to be understood. Lc 15 is only
+ * the floor for non-text that has to be *discernible and differentiable* and is
+ * at least 5px in its smallest dimension; below it a designer should treat the
+ * element as invisible. So Lc 15–30 carries no content of any kind, which is
+ * why it gets its own band instead of being folded into the non-text one.
  */
 export function apcaBand(lc: number): ApcaBand {
   const v = Math.abs(lc);
@@ -393,7 +409,8 @@ export function apcaBand(lc: number): ApcaBand {
   if (v >= 75) return 'body-min';
   if (v >= 60) return 'sub-body';
   if (v >= 45) return 'large-only';
-  if (v >= 15) return 'non-text';
+  if (v >= 30) return 'non-text';
+  if (v >= 15) return 'discernible';
   return 'invisible';
 }
 

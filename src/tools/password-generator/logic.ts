@@ -43,9 +43,17 @@ export type Options = {
 export const MIN_LENGTH = 4;
 export const MAX_LENGTH = 128;
 
+/**
+ * The pool a password is drawn from: the chosen sets, minus look-alikes.
+ *
+ * No sets chosen means an empty pool, deliberately. Falling back to lowercase
+ * here — which this used to do — produced a lowercase-only password for options
+ * that said "none of the four types", and reported the entropy of a set nobody
+ * asked for. `generate` raises `ImpossibleOptions` instead, which is the one
+ * honest answer: the user's selection cannot make a password.
+ */
 export function alphabetFor(options: Options): string {
-  const used = options.sets.length > 0 ? options.sets : (['lower'] as SetId[]);
-  const joined = used.map((id) => CHARSETS[id]).join('');
+  const joined = options.sets.map((id) => CHARSETS[id]).join('');
   const cleaned = options.avoidAmbiguous
     ? [...joined].filter((ch) => !AMBIGUOUS.includes(ch)).join('')
     : joined;
@@ -54,8 +62,7 @@ export function alphabetFor(options: Options): string {
 
 /** Per-set alphabets after the ambiguity filter — what the constraint checks. */
 function setsFor(options: Options): string[] {
-  const used = options.sets.length > 0 ? options.sets : (['lower'] as SetId[]);
-  return used
+  return options.sets
     .map((id) =>
       options.avoidAmbiguous
         ? [...CHARSETS[id]].filter((ch) => !AMBIGUOUS.includes(ch)).join('')
@@ -109,8 +116,13 @@ export function entropyOf(options: Options): number {
 }
 
 export function satisfies(password: string, options: Options): boolean {
+  const sets = setsFor(options);
+  // With nothing to draw from, no string qualifies. `every` over an empty list
+  // is vacuously true, and answering "yes" for options that cannot produce a
+  // password at all is the sort of true statement that misleads.
+  if (sets.length === 0) return false;
   if (!options.requireEach) return true;
-  return setsFor(options).every((set) => [...password].some((ch) => set.includes(ch)));
+  return sets.every((set) => [...password].some((ch) => set.includes(ch)));
 }
 
 export class ImpossibleOptions extends Error {
@@ -128,6 +140,7 @@ export class ImpossibleOptions extends Error {
  */
 export function generate(options: Options, randomIndex: (max: number) => number): string {
   const alphabet = alphabetFor(options);
+  if (options.sets.length === 0) throw new ImpossibleOptions('no character types are selected');
   if (alphabet.length === 0) throw new ImpossibleOptions('no characters left to choose from');
   const sets = setsFor(options);
   if (options.requireEach && options.length < sets.length) {
@@ -165,12 +178,29 @@ export function strengthOf(bits: number): Strength {
 }
 
 /**
+ * The attacker this drawer assumes, in SHA-256 compressions per second.
+ *
+ * hashcat's own benchmark puts a single RTX 4090 at roughly 2.2e10 raw SHA-256
+ * hashes a second (mode 1400, hashcat 6.2.6), and a short password is one
+ * compression per hash. 1e11 is therefore a rented box of four or five such
+ * cards, rounded to one significant figure — a well-funded individual rather
+ * than a state.
+ *
+ * E07 (aes-encrypt) declares the identical constant and divides it by two
+ * compressions per PBKDF2 iteration. Keep the two in step: the two pages'
+ * figures are read side by side, and they previously disagreed by a factor of
+ * ten while both claiming to describe a 2024-era commodity GPU.
+ */
+export const GPU_SHA256_PER_SECOND = 1e11;
+
+/**
  * Time to exhaust half the keyspace at `guessesPerSecond`.
  *
- * The default rate is an offline attack on a fast hash with commodity GPUs —
- * the assumption worth designing against, and far harsher than an online one.
+ * The default is `GPU_SHA256_PER_SECOND`: an offline attack on a fast unsalted
+ * hash, where one guess costs one compression. That is the assumption worth
+ * designing against, and far harsher than an online one.
  */
-export function crackTime(bits: number, guessesPerSecond = 1e11): string {
+export function crackTime(bits: number, guessesPerSecond = GPU_SHA256_PER_SECOND): string {
   if (bits <= 0) return 'instantly';
   const seconds = 2 ** (bits - 1) / guessesPerSecond;
   const units: [number, string][] = [

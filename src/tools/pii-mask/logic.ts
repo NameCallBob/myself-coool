@@ -20,7 +20,15 @@
 /** Longer than this and the tab stops being responsive; refuse instead. */
 export const MAX_INPUT = 500_000;
 
-/** Safety net on the scan loop. */
+/**
+ * Safety net on the scan loop, counted over the whole scan.
+ *
+ * It is a budget shared out between the enabled detectors rather than a
+ * first-come cap: a cap that simply stopped the loop would let a log whose head
+ * is full of JWTs use up the whole allowance before the e-mail and IP detectors
+ * had run once, and the output would look redacted while carrying every address
+ * in the file. See `scan`.
+ */
 export const MAX_MATCHES = 20_000;
 
 export type DetectorId =
@@ -75,9 +83,24 @@ export function isLuhnValid(number: string): boolean {
 /** Letter codes 10–35, in the published (non-alphabetical) order. */
 const ID_LETTERS = 'ABCDEFGHJKLMNPQRSTUVXYWZIO';
 
+/**
+ * 身分證字號 and the 2021 統一證號, which share one formula.
+ *
+ * The second character says which: `1`/`2` is a national ID, `8`/`9` a resident
+ * certificate issued under the 2021 scheme (published example `A800000014`).
+ * The weights are identical in both — the letter expands to its two-digit code,
+ * the eight middle digits carry weights 8 down to 1, and the whole thing plus
+ * the check digit is a multiple of ten. Only the accepted second digit differs,
+ * which is why widening the class is the entire change; a resident certificate
+ * left out of the class is not "not matched", it is silently not redacted.
+ *
+ * The pre-2021 two-letter form (`AB12345678`) is deliberately not accepted: its
+ * second character is a letter with its own code table, and the tool would have
+ * to guess at a rule that has been superseded.
+ */
 export function isTwIdValid(id: string): boolean {
   const clean = id.trim().toUpperCase();
-  if (!/^[A-Z][12]\d{8}$/.test(clean)) return false;
+  if (!/^[A-Z][1289]\d{8}$/.test(clean)) return false;
   const code = ID_LETTERS.indexOf(clean[0]) + 10;
   if (code < 10) return false;
   let sum = Math.floor(code / 10) + (code % 10) * 9;
@@ -261,7 +284,7 @@ export const DETECTORS: readonly Detector[] = [
   {
     id: 'twId',
     label: 'TWID',
-    pattern: /\b[A-Za-z][12]\d{8}\b/g,
+    pattern: /\b[A-Za-z][1289]\d{8}\b/g,
     priority: 66,
     standard: true,
     validate: isTwIdValid,
@@ -357,7 +380,15 @@ export type Match = {
   ordinal: number;
 };
 
-export type ScanResult = { matches: Match[]; truncated: boolean };
+export type ScanResult = {
+  matches: Match[];
+  truncated: boolean;
+  /**
+   * Detectors whose own scan hit the budget and stopped early — the categories
+   * the result under-reports. Empty whenever `truncated` is false.
+   */
+  truncatedIds: DetectorId[];
+};
 
 /**
  * All matches, overlaps resolved.
@@ -367,40 +398,68 @@ export type ScanResult = { matches: Match[]; truncated: boolean };
  * then swept left to right, taking the highest-priority match at each position
  * and skipping anything that would overlap what was already taken — which is why
  * the specific detectors carry higher priorities than the generic ones.
+ *
+ * `MAX_MATCHES` is shared out in rounds rather than spent first-come. Each
+ * pending detector gets an equal slice of what is left, keeps its own
+ * `lastIndex`, and the detectors that finish inside their slice hand the
+ * remainder back to the ones that did not — so a log whose first 300 KB is
+ * nothing but JWTs still gets its e-mail addresses and IPs scanned, and what the
+ * result loses is the tail of the JWTs, named in `truncatedIds`.
+ *
+ * Each round either retires a detector or spends at least one match of the
+ * budget, so the loop terminates and the total stays at or under the cap.
  */
 export function scan(text: string, enabled: readonly DetectorId[]): ScanResult {
   if (text.length > MAX_INPUT) throw new InputTooLarge(text.length);
 
   const found: { id: DetectorId; at: number; length: number; value: string; priority: number }[] = [];
-  let truncated = false;
 
-  for (const detector of DETECTORS) {
-    if (!enabled.includes(detector.id)) continue;
-    const pattern = new RegExp(detector.pattern.source, detector.pattern.flags);
-    pattern.lastIndex = 0;
-    for (;;) {
-      const hit = pattern.exec(text);
-      if (hit === null) break;
-      if (hit[0] === '') {
-        pattern.lastIndex += 1;
+  let pending = DETECTORS.filter((detector) => enabled.includes(detector.id)).map((detector) => ({
+    detector,
+    pattern: new RegExp(detector.pattern.source, detector.pattern.flags),
+  }));
+  let budget = MAX_MATCHES;
+
+  while (pending.length > 0 && budget > 0) {
+    const share = Math.max(1, Math.floor(budget / pending.length));
+    const stillPending: typeof pending = [];
+
+    for (const pass of pending) {
+      if (budget <= 0) {
+        stillPending.push(pass);
         continue;
       }
-      if (!detector.validate || detector.validate(hit[0])) {
+      const quota = Math.min(share, budget);
+      let taken = 0;
+      let exhausted = false;
+      while (taken < quota) {
+        const hit = pass.pattern.exec(text);
+        if (hit === null) {
+          exhausted = true;
+          break;
+        }
+        if (hit[0] === '') {
+          pass.pattern.lastIndex += 1;
+          continue;
+        }
+        if (pass.detector.validate && !pass.detector.validate(hit[0])) continue;
         found.push({
-          id: detector.id,
+          id: pass.detector.id,
           at: hit.index,
           length: hit[0].length,
           value: hit[0],
-          priority: detector.priority,
+          priority: pass.detector.priority,
         });
-        if (found.length >= MAX_MATCHES) {
-          truncated = true;
-          break;
-        }
+        taken += 1;
       }
+      budget -= taken;
+      if (!exhausted) stillPending.push(pass);
     }
-    if (truncated) break;
+
+    pending = stillPending;
   }
+
+  const truncatedIds = pending.map((pass) => pass.detector.id);
 
   found.sort((a, b) => a.at - b.at || b.priority - a.priority || b.length - a.length);
 
@@ -424,7 +483,7 @@ export function scan(text: string, enabled: readonly DetectorId[]): ScanResult {
     cursor = hit.at + hit.length;
   }
 
-  return { matches, truncated };
+  return { matches, truncated: truncatedIds.length > 0, truncatedIds };
 }
 
 /** What one match is replaced with, in the chosen mode. */
@@ -445,6 +504,8 @@ export type RedactResult = {
   /** Distinct values per detector — how many different people or hosts. */
   distinct: Record<string, number>;
   truncated: boolean;
+  /** Which categories stopped early. The UI has to name them, not just say "cut". */
+  truncatedIds: DetectorId[];
 };
 
 export function redact(text: string, enabled: readonly DetectorId[], mode: Mode): RedactResult {
@@ -463,7 +524,14 @@ export function redact(text: string, enabled: readonly DetectorId[], mode: Mode)
   }
   out += text.slice(cursor);
 
-  return { text: out, matches: scanned.matches, counts, distinct, truncated: scanned.truncated };
+  return {
+    text: out,
+    matches: scanned.matches,
+    counts,
+    distinct,
+    truncated: scanned.truncated,
+    truncatedIds: scanned.truncatedIds,
+  };
 }
 
 export type Segment = { text: string; id: DetectorId | null };

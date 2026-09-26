@@ -30,14 +30,37 @@ export type Field = { name: string; schema: Schema; optional: boolean };
 
 /** Nesting levels inferred before giving up. */
 export const MAX_DEPTH = 64;
-/** Distinct members across the whole document before giving up. */
+/**
+ * Distinct members one object may end up with, counted after merging.
+ *
+ * This is the ceiling that bounds the work: merging an object costs a pass over
+ * the members it already has, so an array of records that share no keys is
+ * quadratic in this number and nothing else. 5,000 distinct members keeps the
+ * refusal itself under a second.
+ */
 export const MAX_FIELDS = 5_000;
+/**
+ * Member occurrences read while walking the sample — every occurrence, not
+ * distinct names.
+ *
+ * It has to be its own, much larger number: a 3,000-record array of two-field
+ * objects is 6,000 occurrences and exactly two members, and refusing it would
+ * be refusing the most ordinary thing anyone pastes here. Walking is linear, so
+ * this only bounds patience, not a quadratic.
+ */
+export const MAX_MEMBERS = 100_000;
 
 export class SampleTooBig extends Error {
-  readonly reason: 'depth' | 'fields';
+  readonly reason: 'depth' | 'fields' | 'members';
 
-  constructor(reason: 'depth' | 'fields') {
-    super(reason === 'depth' ? `nesting deeper than ${MAX_DEPTH}` : `more than ${MAX_FIELDS} members`);
+  constructor(reason: 'depth' | 'fields' | 'members') {
+    super(
+      reason === 'depth'
+        ? `nesting deeper than ${MAX_DEPTH}`
+        : reason === 'fields'
+          ? `one object reached more than ${MAX_FIELDS} distinct members`
+          : `more than ${MAX_MEMBERS} members read from the sample`
+    );
     this.name = 'SampleTooBig';
     this.reason = reason;
   }
@@ -126,12 +149,15 @@ export function mergeSchema(a: Schema, b: Schema): Schema {
     for (const field of b.fields) {
       if (!aNames.has(field.name)) fields.push({ ...field, optional: true });
     }
+    // The merged width is what makes merging expensive, so the ceiling belongs
+    // here as well as on a single literal object.
+    if (fields.length > MAX_FIELDS) throw new SampleTooBig('fields');
     return { k: 'object', fields };
   }
   return a;
 }
 
-export function infer(value: unknown, depth = 0, budget = { fields: 0 }): Schema {
+export function infer(value: unknown, depth = 0, budget = { members: 0 }): Schema {
   if (depth > MAX_DEPTH) throw new SampleTooBig('depth');
   if (value === null) return { k: 'null' };
   if (Array.isArray(value)) {
@@ -142,10 +168,11 @@ export function infer(value: unknown, depth = 0, budget = { fields: 0 }): Schema
   if (isRecord(value)) {
     const fields: Field[] = [];
     for (const [name, member] of Object.entries(value)) {
-      budget.fields += 1;
-      if (budget.fields > MAX_FIELDS) throw new SampleTooBig('fields');
+      budget.members += 1;
+      if (budget.members > MAX_MEMBERS) throw new SampleTooBig('members');
       fields.push({ name, schema: infer(member, depth + 1, budget), optional: false });
     }
+    if (fields.length > MAX_FIELDS) throw new SampleTooBig('fields');
     return { k: 'object', fields };
   }
   const t = typeof value;
@@ -188,7 +215,17 @@ export function singular(name: string): string {
   return name;
 }
 
-type Naming = { taken: Set<string>; byShape: Map<string, string> };
+/**
+ * `emitted` holds the names whose declaration is already in the output. It is a
+ * Set rather than a scan over the emitted blocks: with a sample that produces
+ * thousands of distinct shapes, re-scanning every block for every object is
+ * quadratic in the number of declarations.
+ */
+type Naming = { taken: Set<string>; byShape: Map<string, string>; emitted: Set<string> };
+
+function freshNaming(): Naming {
+  return { taken: new Set(), byShape: new Map(), emitted: new Set() };
+}
 
 /** One declared name per distinct object shape, deduplicated by structure. */
 function nameFor(schema: Schema, hint: string, naming: Naming): string {
@@ -267,7 +304,8 @@ function tsType(schema: Schema, hint: string, naming: Naming, out: string[], opt
       return `${bare.options.map((option) => tsType(option, hint, naming, out, options)).join(' | ')}${suffix}`;
     case 'object': {
       const name = nameFor(bare, hint, naming);
-      if (!out.some((block) => block.startsWith(`export interface ${name} `))) {
+      if (!naming.emitted.has(name)) {
+        naming.emitted.add(name);
         const body = bare.fields
           .map((field) => {
             const mark = options.markOptional && field.optional ? '?' : '';
@@ -283,9 +321,9 @@ function tsType(schema: Schema, hint: string, naming: Naming, out: string[], opt
 }
 
 export function emitTypeScript(schema: Schema, options: EmitOptions = DEFAULT_EMIT): string {
-  const naming: Naming = { taken: new Set(), byShape: new Map() };
+  const names = freshNaming();
   const blocks: string[] = [];
-  const root = tsType(schema, rootHint(schema, options.rootName), naming, blocks, options);
+  const root = tsType(schema, rootHint(schema, options.rootName), names, blocks, options);
   const declared = blocks.some((block) => block.startsWith(`export interface ${pascalCase(options.rootName)} `));
   const alias = declared && root === pascalCase(options.rootName) ? '' : `export type ${pascalCase(options.rootName)} = ${root};`;
   // Interfaces come out innermost-first; reversing reads top-down like the JSON.
@@ -315,7 +353,8 @@ function zodType(schema: Schema, hint: string, naming: Naming, out: string[], op
     case 'object': {
       const name = nameFor(bare, hint, naming);
       const variable = name.charAt(0).toLowerCase() + name.slice(1);
-      if (!out.some((block) => block.startsWith(`export const ${variable} `))) {
+      if (!naming.emitted.has(name)) {
+        naming.emitted.add(name);
         const body = bare.fields
           .map((field) => {
             const type = zodType(field.schema, field.name, naming, out, options, 1);
@@ -331,9 +370,9 @@ function zodType(schema: Schema, hint: string, naming: Naming, out: string[], op
 }
 
 export function emitZod(schema: Schema, options: EmitOptions = DEFAULT_EMIT): string {
-  const naming: Naming = { taken: new Set(), byShape: new Map() };
+  const names = freshNaming();
   const blocks: string[] = [];
-  const root = zodType(schema, rootHint(schema, options.rootName), naming, blocks, options, 0);
+  const root = zodType(schema, rootHint(schema, options.rootName), names, blocks, options, 0);
   const rootName = pascalCase(options.rootName);
   const variable = rootName.charAt(0).toLowerCase() + rootName.slice(1);
   const tail =
@@ -387,7 +426,8 @@ function goType(schema: Schema, hint: string, naming: Naming, out: string[], opt
       return 'any';
     case 'object': {
       const name = nameFor(bare, hint, naming);
-      if (!out.some((block) => block.startsWith(`type ${name} struct`))) {
+      if (!naming.emitted.has(name)) {
+        naming.emitted.add(name);
         const rows = bare.fields.map((field) => {
           const type = goType(field.schema, field.name, naming, out, options);
           const omit = options.markOptional && field.optional ? ',omitempty' : '';
@@ -410,9 +450,9 @@ function goType(schema: Schema, hint: string, naming: Naming, out: string[], opt
 }
 
 export function emitGo(schema: Schema, options: EmitOptions = DEFAULT_EMIT): string {
-  const naming: Naming = { taken: new Set(), byShape: new Map() };
+  const names = freshNaming();
   const blocks: string[] = [];
-  const root = goType(schema, rootHint(schema, options.rootName), naming, blocks, options);
+  const root = goType(schema, rootHint(schema, options.rootName), names, blocks, options);
   const rootName = pascalCase(options.rootName);
   const alias = blocks.some((block) => block.startsWith(`type ${rootName} struct`)) && root === rootName
     ? ''
@@ -459,7 +499,8 @@ function pyType(schema: Schema, hint: string, naming: Naming, out: string[], opt
       return wrap(`Union[${bare.options.map((o) => pyType(o, hint, naming, out, options)).join(', ')}]`);
     case 'object': {
       const name = nameFor(bare, hint, naming);
-      if (!out.some((block) => block.startsWith(`class ${name}(BaseModel)`))) {
+      if (!naming.emitted.has(name)) {
+        naming.emitted.add(name);
         const rows = bare.fields.map((field) => {
           const type = pyType(field.schema, field.name, naming, out, options);
           const { name: attribute, alias } = pyFieldName(field.name);
@@ -482,9 +523,9 @@ function pyType(schema: Schema, hint: string, naming: Naming, out: string[], opt
 }
 
 export function emitPydantic(schema: Schema, options: EmitOptions = DEFAULT_EMIT): string {
-  const naming: Naming = { taken: new Set(), byShape: new Map() };
+  const names = freshNaming();
   const blocks: string[] = [];
-  const root = pyType(schema, rootHint(schema, options.rootName), naming, blocks, options);
+  const root = pyType(schema, rootHint(schema, options.rootName), names, blocks, options);
   const rootName = pascalCase(options.rootName);
   const body = [...blocks.reverse()];
   const alias = body.some((block) => block.startsWith(`class ${rootName}(BaseModel)`)) && root === rootName
@@ -505,8 +546,19 @@ export function emitPydantic(schema: Schema, options: EmitOptions = DEFAULT_EMIT
 
 export type Warning = 'empty-array' | 'always-null' | 'mixed-union' | 'integer-guess';
 
-/** What the sample could not tell us. Shown on the page, not hidden. */
-export function warningsFor(schema: Schema, seen: Set<Warning> = new Set()): Warning[] {
+/**
+ * What the sample could not tell us. Shown on the page, not hidden.
+ *
+ * `integer-guess` is the one warning that depends on the target: TypeScript
+ * writes `number` whether the sample held 1 or 1.0, so the guess never reaches
+ * its output and saying so on every document would make the warning permanent
+ * furniture — a light that is always on reports nothing. Zod, Go and Pydantic
+ * all commit to the guess (`.int()`, `int64`, `int`) and can reject a fractional
+ * value at run time, so there it is worth saying. With no target given, every
+ * caveat is listed.
+ */
+export function warningsFor(schema: Schema, target?: Target): Warning[] {
+  const seen = new Set<Warning>();
   const visit = (node: Schema) => {
     switch (node.k) {
       case 'unknown':
@@ -516,7 +568,7 @@ export function warningsFor(schema: Schema, seen: Set<Warning> = new Set()): War
         seen.add('always-null');
         break;
       case 'number':
-        if (node.int) seen.add('integer-guess');
+        if (node.int && target !== 'ts') seen.add('integer-guess');
         break;
       case 'array':
         visit(node.item);
@@ -563,7 +615,7 @@ export function generate(json: string, target: Target, options: EmitOptions = DE
       ok: true,
       schema,
       code: emit(schema, options),
-      warnings: warningsFor(schema),
+      warnings: warningsFor(schema, target),
       fields: countFields(schema),
     };
   } catch (error) {

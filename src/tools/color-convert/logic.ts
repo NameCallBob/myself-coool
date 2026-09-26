@@ -320,6 +320,24 @@ const JND = 0.02;
 const GAMUT_EPSILON = 0.0001;
 
 /**
+ * A screen space to map into: how to read its encoded channels off an sRGB
+ * triple, and how to get back to sRGB coordinates. sRGB itself is the identity
+ * pair; Display-P3 is the same algorithm with a different pair of matrices,
+ * which is the only reason the P3 row can be mapped without a second search.
+ */
+type Encoding = {
+  from: (rgb: Rgb) => Rgb;
+  to: (channels: Rgb) => Rgb;
+};
+
+const SRGB_ENCODING: Encoding = { from: (rgb) => rgb, to: (channels) => channels };
+
+const P3_ENCODING: Encoding = {
+  from: (rgb) => xyzToP3(rgbToXyz(rgb)),
+  to: (channels) => xyzToRgb(p3ToXyz(channels)),
+};
+
+/**
  * CSS Color 4 §13.2 gamut mapping: hold lightness and hue, bisect chroma.
  *
  * Clipping each channel independently is the obvious thing and it is wrong —
@@ -328,9 +346,12 @@ const GAMUT_EPSILON = 0.0001;
  * chroma instead keeps the hue and the lightness the designer asked for, and
  * the search stops as soon as clipping would be within a just-noticeable
  * difference of the reduced colour.
+ *
+ * The just-noticeable-difference test is always measured in OKLab, so the
+ * candidate is converted back out of `space` before `deltaEOK` sees it.
  */
-export function gamutMapOklch(lch: Lch): Rgb {
-  const direct = oklchToRgb(lch);
+function mapInto(lch: Lch, space: Encoding): Rgb {
+  const direct = space.from(oklchToRgb(lch));
   if (inGamut(direct)) return clip(direct);
   if (lch.l >= 1) return { r: 1, g: 1, b: 1 };
   if (lch.l <= 0) return { r: 0, g: 0, b: 0 };
@@ -342,14 +363,14 @@ export function gamutMapOklch(lch: Lch): Rgb {
 
   while (max - min > GAMUT_EPSILON) {
     const chroma = (min + max) / 2;
-    const candidate = oklchToRgb({ l: lch.l, c: chroma, h: lch.h });
+    const candidate = space.from(oklchToRgb({ l: lch.l, c: chroma, h: lch.h }));
     if (minInGamut && inGamut(candidate)) {
       min = chroma;
       best = clip(candidate);
       continue;
     }
     const clipped = clip(candidate);
-    const error = deltaEOK(clipped, candidate);
+    const error = deltaEOK(space.to(clipped), space.to(candidate));
     if (error < JND) {
       best = clipped;
       if (JND - error < GAMUT_EPSILON) return clipped;
@@ -362,9 +383,26 @@ export function gamutMapOklch(lch: Lch): Rgb {
   return best;
 }
 
+export function gamutMapOklch(lch: Lch): Rgb {
+  return mapInto(lch, SRGB_ENCODING);
+}
+
 /** Same guarantee for an arbitrary sRGB triple that may sit outside 0..1. */
 export function toGamut(rgb: Rgb): Rgb {
   return inGamut(rgb) ? clip(rgb) : gamutMapOklch(rgbToOklch(rgb));
+}
+
+/**
+ * Display-P3 channels for a colour held in sRGB coordinates.
+ *
+ * A colour that fits P3 — P3 red, for instance, which is outside sRGB — is
+ * converted and nothing more, because a P3 screen can show it. One that does
+ * not fit P3 either gets the same chroma reduction the sRGB rows get, so the
+ * row prints a colour rather than three numbers outside 0..1.
+ */
+export function toP3Gamut(rgb: Rgb): Rgb {
+  const direct = xyzToP3(rgbToXyz(rgb));
+  return inGamut(direct) ? clip(direct) : mapInto(rgbToOklch(rgb), P3_ENCODING);
 }
 
 /* ── Named colours ────────────────────────── */
@@ -414,13 +452,26 @@ export const NAMED_COLORS: Record<string, string> = (() => {
   return out;
 })();
 
+/**
+ * The table read the other way, built once instead of scanned per call.
+ *
+ * 148 names cover 139 hexes: nine have two spellings (aqua/cyan, fuchsia/
+ * magenta, gray/grey and the dark·dim·light·slate greys). The first one in the
+ * table wins, which is the alphabetically earlier spelling and the answer the
+ * linear scan this replaces gave.
+ */
+const NAME_BY_HEX: Record<string, string> = (() => {
+  const out: Record<string, string> = {};
+  for (const [name, hex] of Object.entries(NAMED_COLORS)) {
+    if (out[hex] === undefined) out[hex] = name;
+  }
+  return out;
+})();
+
 /** Exact name for a colour, when one exists. Used to label the input. */
 export function nameOf(rgb: Rgb): string | null {
-  const hex = toHex({ rgb, alpha: 1 }).slice(1).toLowerCase();
-  for (const [name, value] of Object.entries(NAMED_COLORS)) {
-    if (value === hex) return name;
-  }
-  return null;
+  const hex = toHex({ rgb, alpha: 1 }).slice(1);
+  return NAME_BY_HEX[hex] ?? null;
 }
 
 /* ── Parsing ──────────────────────────────── */
@@ -630,7 +681,9 @@ export function toHex(color: Color): string {
  * Alpha is only written when it is not 1, because `rgb(0 0 0 / 1)` is noise in
  * a stylesheet. Out-of-gamut colours are printed as they are in the
  * perceptual spaces and gamut-mapped in the screen ones — that difference is
- * the point, so the caller can see which notation is lying.
+ * the point, so the caller can see which notation is lying. Each screen row is
+ * mapped into its own gamut: hex/rgb/hsl/hwb into sRGB, the `color(display-p3)`
+ * row into P3, which is wider, so a colour that fits P3 survives it intact.
  */
 export function formatColor(color: Color, space: Space): string {
   const { alpha } = color;
@@ -667,7 +720,7 @@ export function formatColor(color: Color, space: Space): string {
       return `oklch(${trim(lch.l, 4)} ${trim(lch.c, 4)} ${trim(lch.h, 2)}${a})`;
     }
     case 'p3': {
-      const p3 = xyzToP3(rgbToXyz(color.rgb));
+      const p3 = toP3Gamut(color.rgb);
       return `color(display-p3 ${trim(p3.r, 4)} ${trim(p3.g, 4)} ${trim(p3.b, 4)}${a})`;
     }
   }
@@ -689,14 +742,20 @@ export type Report = {
 };
 
 export function describe(color: Color): Report {
+  // The unmapped P3 channels, because the flag is about whether the colour fits
+  // P3 — not about what the P3 row ends up printing.
   const p3 = xyzToP3(rgbToXyz(color.rgb));
+  const outOfSrgb = !inGamut(color.rgb, 0.0005);
   return {
     color,
     notations: SPACES.map((space) => ({ space, value: formatColor(color, space) })),
     oklch: rgbToOklch(color.rgb),
     lab: rgbToLab(color.rgb),
-    outOfSrgb: !inGamut(color.rgb, 0.0005),
+    outOfSrgb,
     outOfP3: !inGamut(p3, 0.0005),
-    name: nameOf(toGamut(color.rgb)),
+    // Only a colour that already fits sRGB gets a name. Naming the mapped
+    // stand-in labels the input with a colour nobody typed: oklch(0.8 0.4 72)
+    // lands on exactly #ffa500 and is not "orange".
+    name: outOfSrgb ? null : nameOf(clip(color.rgb)),
   };
 }

@@ -112,6 +112,7 @@ export function decodedLength(chars: number): number {
 export function decodeBase64(text: string, options: DecodeOptions = {}): Uint8Array {
   const values: number[] = [];
   let padding = 0;
+  let paddingAt = -1;
   let lastIndex = -1;
 
   for (let i = 0; i < text.length; i += 1) {
@@ -119,6 +120,7 @@ export function decodeBase64(text: string, options: DecodeOptions = {}): Uint8Ar
     if (WHITESPACE.has(ch)) continue;
     if (ch === '=') {
       padding += 1;
+      if (paddingAt < 0) paddingAt = i;
       if (padding > 2) throw new Base64Error('more than two padding characters', i);
       continue;
     }
@@ -134,6 +136,13 @@ export function decodeBase64(text: string, options: DecodeOptions = {}): Uint8Ar
     lastIndex = i;
   }
 
+  if (padding > 0 && values.length === 0) {
+    // `=` on its own is not an encoding of nothing: the empty string is. A
+    // decoder that answers "0 bytes" here reports success for input that
+    // carries no data at all, which is the one case lenience cannot excuse.
+    throw new Base64Error('padding with no data characters in front of it', paddingAt);
+  }
+
   const remainder = values.length % 4;
   if (remainder === 1) {
     // Four characters carry three bytes; one left over carries six bits, which
@@ -142,6 +151,11 @@ export function decodeBase64(text: string, options: DecodeOptions = {}): Uint8Ar
   }
 
   if (options.strict) {
+    // How much padding there is stays a strict-mode question. `QQ=` is short
+    // one `=`, but its two data characters still name one byte unambiguously,
+    // and a paste that lost a character off the end is more useful read than
+    // refused. Where the padding sits is checked above for every caller: `=`
+    // before data is an error, and so is `=` with no data at all.
     if (padding > 0 && (values.length + padding) % 4 !== 0) {
       throw new Base64Error('padding does not bring the length to a multiple of four', text.length - 1);
     }
@@ -277,7 +291,15 @@ export type DataUri = {
   data: Uint8Array;
 };
 
-/** Unreserved set of RFC 3986, for the non-base64 form of a data URI. */
+/**
+ * Unreserved set of RFC 2396 — alphanum plus the nine `mark` characters
+ * `-_.!~*'()`, 71 in all — which is what RFC 2397 points at: the non-base64
+ * payload is `*urlchar` and `urlchar` is `unreserved | escape` of RFC 2396.
+ *
+ * Not the RFC 3986 unreserved set: that one is 66 characters, `A-Za-z0-9-._~`,
+ * because 3986 reclassified the marks as sub-delimiters. Keeping 2396's wider
+ * set means a percent-form data URI comes out the length a browser expects.
+ */
 const URI_SAFE = /[A-Za-z0-9\-_.!~*'()]/;
 
 function percentEncode(data: Uint8Array): string {
@@ -330,13 +352,18 @@ export function parseDataUri(text: string): DataUri {
   const meta = trimmed.slice(5, comma).split(';');
   let base64 = false;
   const params: { key: string; value: string }[] = [];
-  // `;base64` is a flag, not a parameter, and it is only meaningful last.
   const head = meta.shift() ?? '';
+  // `;base64` is a flag, not a parameter, and RFC 2397's grammar
+  // (`[ mediatype ] [ ";base64" ] ","`) puts it after the parameters: it closes
+  // the mediatype. So only the final segment turns the payload into base64 —
+  // in `data:text/plain;base64;charset=utf-8,...` the payload is percent
+  // encoded and `base64` is a valueless parameter, which is also how a browser
+  // reads it (it strips a trailing `;base64` and nothing else).
+  if (meta.length > 0 && meta[meta.length - 1].toLowerCase() === 'base64') {
+    base64 = true;
+    meta.pop();
+  }
   for (const part of meta) {
-    if (part.toLowerCase() === 'base64') {
-      base64 = true;
-      continue;
-    }
     const eq = part.indexOf('=');
     if (eq === -1) params.push({ key: part, value: '' });
     else params.push({ key: part.slice(0, eq), value: part.slice(eq + 1) });

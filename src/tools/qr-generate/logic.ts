@@ -732,8 +732,13 @@ export type QrSymbol = {
   ecCodewords: number;
   blocks: number;
   penalty: Penalty;
-  /** Penalty total for each of the eight masks, in mask order. */
-  maskScores: number[];
+  /**
+   * Penalty total per mask, indexed by mask number 0–7 — so `maskScores[mask]`
+   * is always that mask's score and never someone else's. With
+   * `EncodeOptions.mask` set only one mask is built, and the other seven slots
+   * are `null`: a missing measurement, not a zero and not a shifted array.
+   */
+  maskScores: (number | null)[];
 };
 
 export type EncodeOptions = {
@@ -790,7 +795,9 @@ export function encodeBytes(payload: Uint8Array, level: EcLevel, options: Encode
   }
 
   let best = candidates[0];
+  const maskScores: (number | null)[] = [null, null, null, null, null, null, null, null];
   for (const candidate of candidates) {
+    maskScores[candidate.mask] = candidate.penalty.total;
     if (candidate.penalty.total < best.penalty.total) best = candidate;
   }
 
@@ -806,7 +813,7 @@ export function encodeBytes(payload: Uint8Array, level: EcLevel, options: Encode
     ecCodewords: totalCodewords(version) - dataCodewords(version, level),
     blocks,
     penalty: best.penalty,
-    maskScores: candidates.map((candidate) => candidate.penalty.total),
+    maskScores,
   };
 }
 
@@ -817,18 +824,44 @@ export function encodeText(text: string, level: EcLevel, options: EncodeOptions 
 
 /* ── Content templates ─────────────────────── */
 
+/** The RFC 3986 scheme grammar: a letter, then letters, digits, `+`, `-`, `.`. */
+const SCHEME = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
+
+/**
+ * Is `text` a host and a port rather than a scheme and a payload?
+ *
+ * The scheme charset includes `.` and `-`, so `example.com:8080/path` and
+ * `localhost:3000` both satisfy the grammar above while being nothing of the
+ * kind. Two conditions have to hold together, because either one alone
+ * misfires: the part before the colon has to look like a host (a dot in it, or
+ * the name `localhost` — a bare `urn:1234` stays a URN), and the part after it
+ * has to be a port, meaning digits in 1–65535 running to the end or to the
+ * first `/`, `?` or `#` — which is what keeps `tel:0212345678` intact, since a
+ * ten-digit phone number is no port.
+ */
+function looksLikeHostPort(text: string, host: string): boolean {
+  if (!host.includes('.') && host.toLowerCase() !== 'localhost') return false;
+  const port = /^([0-9]{1,5})(?:[/?#]|$)/.exec(text.slice(host.length + 1));
+  if (port === null) return false;
+  const value = Number(port[1]);
+  return value >= 1 && value <= 65535;
+}
+
 /**
  * Add a scheme when the text plainly lacks one.
  *
  * A bare `example.com` in a QR code is a coin toss: some readers prepend
  * http://, some search for it, some show the raw text. `mailto:`, `tel:` and
  * the rest are left exactly as typed — guessing at an existing scheme is how
- * you break a payload that was already correct.
+ * you break a payload that was already correct. The one exception is the
+ * host-and-port shape, which satisfies the scheme grammar by accident; see
+ * `looksLikeHostPort`.
  */
 export function normalizeUrl(input: string): string {
   const text = input.trim();
   if (text === '') return '';
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(text)) return text;
+  const scheme = SCHEME.exec(text);
+  if (scheme !== null && !looksLikeHostPort(text, scheme[1])) return text;
   if (text.startsWith('//')) return `https:${text}`;
   return `https://${text}`;
 }

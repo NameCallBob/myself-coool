@@ -86,6 +86,9 @@ const CJK_CLASS = '\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Sc
 const CJK = new RegExp(`[${CJK_CLASS}]`, 'u');
 const LATIN = /[A-Za-z0-9]/;
 
+/** Letters only. A digit is not evidence that a line is written in English. */
+const LATIN_LETTER = /[A-Za-z]/;
+
 /** Full-width punctuation, for deciding whether a space is wanted next to it. */
 const FULLWIDTH_PUNCT = /[，。、；：！？（）【】《》〈〉「」『』〔〕…—～]/u;
 
@@ -177,8 +180,17 @@ export function convertWidth(text: string, mode: WidthMode): [string, number] {
 export function convertEllipsis(text: string, mode: RunMode): [string, number] {
   if (mode === 'keep') return [text, 0];
   const target = mode === 'cjk' ? '……' : '…';
-  // Three or more dots, or an existing run of ellipsis characters.
-  return tally(text, /\.{3,}|…{1,}/g, target);
+  let n = 0;
+  // Three or more dots, or an existing run of ellipsis characters. A run that is
+  // already the wanted form is left alone rather than replaced by itself: the
+  // change counter is the only evidence the user has of what the tool touched,
+  // and an inflated count is worse than no count. Same reasoning as convertDash.
+  const out = text.replace(/\.{3,}|…{1,}/g, (run) => {
+    if (run === target) return run;
+    n += 1;
+    return target;
+  });
+  return [out, n];
 }
 
 export function convertDash(text: string, mode: RunMode): [string, number] {
@@ -208,6 +220,13 @@ export function convertDash(text: string, mode: RunMode): [string, number] {
  * a Chinese line keeps full-width punctuation and may gain more, a Latin line
  * gets its stray full-width punctuation narrowed.
  *
+ * "Contains CJK" cannot be Han and kana alone, though. A numbered heading in a
+ * Chinese document — `（1）。`, `2。` — holds no Han, so the Han-only test calls
+ * it a Latin line and narrows punctuation the author chose. The test is
+ * therefore: Han/kana/Hangul anywhere, *or* full-width punctuation in a line
+ * that has no Latin letter to justify it. `Hello，world。` still has letters and
+ * is still narrowed, which is the case the narrowing exists for.
+ *
  * Within a Chinese line the remaining rules are:
  *  - brackets are judged by the side they face: `(` by what follows, `)` by what
  *    precedes;
@@ -224,7 +243,7 @@ export function convertPunctuation(text: string, mode: PunctuationMode): [string
   const out = text
     .split('\n')
     .map((line) => {
-      const lineHasCjk = CJK.test(line);
+      const lineHasCjk = CJK.test(line) || (FULLWIDTH_PUNCT.test(line) && !LATIN_LETTER.test(line));
       const chars = [...line];
 
       return chars

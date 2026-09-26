@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   LoanError,
   MAX_MONTHS,
+  annualisedRates,
   buildSchedule,
   byYear,
   effectiveAnnualRate,
@@ -295,4 +296,94 @@ test('the longest allowed loan still builds', () => {
   const schedule = buildSchedule(base({ months: MAX_MONTHS, principal: 20_000_000, rate: 3 }));
   assert.equal(schedule.periods.length, MAX_MONTHS);
   near(schedule.periods[MAX_MONTHS - 1].balance, 0, 1e-6);
+});
+
+test('stage months are counted from the disbursement month, grace included', () => {
+  // The convention, pinned: a contract that says "1.5% for the first two years"
+  // means the first 24 calendar months of the loan, not the first 24 months of
+  // amortisation. A 12-month grace period therefore eats half of stage one.
+  const input = base({ rate: 1.5, stageMonths: 24, rateAfter: 2.5, graceMonths: 12 });
+  assert.equal(rateForMonth(input, 1), 1.5, 'month 1 is inside the grace period');
+  assert.equal(rateForMonth(input, 12), 1.5);
+  assert.equal(rateForMonth(input, 13), 1.5, 'amortisation starts, stage one continues');
+  assert.equal(rateForMonth(input, 24), 1.5);
+  assert.equal(rateForMonth(input, 25), 2.5, 'the step is at calendar month 25');
+
+  const schedule = buildSchedule(input);
+  assert.equal(schedule.periods[11].annualRate, 1.5);
+  assert.equal(schedule.periods[24].annualRate, 2.5);
+  // 12 grace months at 1.5% on the full principal, untouched by the step.
+  for (let i = 0; i < 12; i += 1) near(schedule.periods[i].payment, 1250, 1e-9);
+});
+
+test('a prepayment next to the rate step leaves one row per month, not two', () => {
+  const input = base({
+    rate: 1.5,
+    stageMonths: 24,
+    rateAfter: 2.5,
+    prepayments: [{ month: 24, amount: 200_000 }],
+    prepaymentEffect: 'payment',
+  });
+  const schedule = buildSchedule(input);
+  const months = schedule.stagePayments.map((stage) => stage.fromMonth);
+  assert.deepEqual(months, [...new Set(months)], `duplicate stage rows: ${months.join(',')}`);
+  assert.deepEqual(months, [1, 25]);
+  // The surviving row has to be the instalment the schedule actually charges.
+  const stepped = schedule.stagePayments.find((stage) => stage.fromMonth === 25)!;
+  near(stepped.payment, schedule.periods[24].payment, 1e-9);
+  assert.equal(stepped.annualRate, 2.5);
+
+  // Same collision at the start of amortisation: prepaying in the last grace
+  // month and re-solving for month 13 must not double the row either.
+  const graced = buildSchedule(
+    base({
+      graceMonths: 12,
+      prepayments: [{ month: 12, amount: 200_000 }],
+      prepaymentEffect: 'payment',
+    })
+  );
+  const graceMonths = graced.stagePayments.map((stage) => stage.fromMonth);
+  assert.deepEqual(graceMonths, [...new Set(graceMonths)]);
+  near(graced.stagePayments[0].payment, graced.periods[12].payment, 1e-9);
+});
+
+test('a prepayment inside the grace period does not announce an instalment', () => {
+  // Months 7 to 12 are still interest-only, so a row saying "from month 7 the
+  // instalment is 3,945" is a number that is never charged.
+  const schedule = buildSchedule(
+    base({
+      graceMonths: 12,
+      prepayments: [{ month: 6, amount: 200_000 }],
+      prepaymentEffect: 'payment',
+    })
+  );
+  for (const stage of schedule.stagePayments) {
+    assert.ok(stage.fromMonth > 12, `stage row at month ${stage.fromMonth} is inside the grace period`);
+    near(stage.payment, schedule.periods[stage.fromMonth - 1].payment, 1e-9);
+  }
+  // The lump sum still lands, and still shrinks the instalment that follows.
+  near(schedule.periods[5].extra, 200_000);
+  near(schedule.periods[6].payment, 1_333.3333333333333, 1e-9, '800 000 × 2% ÷ 12, interest only');
+  assert.ok(schedule.periods[12].payment < buildSchedule(base({ graceMonths: 12 })).periods[12].payment);
+});
+
+test('the nominal and the effective annual rate are both reported', () => {
+  // A single-stage loan must hand back the rate it was given, on the basis the
+  // bank quotes it: nominal, not compounded. 2.3% nominal is 2.3245% effective,
+  // and showing only the second one reads as the tool disagreeing with the bank.
+  const single = base({ rate: 2.3, rateAfter: 2.3 });
+  const rates = annualisedRates(single);
+  near(rates.nominal, 2.3, 1e-6, 'nominal must recover the quoted rate');
+  near(rates.monthly, 2.3 / 12, 1e-8);
+  near(rates.effective, ((1 + 0.023 / 12) ** 12 - 1) * 100, 1e-6);
+  assert.ok(rates.effective > rates.nominal, 'monthly compounding lifts it');
+  near(effectiveAnnualRate(single), rates.effective, 1e-12, 'the old export still means APY');
+
+  // Two stages: the nominal figure lands between the two quoted rates.
+  const teaser = annualisedRates(base({ rate: 1.5, stageMonths: 24, rateAfter: 2.5 }));
+  assert.ok(teaser.nominal > 1.5 && teaser.nominal < 2.5, `${teaser.nominal} between the stages`);
+
+  const free = annualisedRates(base({ rate: 0, rateAfter: 0 }));
+  near(free.nominal, 0, 1e-6);
+  near(free.effective, 0, 1e-6);
 });

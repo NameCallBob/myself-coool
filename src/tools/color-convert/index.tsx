@@ -282,8 +282,8 @@ export default function ColorConvert({ l }: ToolProps) {
                 <Note>
                   {t(
                     l,
-                    '超出 sRGB 的顏色,hex / rgb / hsl / hwb 四列是照 CSS Color 4 的色域壓縮演算法算的:固定明度與色相,把彩度降到剛好能顯示為止。不是把每個通道各自截斷——那會讓色相跑掉。',
-                    'For colours outside sRGB, the hex / rgb / hsl / hwb rows use the CSS Color 4 gamut mapping: hold lightness and hue, reduce chroma until it fits. Not per-channel clipping, which shifts the hue.'
+                    '超出 sRGB 的顏色,hex / rgb / hsl / hwb 四列是照 CSS Color 4 的色域壓縮演算法算的:固定明度與色相,把彩度降到剛好能顯示為止。不是把每個通道各自截斷——那會讓色相跑掉。color(display-p3) 那一列用同一套演算法,但壓的是 P3 的邊界,所以 P3 裝得下的顏色會原樣印出來。',
+                    'For colours outside sRGB, the hex / rgb / hsl / hwb rows use the CSS Color 4 gamut mapping: hold lightness and hue, reduce chroma until it fits. Not per-channel clipping, which shifts the hue. The color(display-p3) row runs the same algorithm against the P3 boundary instead, so a colour that fits P3 is printed as it is.'
                   )}
                 </Note>
               ) : null}

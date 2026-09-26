@@ -6,13 +6,16 @@ import {
   FUNCTIONS,
   MAX_DEPTH,
   MAX_EXPRESSION,
+  MAX_EXACT_FACTORIAL,
   MAX_FACTORIAL,
   MAX_LINES,
   evaluate,
   factorial,
   formatResult,
+  hidesFraction,
   integerViews,
   parse,
+  roundTo,
   run,
   tokenize,
   type Env,
@@ -340,4 +343,86 @@ test('worked examples, checked by hand', () => {
   assert.equal(ev('49! / (6! * 43!)'), 13983816);
   // A quadratic root: x^2 - 5x + 6, larger root.
   near(ev('(5 + sqrt(5^2 - 4*6)) / 2'), 3);
+});
+
+test('round() rounds the decimal the person typed, not its binary scaling', () => {
+  // x * 10^places is where the error comes in: 1.005 * 100 is 100.49999999999999,
+  // so the naive version answers 1 and the 15-digit display hides why.
+  assert.equal(ev('round(1.005, 2)'), 1.01);
+  assert.equal(ev('round(1.015, 2)'), 1.02);
+  assert.equal(ev('round(10.075, 2)'), 10.08);
+  // Cases the naive version already got right must not move.
+  assert.equal(ev('round(2.345, 2)'), 2.35);
+  assert.equal(ev('round(2.675, 2)'), 2.68);
+  assert.equal(ev('round(2.5)'), 3);
+  assert.equal(ev('round(1234, -2)'), 1200);
+  assert.equal(ev('round(5, 3)'), 5);
+  assert.equal(roundTo(0.5, 0), 1);
+  assert.equal(roundTo(-2.5, 0), -2, 'halves go up, the way Math.round does');
+  assert.equal(roundTo(1e-7, 9), 1e-7, 'a value printed in exponential form still rounds');
+  assert.equal(roundTo(1.5, 400), 1.5, 'a scale a double cannot hold leaves the value alone');
+  assert.ok(Number.isNaN(roundTo(Number.NaN, 2)));
+  assert.equal(roundTo(Number.POSITIVE_INFINITY, 2), Number.POSITIVE_INFINITY);
+});
+
+test('the whole-number complaint names the function that was called', () => {
+  // lcm() borrows gcd() internally; the message must not mention a function
+  // the person never typed.
+  assert.throws(() => ev('lcm(2.5, 4)'), /lcm needs whole numbers, got 2\.5/);
+  assert.throws(() => ev('gcd(2.5, 4)'), /gcd needs whole numbers, got 2\.5/);
+  assert.throws(() => ev('lcm(4, 2.5)'), /lcm needs whole numbers/);
+  assert.throws(() => ev('round(1, 1.5)'), /round needs whole numbers/);
+});
+
+test('factorials stop being exact at 23!, and a result that hides it is marked', () => {
+  const exact = (n: number) => {
+    let out = 1n;
+    for (let i = 2n; i <= BigInt(n); i += 1n) out *= i;
+    return out;
+  };
+  for (let n = 0; n <= MAX_EXACT_FACTORIAL; n += 1) {
+    assert.equal(BigInt(factorial(n)), exact(n), `${n}! must be exact`);
+  }
+  assert.notEqual(
+    BigInt(factorial(MAX_EXACT_FACTORIAL + 1)),
+    exact(MAX_EXACT_FACTORIAL + 1),
+    '23! cannot be exact in a double, so the limit must not claim more'
+  );
+
+  // 23! / (2! · 21!) is 253 exactly, but the double arithmetic lands on
+  // 253.00000000000006 and fifteen significant digits print that as "253".
+  const combination = ev('23! / (2! * 21!)');
+  assert.notEqual(combination, 253);
+  assert.equal(formatResult(combination), '253');
+  assert.equal(hidesFraction(combination), true);
+
+  // Everything that really is what it prints stays unmarked.
+  assert.equal(hidesFraction(253), false);
+  assert.equal(hidesFraction(ev('49! / (6! * 43!)')), false, 'this one comes out exact');
+  assert.equal(hidesFraction(0.1 + 0.2), false, '0.3 shows a decimal point');
+  assert.equal(hidesFraction(1 / 3), false);
+  assert.equal(hidesFraction(factorial(23)), false, 'exponential form hides nothing');
+  assert.equal(hidesFraction(Number.NaN), false);
+  assert.equal(hidesFraction(Number.POSITIVE_INFINITY), false);
+});
+
+test('`!` always binds to the value immediately before it', () => {
+  // These pin the postfix rule after the dead re-check in climb() was removed.
+  // A `!` can only ever follow a number, a name or a closing parenthesis, and
+  // every one of those is a primary — which parsePostfix is called on directly,
+  // consuming the whole run of `!` before any binary operator is considered.
+  assert.equal(ev('2+3!'), 8, '2 + (3!)');
+  assert.equal(ev('2*3!'), 12);
+  assert.equal(ev('2^3!'), 64);
+  assert.equal(ev('3!+2'), 8);
+  assert.equal(ev('3!!'), 720);
+  assert.equal(ev('(2+3)!'), 120);
+  assert.equal(ev('2(3)!'), 12, 'implicit multiplication, then the factorial of 3');
+  assert.equal(ev('(1+2)!(2)'), 12, '(3!) × 2');
+  assert.equal(ev('2+3!*2'), 14);
+  assert.equal(ev('4!/3!'), 4);
+  assert.equal(ev('-3!'), -6);
+  // A `!` with no value in front of it is still an error, not a silent no-op.
+  assert.throws(() => parse('!3'), /cannot start a value/);
+  assert.throws(() => parse('2+!'), /cannot start a value/);
 });

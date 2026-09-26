@@ -5,8 +5,8 @@
  * to an encoder — lives in `index.tsx`, because it needs `ImageBitmap` and a
  * canvas and neither exists under `node --test`. What is left here is the part
  * that is easy to get quietly wrong: which target sizes preserve the aspect
- * ratio, what "70% smaller" actually means, and how to find the highest
- * quality that still fits a byte budget.
+ * ratio, what "70% smaller" actually means, and how to find (within a percent)
+ * the highest quality that still fits a byte budget.
  *
  * Two honesty rules shaped this file.
  *
@@ -68,8 +68,11 @@ export const PIXEL_CEILING = 40_000_000;
 
 export const QUALITY_FLOOR = 0.05;
 export const QUALITY_CEILING = 1;
-/** Seven halvings of 0..1 land within 0.01, which is finer than any encoder's
- *  quality knob actually resolves. */
+/** The cap on encodes per file. Bisecting 0..100 in whole percent reaches the
+ *  two-percent bracket the search stops at in at most seven probes, so on an
+ *  encoder whose size grows with quality this cap never actually fires — it is
+ *  here for the encoder that is not monotone, where the bracket could otherwise
+ *  refuse to collapse. */
 export const QUALITY_SEARCH_ROUNDS = 7;
 
 /** A dimension is a whole number of pixels, and zero pixels is not an image. */
@@ -236,6 +239,10 @@ export function startQualitySearch(first = 0.8): QualitySearch {
  * measured hit. `best: null` on a finished search means the budget was not
  * reachable at this size — the caller should offer a resize, not a rounder
  * number.
+ *
+ * What `best.quality` is *not* is provably the highest quality that fits: the
+ * bracket closes at two percent, which leaves one percent untried. Callers that
+ * present the number should say "within a percent", not "the highest".
  */
 export function advanceQualitySearch(
   state: QualitySearch,
@@ -268,14 +275,20 @@ export function advanceQualitySearch(
   const hiPct = Math.round(hi * 100);
   const next = clampQuality(Math.round((loPct + hiPct) / 2) / 100);
 
-  // Stop when the bracket is narrower than the encoder can resolve, when the
-  // bisection would re-measure the quality we just measured, or when the
-  // round budget runs out. Any of the three means further encodes are waste.
+  // Stop when the bracket is two percent wide or less, when the bisection would
+  // re-measure the quality we just measured, or when the round budget runs out.
+  //
+  // Two percent, not one, is a deliberate saving of one encode, and it has a
+  // price worth stating plainly: with `lo` measured as fitting and `hi` measured
+  // as overshooting, a bracket of two leaves exactly one percent untried between
+  // them. So the quality this search reports can be one percent below the
+  // highest that would have fit — one, never two, and never a quality that was
+  // not measured to fit.
   //
   // `hi` starts at 1 as an *unmeasured* bound, so a budget nothing overshoots
-  // converges to 0.99 rather than 1: the search will not claim the ceiling it
-  // never tried. Someone who wants a straight quality-1 encode turns the
-  // budget off.
+  // ends at 0.98: 0.8 → 0.9 → 0.95 → 0.98, at which point 0.98 against the
+  // untried 1 is two wide. The search will not claim a ceiling it never tried.
+  // Someone who wants a straight quality-1 encode turns the budget off.
   const done = rounds >= maxRounds || hiPct - loPct <= 2 || next === state.quality;
 
   return { quality: next, lo, hi, best, rounds, done };

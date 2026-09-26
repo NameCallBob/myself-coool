@@ -601,7 +601,27 @@ test('a symbol reads back to the text that went in', () => {
   assert.equal(symbol.ecCodewords, 13);
   assert.equal(symbol.blocks, 1);
   assert.equal(symbol.maskScores.length, 8);
-  assert.equal(symbol.penalty.total, Math.min(...symbol.maskScores));
+  const scored = symbol.maskScores.filter((score): score is number => score !== null);
+  assert.equal(scored.length, 8);
+  assert.equal(symbol.penalty.total, Math.min(...scored));
+});
+
+test('maskScores is indexed by mask, fixed mask included', () => {
+  const auto = encodeText('mask scores', 'M');
+  assert.equal(auto.maskScores.length, 8);
+  assert.equal(auto.maskScores[auto.mask], auto.penalty.total);
+  for (let mask = 0; mask < 8; mask += 1) {
+    const fixed = encodeText('mask scores', 'M', { mask });
+    assert.equal(fixed.maskScores.length, 8, 'always eight slots, one per mask');
+    // The slot for the mask that was built holds that mask's score, and it is
+    // the same score the full search measured for it.
+    assert.equal(fixed.maskScores[mask], fixed.penalty.total);
+    assert.equal(fixed.maskScores[mask], auto.maskScores[mask]);
+    for (let other = 0; other < 8; other += 1) {
+      if (other === mask) continue;
+      assert.equal(fixed.maskScores[other], null, `mask ${other} was never built, so it must read as null`);
+    }
+  }
 });
 
 test('every level and every version round-trips', () => {
@@ -622,7 +642,7 @@ test('all eight masks produce a readable symbol', () => {
   for (let mask = 0; mask < 8; mask += 1) {
     const symbol = roundTrip('https://example.com/a/b?c=1', 'M', { mask });
     assert.equal(symbol.mask, mask);
-    assert.equal(symbol.maskScores.length, 1);
+    assert.equal(typeof symbol.maskScores[mask], 'number');
   }
 });
 
@@ -725,6 +745,27 @@ test('normalizeUrl adds a scheme only when one is missing', () => {
   assert.equal(normalizeUrl(''), '');
   assert.equal(normalizeUrl('   '), '');
   assert.equal(normalizeUrl('中文.tw'), 'https://中文.tw');
+});
+
+test('a host with a port is not mistaken for a scheme', () => {
+  // `example.com:8080` matches the scheme grammar — the scheme charset allows
+  // dots and hyphens — but it is a host and a port, and a reader handed it with
+  // no scheme falls back to a search box.
+  assert.equal(normalizeUrl('example.com:8080/path'), 'https://example.com:8080/path');
+  assert.equal(normalizeUrl('example.com:8080'), 'https://example.com:8080');
+  assert.equal(normalizeUrl('localhost:3000'), 'https://localhost:3000');
+  assert.equal(normalizeUrl('LOCALHOST:3000/x?y=1'), 'https://LOCALHOST:3000/x?y=1');
+  assert.equal(normalizeUrl('sub.example.com:8443/a#b'), 'https://sub.example.com:8443/a#b');
+  assert.equal(normalizeUrl('127.0.0.1:8080'), 'https://127.0.0.1:8080');
+  // Payloads that really are schemes stay untouched, digits and all.
+  assert.equal(normalizeUrl('http://example.com:8080/path'), 'http://example.com:8080/path');
+  assert.equal(normalizeUrl('tel:0212345678'), 'tel:0212345678');
+  assert.equal(normalizeUrl('sms:0912345678'), 'sms:0912345678');
+  assert.equal(normalizeUrl('urn:1234'), 'urn:1234');
+  assert.equal(normalizeUrl('mailto:a@b.c'), 'mailto:a@b.c');
+  // Not a port: out of range, or not digits all the way to the delimiter.
+  assert.equal(normalizeUrl('example.com:99999999'), 'example.com:99999999');
+  assert.equal(normalizeUrl('example.com:80a'), 'example.com:80a');
 });
 
 test('the WiFi payload escapes the characters that would break the parse', () => {

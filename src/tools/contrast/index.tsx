@@ -6,6 +6,7 @@ import { Btn, CopyButton, Input, Note, Panel, Readout, Row, Seg, Table } from '@
 import { t } from '@/lib/tools/locale';
 import {
   apcaBand,
+  compositeOver,
   measure,
   nearestPassing,
   parseColor,
@@ -16,14 +17,23 @@ import {
   type WcagLevel,
 } from './logic';
 
+/** APCA's six published levels, in its own words. Lc 30 is the floor for any
+ *  text at all and for solid semantic non-text; Lc 15–30 is only enough for
+ *  something to be told apart, which is not the same as carrying meaning. */
 const BAND_TEXT: Record<ApcaBand, { zh: string; en: string }> = {
   'body-preferred': { zh: 'Lc 90 以上 — 正文的理想值', en: 'Lc 90+ — preferred for body text' },
   'body-min': { zh: 'Lc 75–90 — 正文的下限', en: 'Lc 75–90 — minimum for body text' },
   'sub-body': { zh: 'Lc 60–75 — 只夠較大或較粗的字', en: 'Lc 60–75 — larger or heavier text only' },
-  'large-only': { zh: 'Lc 45–60 — 只夠大標題', en: 'Lc 45–60 — headlines only' },
-  'non-text': { zh: 'Lc 15–45 — 只夠非文字元素', en: 'Lc 15–45 — non-text elements only' },
-  invisible: { zh: 'Lc 15 以下 — 看不見', en: 'Lc under 15 — invisible' },
+  'large-only': { zh: 'Lc 45–60 — 只夠大標題(36px 或 24px 粗體)', en: 'Lc 45–60 — headlines only (36px, or 24px bold)' },
+  'non-text': { zh: 'Lc 30–45 — 任何文字的下限:停用態、佔位字,以及實心的非文字元素', en: 'Lc 30–45 — the floor for any text at all (disabled, placeholder) and for solid non-text' },
+  discernible: { zh: 'Lc 15–30 — 只分得出有東西,不足以承載文字或語意圖形', en: 'Lc 15–30 — discernible only; not enough for text or for meaningful non-text' },
+  invisible: { zh: 'Lc 15 以下 — 當作看不見', en: 'Lc under 15 — treat as invisible' },
 };
+
+/** The grounds a page actually has. White and black are the extremes, and a
+ *  real page is usually neither — so these are shortcuts into a free field,
+ *  not the whole choice. */
+const PAGES = ['#ffffff', '#f5f5f5', '#111111', '#000000'];
 
 const LEVEL_MARK: Record<WcagLevel, string> = { AAA: 'AAA', AA: 'AA', fail: '✕' };
 
@@ -50,16 +60,24 @@ const SAMPLES: { text: string; bg: string; note: { zh: string; en: string } }[] 
 export default function Contrast({ l }: ToolProps) {
   const [textInput, setTextInput] = useState('#767676');
   const [bgInput, setBgInput] = useState('#ffffff');
-  const [page, setPage] = useState<'white' | 'black'>('white');
+  const [pageInput, setPageInput] = useState('#ffffff');
   const [target, setTarget] = useState<Target>(4.5);
   const [move, setMove] = useState<'text' | 'background'>('text');
 
   const text = useMemo(() => parseColor(textInput), [textInput]);
   const background = useMemo(() => parseColor(bgInput), [bgInput]);
-  const result = useMemo(() => {
-    const pageRgb: Rgb = page === 'white' ? { r: 1, g: 1, b: 1 } : { r: 0, g: 0, b: 0 };
-    return text && background ? measure(text, background, pageRgb) : null;
-  }, [text, background, page]);
+  const page = useMemo(() => parseColor(pageInput), [pageInput]);
+  // The bottom of the stack has to be something opaque; an unreadable or empty
+  // page field falls back to the browser's own white canvas rather than
+  // blanking the measurement.
+  const pageRgb = useMemo<Rgb>(
+    () => (page ? compositeOver(page, { r: 1, g: 1, b: 1 }) : { r: 1, g: 1, b: 1 }),
+    [page]
+  );
+  const result = useMemo(
+    () => (text && background ? measure(text, background, pageRgb) : null),
+    [text, background, pageRgb]
+  );
 
   const suggestions = useMemo(() => {
     if (!result) return [];
@@ -97,16 +115,30 @@ export default function Contrast({ l }: ToolProps) {
             placeholder="#ffffff"
             hint={t(l, '半透明會先疊在下面的頁面色上', 'A translucent value is composited onto the page colour below')}
           />
-          <Seg
+          <Input
             label={t(l, '頁面底色', 'Page colour')}
-            value={page}
-            onChange={setPage}
-            options={[
-              { value: 'white', label: t(l, '白', 'white') },
-              { value: 'black', label: t(l, '黑', 'black') },
-            ]}
+            value={pageInput}
+            onChange={setPageInput}
+            invalid={pageInput.trim() !== '' && !page}
+            placeholder="#ffffff"
+            hint={t(
+              l,
+              '兩層都半透明時,結論取決於這一層。填你真的在用的底色,不要只在純白與純黑之間選。',
+              'With both layers translucent the verdict rests on this one. Use the ground you actually ship, not just white or black.'
+            )}
           />
         </div>
+
+        <Row>
+          <span className="inst-no" style={{ color: 'var(--fg-muted)' }}>
+            {t(l, '常見底色', 'common grounds')}
+          </span>
+          {PAGES.map((hex) => (
+            <Btn key={hex} onClick={() => setPageInput(hex)} disabled={pageInput === hex}>
+              {hex}
+            </Btn>
+          ))}
+        </Row>
 
         <Row>
           <Btn
@@ -131,12 +163,14 @@ export default function Contrast({ l }: ToolProps) {
           ))}
         </Row>
 
-        {(textInput.trim() !== '' && !text) || (bgInput.trim() !== '' && !background) ? (
+        {(textInput.trim() !== '' && !text) ||
+        (bgInput.trim() !== '' && !background) ||
+        (pageInput.trim() !== '' && !page) ? (
           <Note error>
             {t(
               l,
-              '有一邊讀不出來。這裡吃 hex、rgb()、hsl()、oklch()、oklab() 與 black/white/grey 幾個名稱;完整的顏色名稱表在 H01。',
-              'One side did not parse. This tool reads hex, rgb(), hsl(), oklch(), oklab() and a few names; the full named-colour table is in H01.'
+              '有一個欄位讀不出來。這裡吃 hex、rgb()、hsl()、oklch()、oklab() 與 black/white/grey 幾個名稱;完整的顏色名稱表在 H01。底色讀不出來時先當成白色。',
+              'One of the fields did not parse. This tool reads hex, rgb(), hsl(), oklch(), oklab() and a few names; the full named-colour table is in H01. An unreadable page colour is treated as white for now.'
             )}
           </Note>
         ) : null}
@@ -153,29 +187,34 @@ export default function Contrast({ l }: ToolProps) {
                 ) : null
               }
             >
-              <div
-                style={{
-                  background: swatchBg,
-                  color: swatchText,
-                  border: '1px solid var(--border-3)',
-                  padding: '1.25rem',
-                  display: 'grid',
-                  gap: '0.6rem',
-                }}
-              >
-                <p style={{ fontSize: '2rem', lineHeight: 1.1, margin: 0 }}>
-                  {t(l, '大標題 24px 以上', 'Large heading, 24px up')}
-                </p>
-                <p style={{ fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>
-                  {t(
-                    l,
-                    '正文大小的中文。判定門檻看的是字級與字重,不只是顏色:18pt(24px),或 14pt(18.66px)加粗,算「大字」。',
-                    'Body copy. The threshold depends on size and weight, not colour alone: 18pt (24px), or 14pt (18.66px) bold, counts as large.'
-                  )}
-                </p>
-                <p style={{ fontSize: '0.75rem', margin: 0 }}>
-                  {t(l, '12px 的註腳文字', 'A 12px footnote')}
-                </p>
+              {/* The page ground is drawn around the block, so a translucent
+                  background is seen sitting on the colour it was measured
+                  against rather than on whatever this page happens to be. */}
+              <div style={{ background: toHex(pageRgb), padding: '0.75rem', border: '1px solid var(--border-3)' }}>
+                <div
+                  style={{
+                    background: swatchBg,
+                    color: swatchText,
+                    border: '1px solid var(--border-3)',
+                    padding: '1.25rem',
+                    display: 'grid',
+                    gap: '0.6rem',
+                  }}
+                >
+                  <p style={{ fontSize: '2rem', lineHeight: 1.1, margin: 0 }}>
+                    {t(l, '大標題 24px 以上', 'Large heading, 24px up')}
+                  </p>
+                  <p style={{ fontSize: '1rem', lineHeight: 1.6, margin: 0 }}>
+                    {t(
+                      l,
+                      '正文大小的中文。判定門檻看的是字級與字重,不只是顏色:18pt(24px),或 14pt(18.66px)加粗,算「大字」。',
+                      'Body copy. The threshold depends on size and weight, not colour alone: 18pt (24px), or 14pt (18.66px) bold, counts as large.'
+                    )}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', margin: 0 }}>
+                    {t(l, '12px 的註腳文字', 'A 12px footnote')}
+                  </p>
+                </div>
               </div>
             </Panel>
           </div>

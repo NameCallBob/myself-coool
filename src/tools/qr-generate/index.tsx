@@ -295,8 +295,8 @@ export default function QrGenerate({ l }: ToolProps) {
                 placeholder="example.com/path"
                 hint={t(
                   l,
-                  '沒寫 scheme 的話會補上 https://。mailto:、tel: 這類自己帶 scheme 的不會被改。',
-                  'https:// is added when no scheme is present. mailto:, tel: and friends are left as typed.'
+                  '沒寫 scheme 的話會補上 https://,主機帶埠號(localhost:3000)也算沒寫。mailto:、tel: 這類自己帶 scheme 的不會被改。',
+                  'https:// is added when no scheme is present, a host with a port (localhost:3000) included. mailto:, tel: and friends are left as typed.'
                 )}
               />
             ) : null}

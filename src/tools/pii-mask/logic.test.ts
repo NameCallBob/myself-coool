@@ -4,6 +4,7 @@ import {
   DETECTORS,
   InputTooLarge,
   MAX_INPUT,
+  MAX_MATCHES,
   STANDARD_DETECTORS,
   detectorFor,
   isIpv4,
@@ -231,4 +232,36 @@ test('a realistic log line, end to end', () => {
   // The timestamp is not a phone number, and the date is not an IP.
   assert.equal(result.counts.mobileTw, undefined);
   assert.equal(result.counts.ipv4, 1);
+});
+
+test('the match cap never leaves a whole category unscanned', () => {
+  // A log whose head is nothing but JWTs, with an address and an IP at the end.
+  // The cap has to stop the scan somewhere, but stopping before the e-mail and
+  // IP detectors have run at all would produce an output that looks redacted
+  // and still carries every address in the file.
+  const filler = 'eyJabcd.abcd.abcd ';
+  const text = filler.repeat(MAX_MATCHES + 1) + 'ann@example.com 203.0.113.42';
+  const result = redact(text, STANDARD_DETECTORS, 'label');
+
+  assert.equal(result.truncated, true);
+  assert.equal(result.counts.email, 1, 'e-mail was never scanned');
+  assert.equal(result.counts.ipv4, 1, 'IPv4 was never scanned');
+  assert.ok(!result.text.includes('ann@example.com'));
+  assert.ok(!result.text.includes('203.0.113.42'));
+  // and the result says which categories were cut short, not just "truncated".
+  assert.deepEqual(result.truncatedIds, ['jwt']);
+  assert.ok(result.matches.length <= MAX_MATCHES, 'the cap still holds');
+});
+
+test('新式外來人口統一證號 is detected, with the same weighted checksum', () => {
+  // The 2021 format keeps the ROC ID formula and puts 8 or 9 in the second
+  // position instead of 1 or 2. Published example: A800000014.
+  assert.equal(isTwIdValid('A800000014'), true);
+  assert.equal(isTwIdValid('A800000015'), false);
+  assert.equal(isTwIdValid('F900000011'), true);
+  assert.equal(isTwIdValid('F900000012'), false);
+  // The national form still behaves exactly as before.
+  assert.equal(isTwIdValid('A123456789'), true);
+  assert.equal(isTwIdValid('A323456789'), false);
+  assert.equal(redact('居留證 A800000014 到期', ['twId'], 'label').text, '居留證 [TWID_1] 到期');
 });

@@ -160,3 +160,30 @@ test('empty input produces empty output in every style', () => {
     assert.equal(convert('', style), '', style);
   }
 });
+
+test('a name that was already mixed case is not flattened by title case', () => {
+  // iPhone → Iphone and McDonald → Mcdonald are the two everyone notices. With
+  // acronym preservation on (the UI default) a word carrying a capital anywhere
+  // but the front is taken as deliberate and left alone.
+  assert.equal(toTitle('the iPhone era', { preserveAcronyms: true }), 'The iPhone Era');
+  assert.equal(toTitle('McDonald and eBay', { preserveAcronyms: true }), 'McDonald and eBay');
+  assert.equal(toTitle('a LaTeX macro', { preserveAcronyms: true }), 'A LaTeX Macro');
+  assert.equal(toPascal('iPhone case', { preserveAcronyms: true }), 'IPhoneCase');
+  // Ordinary words still get their capital, and ALL CAPS still works as before.
+  assert.equal(toTitle('hello world', { preserveAcronyms: true }), 'Hello World');
+  assert.equal(toTitle('NASA and ESA', { preserveAcronyms: true }), 'NASA and ESA');
+  // Without the switch the old behaviour is what you get.
+  assert.equal(toTitle('the iPhone era'), 'The Iphone Era');
+});
+
+test('upper case is Unicode full case mapping, and is not a round trip', () => {
+  // Documented rather than fixed. ß uppercases to SS and ﬁ to FI by Unicode's
+  // own mapping, so upper() can change the length and lower() cannot undo it.
+  assert.equal(toUpperText('straße'), 'STRASSE');
+  assert.equal(toLowerText(toUpperText('straße')), 'strasse');
+  assert.equal(toUpperText('ﬁle'), 'FILE');
+  assert.equal(toUpperText('ΣΟΦΟΣ'.toLowerCase()), 'ΣΟΦΟΣ');
+  // Latin text, which is what the tool is for, does round trip.
+  assert.equal(toLowerText(toUpperText('Hello World')), 'hello world');
+  assert.equal(toUpperText('HTTP header'), 'HTTP HEADER');
+});

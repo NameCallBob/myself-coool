@@ -23,16 +23,16 @@ export const NET_NOTES: Record<string, ToolNote> = {
     ],
     limits: [
       {
-        zh: 'IPv4 的前導零一律拒絕。010.0.0.1 在 inet_aton 眼裡是八進位,解出來是 8.0.0.1,在別的函式庫眼裡是 10.0.0.1;哪一家採哪一種解讀,就是一長串 SSRF 繞過的來源。這個剖析器兩種都不猜,直接不接受這種寫法,那是唯一不會默默算錯的答案。',
-        en: 'Leading zeros in IPv4 are refused outright. 010.0.0.1 is 8.0.0.1 to inet_aton and 10.0.0.1 to other libraries, and which reading a library takes is the root of a long line of SSRF bypasses; refusing the form is the only answer that cannot be quietly wrong.',
+        zh: 'IPv4 的前導零一律拒絕。010.0.0.1 在 inet_aton 眼裡是八進位,解出來是 8.0.0.1,在別的函式庫眼裡是 10.0.0.1;哪一家採哪一種解讀,就是一長串 SSRF 繞過的來源。這個剖析器兩種都不猜,直接不接受這種寫法,那是唯一不會默默算錯的答案。斜線後面的前綴長度守同一條規則:/024 一樣退掉,不會被當成 /24——一個嚴格到位址部分、對前綴部分就鬆手的剖析器,只是在有人記得的地方嚴格而已。',
+        en: 'Leading zeros in IPv4 are refused outright. 010.0.0.1 is 8.0.0.1 to inet_aton and 10.0.0.1 to other libraries, and which reading a library takes is the root of a long line of SSRF bypasses; refusing the form is the only answer that cannot be quietly wrong. The prefix length after the slash is held to the same rule: /024 is rejected rather than read as /24, because a parser that is strict about the address and lax about the prefix is only strict where someone remembered to be.',
       },
       {
         zh: '切分與範圍彙總都有列表上限,切分最多列 128 個子網段,範圍最多 64 個區塊。總數照算並顯示,列表截斷時會說明。上限存在的理由很實際:把 /8 切成 /32 是一千六百多萬列,沒有人要看,而在瀏覽器裡跑一個停不下來的迴圈,跟分頁當掉沒有區別。',
         en: 'Splitting lists at most 128 subnets and range decomposition at most 64 blocks; the true total is still computed and the truncation is stated. A /8 cut into /32s is over sixteen million rows, and a runaway loop in a browser is indistinguishable from a crash.',
       },
       {
-        zh: '這裡只做算術,不查 whois、不問 DNS、不測連通性。「全球單播」只代表「沒有被保留給特別用途」,不代表那個位址通得到;那份特殊用途清單也是 2024 年的快照,IANA 之後新增的保留區段不會自己長出來。要把位址當成整數在進位之間搬,請用 G02;要逐位元看遮罩與位移,請用 D06。',
-        en: 'Arithmetic only: no whois, no DNS, no reachability test. "Global unicast" means "not reserved for anything in particular", and the special-purpose list is a 2024 snapshot that will not grow on its own. For base conversion use G02, and for bit-level masking and shifts use D06.',
+        zh: '這裡只做算術,不查 whois、不問 DNS、不測連通性。「全球單播」只代表「沒有被保留給特別用途」,不代表那個位址通得到。那份特殊用途清單是 IANA 登錄表在 2024 年的快照,而且是節錄:區段級的項目都在(包含 192.0.0.0/29 的 DS-Lite、192.31.196.0/24 與 192.175.48.0/24 的 AS112、192.52.193.0/24 的 AMT),但 192.0.0.0/24 裡面那幾筆單一位址的協定指派——dummy address、PCP 與 TURN 的 anycast、NAT64 探測用的那一對——沒有逐筆列,它們會顯示成外層的「IETF 協定指派保留」。IANA 之後新增的保留區段不會自己長出來。要把位址當成整數在進位之間搬,請用 G02;要逐位元看遮罩與位移,請用 D06。',
+        en: 'Arithmetic only: no whois, no DNS, no reachability test. "Global unicast" means "not reserved for anything in particular", not "reachable". The special-purpose list is a 2024 snapshot of the IANA registry, and an abridged one: every block-level entry is there (including 192.0.0.0/29 for DS-Lite, AS112 at 192.31.196.0/24 and 192.175.48.0/24, and AMT at 192.52.193.0/24), but the single-address protocol assignments inside 192.0.0.0/24 — the dummy address, the PCP and TURN anycast addresses, the NAT64 discovery pair — are not listed row by row and report as the enclosing IETF protocol assignments block. Entries IANA adds later will not appear on their own. For base conversion use G02, and for bit-level masking and shifts use D06.',
       },
     ],
   },

@@ -31,8 +31,14 @@ export type LoanInput = {
   /** Annual nominal rate, percent, for the first stage. */
   rate: number;
   /**
-   * Months the first rate applies for. Zero means one rate for the whole term,
-   * and `rateAfter` is then ignored.
+   * Months the first rate applies for, counted from month 1 — the disbursement
+   * month — so a grace period falls inside the first stage. That is how a rate
+   * card reads ("1.5% for the first two years" means the first two calendar
+   * years of the loan), and it is the only reading this model can express: a
+   * contract whose stage one instead starts when principal repayment begins has
+   * to be entered as `stageMonths = graceMonths + 24`.
+   *
+   * Zero means one rate for the whole term, and `rateAfter` is then ignored.
    */
   stageMonths: number;
   /** Annual nominal rate, percent, after `stageMonths`. */
@@ -75,7 +81,12 @@ export function monthlyPayment(principal: number, annualRatePercent: number, mon
   return (principal * i) / (1 - (1 + i) ** -months);
 }
 
-/** Annual percent applying in a given 1-based month. */
+/**
+ * Annual percent applying in a given 1-based month.
+ *
+ * Month 1 is the disbursement month, not the first month of amortisation, so a
+ * grace period is spent inside the first stage. See `stageMonths`.
+ */
 export function rateForMonth(input: LoanInput, month: number): number {
   if (input.stageMonths > 0 && month > input.stageMonths) return input.rateAfter;
   return input.rate;
@@ -180,6 +191,22 @@ export function buildSchedule(input: LoanInput): Schedule {
 
   const round = (value: number) => (input.roundPayment ? Math.ceil(value) : value);
 
+  /**
+   * Records the instalment that applies from a month, one row per month.
+   *
+   * Two of the three re-solve moments can land on the same month — a lump sum in
+   * month 24 re-solves for month 25, and the rate step re-solves for month 25 as
+   * well — and the table of "where the instalment changes" then showed month 25
+   * twice. The later write is the authoritative one: it is the figure the loop
+   * goes on to charge.
+   */
+  const pushStage = (fromMonth: number, annualRate: number, value: number) => {
+    const existing = stagePayments.findIndex((stage) => stage.fromMonth === fromMonth);
+    const row = { fromMonth, annualRate, payment: value };
+    if (existing >= 0) stagePayments[existing] = row;
+    else stagePayments.push(row);
+  };
+
   for (let month = 1; month <= input.months; month += 1) {
     if (balance <= EPSILON) break;
 
@@ -199,24 +226,16 @@ export function buildSchedule(input: LoanInput): Schedule {
       if (input.method === 'equal-payment') {
         if (startingAmortisation || rateChanged || Number.isNaN(payment)) {
           payment = round(monthlyPayment(balance, annualRate, remaining));
-          stagePayments.push({ fromMonth: month, annualRate, payment });
+          pushStage(month, annualRate, payment);
         }
         scheduledPayment = Math.min(payment, balance + interest);
         scheduledPrincipal = scheduledPayment - interest;
       } else {
         if (startingAmortisation || Number.isNaN(fixedPrincipal)) {
           fixedPrincipal = balance / remaining;
-          stagePayments.push({
-            fromMonth: month,
-            annualRate,
-            payment: fixedPrincipal + interest,
-          });
+          pushStage(month, annualRate, fixedPrincipal + interest);
         } else if (rateChanged) {
-          stagePayments.push({
-            fromMonth: month,
-            annualRate,
-            payment: fixedPrincipal + interest,
-          });
+          pushStage(month, annualRate, fixedPrincipal + interest);
         }
         scheduledPrincipal = Math.min(fixedPrincipal, balance);
         scheduledPayment = scheduledPrincipal + interest;
@@ -257,16 +276,18 @@ export function buildSchedule(input: LoanInput): Schedule {
     // A lump sum leaves the schedule over-funded. Either the term shortens
     // (nothing to do — the loop exits early when the balance reaches zero) or
     // the instalment is re-solved over the months that remain.
-    if (extra > 0 && input.prepaymentEffect === 'payment' && balance > EPSILON) {
+    //
+    // Not while the grace period is still running, though: those months pay
+    // interest only, and the instalment is solved from scratch when amortisation
+    // starts. Re-solving here changed no figure the loop went on to use, but it
+    // did publish an instalment for a month that never charges one.
+    if (extra > 0 && !grace && input.prepaymentEffect === 'payment' && balance > EPSILON) {
       const monthsLeft = input.months - month;
       if (monthsLeft > 0) {
+        const nextRate = rateForMonth(input, month + 1);
         if (input.method === 'equal-payment') {
-          payment = round(monthlyPayment(balance, rateForMonth(input, month + 1), monthsLeft));
-          stagePayments.push({
-            fromMonth: month + 1,
-            annualRate: rateForMonth(input, month + 1),
-            payment,
-          });
+          payment = round(monthlyPayment(balance, nextRate, monthsLeft));
+          pushStage(month + 1, nextRate, payment);
         } else {
           fixedPrincipal = balance / monthsLeft;
         }
@@ -305,16 +326,30 @@ export function prepaymentSaving(input: LoanInput): {
 }
 
 /**
- * Effective annual rate implied by a schedule, found by bisection on the
- * internal rate of return of the actual cash flows.
+ * The monthly internal rate of return of the actual cash flows, found by
+ * bisection, annualised two ways.
  *
- * Worth having because it is the only number that compares two offers honestly
- * once one of them has a teaser rate: a loan at "1.5% for two years then 2.3%"
- * is not a 1.5% loan and is not a 2.3% loan either.
+ * Both numbers are here because they answer different questions and the gap
+ * between them looks like a bug when only one is shown. `nominal` is the monthly
+ * IRR times twelve, which is the basis every bank quotes on: a single-stage loan
+ * at 2.3% hands 2.3% back, which also makes this function self-checking.
+ * `effective` compounds the same monthly rate twelve times — 2.3% nominal is
+ * 2.3245% effective — and is the honest comparison once one offer has a teaser
+ * rate, because a loan at "1.5% for two years then 2.3%" is neither a 1.5% loan
+ * nor a 2.3% one.
  */
-export function effectiveAnnualRate(input: LoanInput): number {
+export function annualisedRates(input: LoanInput): {
+  /** Monthly IRR, in percent. */
+  monthly: number;
+  /** monthly × 12: the basis a rate card is quoted on. */
+  nominal: number;
+  /** (1 + monthly)^12 − 1: what a year of monthly compounding costs. */
+  effective: number;
+} {
   const schedule = buildSchedule(input);
-  if (schedule.periods.length === 0) return Number.NaN;
+  if (schedule.periods.length === 0) {
+    return { monthly: Number.NaN, nominal: Number.NaN, effective: Number.NaN };
+  }
 
   const flows = schedule.periods.map((period) => period.payment + period.extra);
 
@@ -330,14 +365,26 @@ export function effectiveAnnualRate(input: LoanInput): number {
   // more than double precision can use, and it always terminates.
   let low = 0;
   let high = 1;
-  if (presentValue(low) < 0) return 0;
-  for (let step = 0; step < 200; step += 1) {
-    const middle = (low + high) / 2;
-    if (presentValue(middle) > 0) low = middle;
-    else high = middle;
+  let monthly = 0;
+  if (presentValue(low) >= 0) {
+    for (let step = 0; step < 200; step += 1) {
+      const middle = (low + high) / 2;
+      if (presentValue(middle) > 0) low = middle;
+      else high = middle;
+    }
+    monthly = (low + high) / 2;
   }
-  const monthly = (low + high) / 2;
-  return ((1 + monthly) ** 12 - 1) * 100;
+
+  return {
+    monthly: monthly * 100,
+    nominal: monthly * 12 * 100,
+    effective: ((1 + monthly) ** 12 - 1) * 100,
+  };
+}
+
+/** Effective annual rate: the monthly IRR compounded over twelve months. */
+export function effectiveAnnualRate(input: LoanInput): number {
+  return annualisedRates(input).effective;
 }
 
 /** Yearly roll-up of the schedule, for a table that fits on a screen. */

@@ -318,6 +318,117 @@ test('local-zone runs are consistent with the machine timezone', () => {
   assert.ok(first > at('2026-06-01T00:00:00Z'));
 });
 
+/** Runs `fn` with the process timezone pinned, so a DST case is reproducible. */
+function withZone(zone: string, fn: () => void): void {
+  const previous = process.env.TZ;
+  process.env.TZ = zone;
+  try {
+    fn();
+  } finally {
+    if (previous === undefined) delete process.env.TZ;
+    else process.env.TZ = previous;
+  }
+}
+
+/**
+ * Calendar-shaped `new Date(y, m, d, …)` builds during `run` — the unit of work
+ * the day-first search spends, and the only one worth counting here.
+ */
+function countCalendarBuilds(run: () => void): number {
+  const RealDate = Date;
+  let builds = 0;
+  function counting(...args: unknown[]): Date {
+    if (args.length >= 3) builds += 1;
+    // The genuine prototype has to come along, or the result has no methods.
+    return Reflect.construct(RealDate, args, counting) as Date;
+  }
+  // A mutable view of the members a DateConstructor needs: the real type
+  // declares `prototype` readonly, and this stand-in has to carry it.
+  const statics = counting as unknown as {
+    prototype: Date;
+    UTC: typeof Date.UTC;
+    now: typeof Date.now;
+    parse: typeof Date.parse;
+  };
+  statics.prototype = RealDate.prototype;
+  statics.UTC = RealDate.UTC;
+  statics.now = RealDate.now;
+  statics.parse = RealDate.parse;
+  globalThis.Date = counting as unknown as DateConstructor;
+  try {
+    run();
+  } finally {
+    globalThis.Date = RealDate;
+  }
+  return builds;
+}
+
+test('a spring-forward local time that does not exist is skipped, not shifted', () => {
+  withZone('America/New_York', () => {
+    // 2026-03-08: 02:00 EST jumps to 03:00 EDT, so 02:30 never happens.
+    const cron = parseCron('30 2 * * *', 'unix');
+    assert.deepEqual(nextRuns(cron, at('2026-03-08T00:00:00Z'), 2, 'local').map(iso), [
+      '2026-03-09T06:30:00Z',
+      '2026-03-10T06:30:00Z',
+    ]);
+  });
+});
+
+test('a fall-back local time that happens twice is reported once', () => {
+  withZone('America/New_York', () => {
+    // 2026-11-01: 02:00 EDT falls back to 01:00 EST, so 01:30 happens twice —
+    // once at 05:30Z and again at 06:30Z. Only the first is listed, which is
+    // roughly what Vixie cron does; it is asserted here so the asymmetry with
+    // the spring-forward case is a decision on the record, not an accident.
+    const cron = parseCron('30 1 * * *', 'unix');
+    const runs = nextRuns(cron, at('2026-11-01T04:30:00Z'), 2, 'local').map(iso);
+    assert.deepEqual(runs, ['2026-11-01T05:30:00Z', '2026-11-02T06:30:00Z']);
+    assert.ok(!runs.includes('2026-11-01T06:30:00Z'));
+  });
+});
+
+test('the search does not enumerate the day before the reference instant', () => {
+  withZone('America/New_York', () => {
+    // Every second, asked at 19:00 local: the eight answers are the next eight
+    // seconds, so the walk must not first build the 68 400 wall-clock times
+    // that precede it.
+    const cron = parseCron('* * * * * ?', 'quartz');
+    let runs: number[] = [];
+    const builds = countCalendarBuilds(() => {
+      runs = nextRuns(cron, at('2026-06-15T23:00:00Z'), 8, 'local');
+    });
+    assert.deepEqual(runs.map(iso), [
+      '2026-06-15T23:00:01Z',
+      '2026-06-15T23:00:02Z',
+      '2026-06-15T23:00:03Z',
+      '2026-06-15T23:00:04Z',
+      '2026-06-15T23:00:05Z',
+      '2026-06-15T23:00:06Z',
+      '2026-06-15T23:00:07Z',
+      '2026-06-15T23:00:08Z',
+    ]);
+    assert.ok(builds < 200, `${builds} calendar builds for eight runs`);
+  });
+});
+
+test('skipping ahead never drops a run, in a half-hour DST zone either', () => {
+  // Lord Howe shifts by 30 minutes, which is exactly the shape a cutoff
+  // computed from whole hours would get wrong.
+  withZone('Australia/Lord_Howe', () => {
+    const cron = parseCron('*/7 * * * *', 'unix');
+    assert.deepEqual(nextRuns(cron, at('2026-04-04T15:30:00Z'), 4, 'local').map(iso), [
+      '2026-04-04T15:37:00Z',
+      '2026-04-04T15:44:00Z',
+      '2026-04-04T15:51:00Z',
+      '2026-04-04T15:58:00Z',
+    ]);
+    const daily = parseCron('30 1 * * *', 'unix');
+    const runs = nextRuns(daily, at('2026-04-04T13:00:00Z'), 3, 'local');
+    assert.ok(runs.every((run, index) => index === 0 || run > runs[index - 1]));
+    for (const run of runs) assert.equal(new Date(run).getHours(), 1);
+  });
+});
+
 test('month lengths are right, including leap February', () => {
   assert.equal(daysInMonth(2026, 2), 28);
   assert.equal(daysInMonth(2028, 2), 29);

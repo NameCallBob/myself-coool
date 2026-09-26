@@ -71,12 +71,27 @@ const ANSI_C: Record<string, string> = {
 };
 
 /**
- * Splits a command line into words the way a shell would.
+ * Where the tokenizer stopped short of the end of the input.
+ *
+ * `inWord` is the interesting case: an unquoted `&` in the middle of a word is
+ * almost always a URL that was pasted without quotes, so the code would have
+ * requested half a query string.
+ */
+export type ShellStop = { at: string; inWord: boolean; rest: string };
+
+export type Tokenized = { tokens: string[]; stop: ShellStop | null };
+
+/**
+ * Splits a command line into words the way a shell would, and says whether it
+ * stopped early.
  *
  * Unbalanced quotes are an error: a converter that silently drops the rest of
- * the command would produce code that looks right and sends the wrong body.
+ * the command would produce code that looks right and sends the wrong body. A
+ * `|`, `;` or `&` is not an error — the shell would end the command there too —
+ * but it is reported, because `curl http://x?a=1&b=2` unquoted loses half its
+ * query string and the generated code would look perfectly fine.
  */
-export function tokenizeShell(source: string): string[] {
+export function tokenize(source: string): Tokenized {
   const tokens: string[] = [];
   let current = '';
   let started = false;
@@ -187,8 +202,12 @@ export function tokenizeShell(source: string): string[] {
     }
 
     // A pipe or a semicolon ends the curl command; anything after it belongs to
-    // another program and is not ours to translate.
-    if (ch === '|' || ch === ';' || ch === '&') break;
+    // another program and is not ours to translate. Reported, never silent.
+    if (ch === '|' || ch === ';' || ch === '&') {
+      const stop: ShellStop = { at: ch, inWord: started, rest: source.slice(i) };
+      push();
+      return { tokens, stop };
+    }
 
     current += ch;
     started = true;
@@ -196,7 +215,12 @@ export function tokenizeShell(source: string): string[] {
   }
 
   push();
-  return tokens;
+  return { tokens, stop: null };
+}
+
+/** The words alone, for callers that do not care where the line ended. */
+export function tokenizeShell(source: string): string[] {
+  return tokenize(source).tokens;
 }
 
 /* ── Flag parsing ─────────────────────────── */
@@ -263,7 +287,7 @@ function splitPair(text: string): [string, string] {
 
 /** Parses a tokenized curl command into a request. */
 export function parseCurl(source: string): Request {
-  const tokens = tokenizeShell(source.trim().replace(/^\s*[$#>]\s+/, ''));
+  const { tokens, stop } = tokenize(source.trim().replace(/^\s*[$#>]\s+/, ''));
   const request: Request = {
     method: '',
     url: '',
@@ -283,6 +307,14 @@ export function parseCurl(source: string): Request {
   };
 
   if (tokens.length === 0) throw new CurlParseError('nothing to parse');
+  if (stop) {
+    const dropped = stop.rest.length > 40 ? `${stop.rest.slice(0, 40)}…` : stop.rest;
+    request.warnings.push(
+      stop.inWord
+        ? `an unquoted ${stop.at} cut the word it was inside; "${dropped}" was dropped — quote the whole URL (curl 'http://…?a=1&b=2') and convert again`
+        : `the command ends at ${stop.at}; "${dropped}" belongs to another program and was not translated`
+    );
+  }
   let start = 0;
   if (tokens[0] === 'curl') start = 1;
   else if (/(^|\/)curl(\.exe)?$/.test(tokens[0])) start = 1;
@@ -587,15 +619,27 @@ function urlWithQuery(request: Request): string {
   return request.url.includes('?') ? `${request.url}&${search}` : `${request.url}?${search}`;
 }
 
-function headersWithAuth(request: Request, encodeBasic: boolean): Header[] {
-  const headers = [...request.headers];
+/**
+ * A header on its way into generated code. `basic` marks the one whose value is
+ * a credential pair for the emitter to wrap in `btoa(...)`.
+ *
+ * The flag is a separate field rather than a marker inside the value: a sentinel
+ * string in the value is control information travelling down the data channel,
+ * and a request carrying `-H 'X-Foo: __BASIC__a:b'` would come out as
+ * `'Basic ' + btoa('a:b')`.
+ */
+type EmitHeader = Header & { basic?: true };
+
+function headersWithAuth(request: Request, encodeBasic: boolean): EmitHeader[] {
+  const headers: EmitHeader[] = [...request.headers];
   if (request.cookies) headers.push({ name: 'Cookie', value: request.cookies });
   if (request.auth && encodeBasic) {
     headers.push({
       name: 'Authorization',
       // btoa is left in the generated code on purpose: a base64 constant in a
       // snippet hides which credentials are in it.
-      value: `__BASIC__${request.auth.user}:${request.auth.password}`,
+      value: `${request.auth.user}:${request.auth.password}`,
+      basic: true,
     });
   }
   return headers;
@@ -632,8 +676,8 @@ export function emitFetch(request: Request, options: EmitOptions = DEFAULT_EMIT)
   const init: string[] = [`method: ${jsString(request.method)}`];
   if (headers.length > 0) {
     const rows = headers.map((header) => {
-      const value = header.value.startsWith('__BASIC__')
-        ? `'Basic ' + btoa(${jsString(header.value.slice('__BASIC__'.length))})`
+      const value = header.basic
+        ? `'Basic ' + btoa(${jsString(header.value)})`
         : jsString(header.value);
       return `${pad}${pad}${jsString(header.name)}: ${value},`;
     });
@@ -676,6 +720,43 @@ export function toJsLiteral(value: unknown, indent: number, level = 1): string {
     .join(',\n')}\n${closing}}`;
 }
 
+/**
+ * `--proxy [protocol://]host[:port]` split into the pieces axios wants.
+ *
+ * curl defaults the scheme to http and the port to 1080 when they are absent,
+ * so those are curl's numbers rather than a guess. Returns null when the value
+ * does not parse as a host at all, and then the emitters only comment on it.
+ */
+export function parseProxy(raw: string): {
+  protocol: string;
+  host: string;
+  port: number;
+  /** False when the port is curl's default rather than something the command said. */
+  portGiven: boolean;
+  user: string;
+  password: string;
+} | null {
+  const text = raw.trim();
+  if (text === '') return null;
+  const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(text) ? text : `http://${text}`;
+  let parsed: URL;
+  try {
+    parsed = new URL(withScheme);
+  } catch {
+    return null;
+  }
+  if (parsed.hostname === '') return null;
+  return {
+    protocol: parsed.protocol.replace(':', ''),
+    // curl's documented default when the proxy string carries no port.
+    port: parsed.port === '' ? 1080 : Number(parsed.port),
+    portGiven: parsed.port !== '',
+    host: parsed.hostname,
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+  };
+}
+
 export function emitAxios(request: Request, options: EmitOptions = DEFAULT_EMIT): string {
   const pad = ' '.repeat(options.indent);
   const lines: string[] = [`import axios from 'axios';`, ''];
@@ -685,6 +766,13 @@ export function emitAxios(request: Request, options: EmitOptions = DEFAULT_EMIT)
   if (request.insecure) {
     lines.push('// --insecure needs an https.Agent({ rejectUnauthorized: false }) on Node,');
     lines.push('// and is impossible in the browser.');
+  }
+  const proxy = request.proxy ? parseProxy(request.proxy) : null;
+  if (request.proxy) {
+    lines.push(`// curl --proxy ${request.proxy}: axios honours proxy on Node only — in the`);
+    lines.push('// browser the request goes through whatever the OS and the page are already using.');
+    if (proxy === null) lines.push(`// ${request.proxy} did not parse as [protocol://]host[:port], so it is left here as a note.`);
+    else if (!proxy.portGiven) lines.push('// No port in the command, so curl\'s default of 1080 is used.');
   }
 
   if (request.bodyKind === 'multipart') {
@@ -715,6 +803,15 @@ export function emitAxios(request: Request, options: EmitOptions = DEFAULT_EMIT)
     config.push(body === undefined ? `data: ${jsString(request.body)}` : `data: ${toJsLiteral(body, options.indent, 1)}`);
   }
   if (request.timeout !== null) config.push(`timeout: ${request.timeout * 1000}`);
+  if (proxy) {
+    const proxyAuth =
+      proxy.user !== '' || proxy.password !== ''
+        ? `, auth: { username: ${jsString(proxy.user)}, password: ${jsString(proxy.password)} }`
+        : '';
+    config.push(
+      `proxy: { protocol: ${jsString(proxy.protocol)}, host: ${jsString(proxy.host)}, port: ${proxy.port}${proxyAuth} }`
+    );
+  }
 
   const call = `axios({\n${config.map((row) => `${pad}${row},`).join('\n')}\n})`;
   if (options.awaitStyle) lines.push(`const { data } = await ${call};`);

@@ -22,6 +22,7 @@ import {
   formatIso,
   formatRfc2822,
   formatUnix,
+  inRange,
   parseAny,
   type ParseNote,
   type Unit,
@@ -122,8 +123,8 @@ function noteText(note: ParseNote, l: 'zh' | 'en'): string {
     case 'out-of-range':
       return t(
         l,
-        '這個數值超出 JavaScript Date 能表示的範圍(epoch 前後各約 2.7 億年),所以下面的日期欄位都是空的。',
-        'The value is outside what a JavaScript Date can hold (about ±273 000 years from the epoch), so the date fields below are empty.'
+        '這一串讀得出來,但它落在 JavaScript Date 能表示的範圍之外(epoch 前後各約 2.7 億年),所以下面的日期欄位與距離都是空的。這是數值太大,不是格式不對。',
+        'This was read without trouble, but it lands outside what a JavaScript Date can hold (about ±273 000 years from the epoch), so the calendar fields and the distance below stay empty. The magnitude is the problem, not the syntax.'
       );
     default:
       return note;
@@ -158,7 +159,9 @@ export default function Timestamp({ l }: ToolProps) {
   const utc = useMemo(() => breakdown(parsed.ms, 'utc'), [parsed.ms]);
 
   const gap = useMemo(() => {
-    if (parsed.kind === 'none' || !Number.isFinite(parsed.ms)) return null;
+    // Out of Date range there is no calendar reading either, so a distance of
+    // "a hundred million days" would be arithmetic dressed up as an answer.
+    if (parsed.kind === 'none' || !inRange(parsed.ms)) return null;
     const parts = elapsed(now, parsed.ms);
     const unitName = (name: string) =>
       ({
@@ -166,6 +169,7 @@ export default function Timestamp({ l }: ToolProps) {
         hour: t(l, '小時', 'h'),
         minute: t(l, '分', 'm'),
         second: t(l, '秒', 's'),
+        millisecond: t(l, '毫秒', 'ms'),
       })[name] ?? name;
     const body = parts.map((part) => `${part.value}${unitName(part.unit)}`).join(' ');
     return parsed.ms >= now ? t(l, `${body} 之後`, `in ${body}`) : t(l, `${body} 之前`, `${body} ago`);

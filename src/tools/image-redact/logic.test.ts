@@ -157,14 +157,46 @@ test('a partial block averages only the pixels inside the image', () => {
   assert.deepEqual(reds(pixels, 3), [15, 15, 90]);
 });
 
-test('mosaic averages alpha as well, and rounds halves up', () => {
+test('mosaic rounds halves up on the colour channels', () => {
   const pixels = new Uint8Array([
-    0, 0, 0, 0,
+    0, 0, 0, 255,
     255, 255, 255, 255,
   ]);
   applyMosaic(pixels, 2, 1, { x: 0, y: 0, w: 2, h: 1 }, 2);
-  // (0 + 255) / 2 = 127.5 → 128 on every channel, alpha included.
-  assert.deepEqual([...pixels], [128, 128, 128, 128, 128, 128, 128, 128]);
+  // (0 + 255) / 2 = 127.5 → 128 on the three colour channels. Alpha is not
+  // averaged; it is written opaque, which the next test is about.
+  assert.deepEqual([...pixels], [128, 128, 128, 255, 128, 128, 128, 255]);
+});
+
+test('a mosaic block comes out opaque, so transparency leaves no shape behind', () => {
+  // One white pixel beside a transparent one, and the same white pixel beside
+  // an opaque white one: the two cells have to come out identical. If alpha were
+  // averaged, the first would be half-transparent — it would change brightness
+  // against whatever it is composited on, and its alpha would still be
+  // describing the transparent/opaque boundary that was under the mark.
+  const half = new Uint8Array([255, 255, 255, 0, 255, 255, 255, 255]);
+  applyMosaic(half, 2, 1, { x: 0, y: 0, w: 2, h: 1 }, 2);
+  const opaque = new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255]);
+  applyMosaic(opaque, 2, 1, { x: 0, y: 0, w: 2, h: 1 }, 2);
+  assert.deepEqual([...half], [...opaque]);
+  assert.deepEqual([...half], [255, 255, 255, 255, 255, 255, 255, 255]);
+
+  // A fully transparent pixel carries RGB that was never visible (canvas hands
+  // back zeroes), so it must not drag the mean toward black.
+  const mixed = new Uint8Array([0, 0, 0, 0, 200, 100, 50, 255]);
+  applyMosaic(mixed, 2, 1, { x: 0, y: 0, w: 2, h: 1 }, 2);
+  assert.deepEqual([...mixed], [200, 100, 50, 255, 200, 100, 50, 255]);
+
+  // Partial alpha weights the mean: (200·128 + 0·255) / (128 + 255) = 66.8 → 67.
+  const partial = new Uint8Array([200, 0, 0, 128, 0, 0, 0, 255]);
+  applyMosaic(partial, 2, 1, { x: 0, y: 0, w: 2, h: 1 }, 2);
+  assert.deepEqual([...partial], [67, 0, 0, 255, 67, 0, 0, 255]);
+
+  // Nothing in the cell was ever visible: fall back to the plain mean, still
+  // opaque. The block is erased either way; it does not stay a transparent hole.
+  const clear = new Uint8Array([10, 20, 30, 0, 50, 60, 70, 0]);
+  applyMosaic(clear, 2, 1, { x: 0, y: 0, w: 2, h: 1 }, 2);
+  assert.deepEqual([...clear], [30, 40, 50, 255, 30, 40, 50, 255]);
 });
 
 test('a block size below two is raised to two rather than dividing by zero', () => {

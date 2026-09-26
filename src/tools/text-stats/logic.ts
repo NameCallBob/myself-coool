@@ -161,9 +161,25 @@ export function countSentences(text: string): number {
   return matchCount(text, SENTENCE_END);
 }
 
+/**
+ * The head of the text, cut at a character boundary.
+ *
+ * `slice(0, MAX_INPUT)` alone can land between the two halves of a surrogate
+ * pair, and the lone half that stays behind is a character nobody typed: it
+ * counts as one code point, one grapheme cluster and three UTF-8 bytes, so all
+ * four readings come out slightly wrong at exactly the boundary. Dropping the
+ * orphaned half costs one UTF-16 unit and keeps the four counts consistent.
+ */
+function headOf(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const last = text.charCodeAt(max - 1);
+  const high = last >= 0xd800 && last <= 0xdbff;
+  return text.slice(0, high ? max - 1 : max);
+}
+
 export function analyze(input: string): Counts {
   const truncated = input.length > MAX_INPUT;
-  const text = truncated ? input.slice(0, MAX_INPUT) : input;
+  const text = truncated ? headOf(input, MAX_INPUT) : input;
 
   let whitespace = 0;
   let codePoints = 0;
@@ -243,8 +259,18 @@ export function frequency(
   const includeCjk = options?.includeCjk ?? true;
 
   const tally = new Map<string, number>();
-  const bump = (token: string) => {
-    if ([...token].length < minLength) return;
+  /**
+   * `minLength` is a word-length filter and applies to Latin tokens only.
+   *
+   * Every CJK token here is one character by construction — there is no
+   * dictionary, so there is no longer unit to measure — which means the same
+   * threshold would not filter the CJK table, it would empty it: at a minLength
+   * of 2 a Chinese document produces no rows at all, and an empty table reads as
+   * "nothing occurs often" rather than "this setting does not apply here". CJK
+   * is therefore exempt, and `includeCjk` stays the switch that removes it.
+   */
+  const bump = (token: string, cjk = false) => {
+    if (!cjk && [...token].length < minLength) return;
     const key = ignoreCase ? token.toLowerCase() : token;
     tally.set(key, (tally.get(key) ?? 0) + 1);
   };
@@ -254,7 +280,7 @@ export function frequency(
     for (;;) {
       const found = CJK_LETTER.exec(text);
       if (found === null) break;
-      bump(found[0]);
+      bump(found[0], true);
     }
   }
 

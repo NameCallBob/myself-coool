@@ -12,6 +12,7 @@ import {
   Readout,
   ResetButton,
   Row,
+  Seg,
   Select,
   Table,
 } from '@/components/tools/bench';
@@ -25,6 +26,7 @@ import {
   secretStrength,
   verify,
   type Jwt,
+  type SecretEncoding,
   type VerifyOutcome,
 } from './logic';
 
@@ -133,6 +135,9 @@ export default function JwtDecode({ l }: ToolProps) {
 
   const [token, setToken] = useState('');
   const [key, setKey] = useState('');
+  // An HMAC key is bytes. Text is the right default for a passphrase and the
+  // wrong one for `openssl rand -base64 32`, so the reading is a choice.
+  const [secretEncoding, setSecretEncoding] = useState<SecretEncoding>('utf8');
   const [algOverride, setAlgOverride] = useState('');
   const [outcome, setOutcome] = useState<VerifyOutcome | null>(null);
   const [checking, setChecking] = useState(false);
@@ -159,12 +164,12 @@ export default function JwtDecode({ l }: ToolProps) {
   const alg = algOverride || (ALGS.includes(headerAlg.toUpperCase() as (typeof ALGS)[number]) ? headerAlg.toUpperCase() : 'HS256');
   const family = algFamily(alg);
   const symmetric = family === 'HS';
-  const strength = symmetric ? secretStrength(key, alg) : null;
+  const strength = symmetric ? secretStrength(key, alg, secretEncoding) : null;
 
   const runVerify = async () => {
     if (!jwt) return;
     setChecking(true);
-    const result = await verify(jwt, alg, key, crypto.subtle);
+    const result = await verify(jwt, alg, key, crypto.subtle, secretEncoding);
     setChecking(false);
     setOutcome(result);
   };
@@ -284,8 +289,8 @@ export default function JwtDecode({ l }: ToolProps) {
                   symmetric
                     ? t(
                         l,
-                        'RFC 7518 要求密鑰長度不短於雜湊輸出:HS256 至少 32 位元組。',
-                        'RFC 7518 requires a key no shorter than the hash output: 32 bytes for HS256.'
+                        `RFC 7518 要求密鑰長度不短於雜湊輸出:${alg} 至少 ${strength?.required ?? 32} 位元組。下面選的是「這段文字怎麼變成位元組」。`,
+                        `RFC 7518 requires a key no shorter than the hash output: ${strength?.required ?? 32} bytes for ${alg}. The switch below says how this text becomes those bytes.`
                       )
                     : t(
                         l,
@@ -301,6 +306,47 @@ export default function JwtDecode({ l }: ToolProps) {
                 rows={symmetric ? 2 : 6}
               />
 
+              {symmetric ? (
+                <Row>
+                  <Seg
+                    label={t(l, '密鑰編碼', 'Secret encoding')}
+                    value={secretEncoding}
+                    onChange={(value) => {
+                      setSecretEncoding(value);
+                      setOutcome(null);
+                    }}
+                    options={[
+                      { value: 'utf8', label: t(l, '文字 UTF-8', 'text (UTF-8)') },
+                      { value: 'base64', label: 'base64' },
+                      { value: 'hex', label: t(l, '十六進位', 'hex') },
+                    ]}
+                  />
+                  <span className="inst-no">
+                    {strength === null || key === ''
+                      ? '—'
+                      : strength.problem !== null
+                        ? t(l, '讀不出位元組', 'no bytes')
+                        : `${strength.bytes} B / ${strength.required} B`}
+                  </span>
+                </Row>
+              ) : null}
+
+              {strength?.problem && key !== '' ? (
+                <Note error>
+                  {strength.problem === 'bad-base64'
+                    ? t(
+                        l,
+                        '這段文字不是合法的 base64(接受標準與 URL 安全字母表,補位可省,換行會被忽略)。如果它其實是一句通關密語,把編碼切回「文字」。',
+                        'This is not valid base64 (either alphabet, padding optional, line breaks ignored). If it is actually a passphrase, switch the encoding back to text.'
+                      )
+                    : t(
+                        l,
+                        '這段文字不是合法的十六進位:只能有 0-9a-f,而且位數要成對(可以寫 0x 開頭、用空白或冒號分隔)。',
+                        'This is not valid hex: 0-9a-f only, in pairs. A 0x prefix, spaces and colons are fine.'
+                      )}
+                </Note>
+              ) : null}
+
               <Row>
                 <Btn onClick={() => void runVerify()} primary disabled={!jwt || checking}>
                   {checking ? t(l, '驗證中…', 'checking…') : t(l, '驗證簽章', 'verify signature')}
@@ -310,12 +356,12 @@ export default function JwtDecode({ l }: ToolProps) {
                 </span>
               </Row>
 
-              {strength?.weak && key !== '' ? (
+              {strength?.weak && strength.problem === null && key !== '' ? (
                 <Note>
                   {t(
                     l,
-                    `這個密鑰是 ${strength.bytes} 位元組,${alg} 建議至少 ${strength.required}。短密鑰可以離線暴力破解,簽章就不再代表什麼。`,
-                    `This secret is ${strength.bytes} bytes; ${alg} wants at least ${strength.required}. A short secret can be brute-forced offline, at which point the signature means nothing.`
+                    `照「${secretEncoding === 'utf8' ? '文字' : secretEncoding}」讀出來是 ${strength.bytes} 位元組,${alg} 建議至少 ${strength.required}。短密鑰可以離線暴力破解,簽章就不再代表什麼。`,
+                    `Read as ${secretEncoding === 'utf8' ? 'text' : secretEncoding}, this secret is ${strength.bytes} bytes; ${alg} wants at least ${strength.required}. A short secret can be brute-forced offline, at which point the signature means nothing.`
                   )}
                 </Note>
               ) : null}

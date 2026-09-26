@@ -99,8 +99,8 @@ export default function JsonToTypes({ l }: ToolProps) {
               label={t(l, '貼上一份代表性的 JSON', 'Paste a representative JSON sample')}
               hint={t(
                 l,
-                '陣列裡的每一筆都會合併推論:某筆缺的欄位會標成選填,而不是只看第一筆。',
-                'Every array element is merged: a member missing from any of them comes out optional.'
+                '陣列裡的每一筆都會合併推論:某筆缺的欄位會標成選填,而不是只看第一筆。形狀相同的物件共用一個型別名稱,所以 from 與 to 這種同形狀的欄位會宣告成同一個型別。',
+                'Every array element is merged: a member missing from any of them comes out optional. Objects with the same shape share one declared name, so same-shaped members like from and to come out as the same type.'
               )}
               value={json}
               onChange={setJson}

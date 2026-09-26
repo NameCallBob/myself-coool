@@ -198,3 +198,29 @@ test('changes are counted per category', () => {
   assert.equal(latinList.text, '\u9019\u500b API,AB');
   assert.equal(latinList.changes.punctuation, 0);
 });
+
+test('an ellipsis already in the target form is left alone and not counted', () => {
+  // The change counter is the only evidence the user has about what the tool
+  // touched, so a no-op must not be reported as an edit.
+  assert.deepEqual(convertEllipsis('他說……然後', 'cjk'), ['他說……然後', 0]);
+  assert.deepEqual(convertEllipsis('wait…', 'single'), ['wait…', 0]);
+  // A real conversion still counts once, in both directions.
+  assert.deepEqual(convertEllipsis('他說...然後', 'cjk'), ['他說……然後', 1]);
+  assert.deepEqual(convertEllipsis('他說……然後', 'single'), ['他說…然後', 1]);
+  assert.deepEqual(convertEllipsis('他說…然後', 'cjk'), ['他說……然後', 1]);
+  // and through the pipeline: nothing to do means a change count of zero.
+  const result = tidy('他說……然後呢', off({ ellipsis: 'cjk' }));
+  assert.equal(result.text, '他說……然後呢');
+  assert.equal(totalChanges(result.changes), 0);
+});
+
+test('a line of full-width punctuation with no Han is not a Latin line', () => {
+  // A numbered item in a Chinese document holds no Han at all. Judging it by
+  // Han alone calls it Latin and narrows its punctuation.
+  assert.deepEqual(convertPunctuation('（1）。', 'contextual'), ['（1）。', 0]);
+  assert.deepEqual(convertPunctuation('（一）。', 'contextual'), ['（一）。', 0]);
+  assert.deepEqual(convertPunctuation('2。', 'contextual'), ['2。', 0]);
+  // But a line with Latin words in it is still a Latin line and still narrowed.
+  assert.deepEqual(convertPunctuation('Hello，world。', 'contextual'), ['Hello,world.', 2]);
+  assert.deepEqual(convertPunctuation('Hello（world）', 'contextual'), ['Hello(world)', 2]);
+});

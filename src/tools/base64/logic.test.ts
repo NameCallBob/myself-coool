@@ -194,3 +194,63 @@ test('a megabyte encodes without recursion or argument limits', () => {
   assert.equal(encoded.length, Math.ceil(big.length / 3) * 4);
   assert.deepEqual(decodeBase64(encoded), big);
 });
+
+test('the percent form of a data URI keeps the RFC 2396 unreserved set literal', () => {
+  // RFC 2397 defines the non-base64 payload as *urlchar, and urlchar is
+  // RFC 2396's `unreserved` — alphanum plus the nine "mark" characters, 71 in
+  // all. RFC 3986 later dropped the marks, leaving 66. The two sets are not
+  // the same, so the comment above URI_SAFE has to name the right one.
+  const literal: string[] = [];
+  for (let byte = 0x20; byte < 0x7f; byte += 1) {
+    const uri = buildDataUri('text/plain', new Uint8Array([byte]), { base64: false });
+    const payload = uri.slice(uri.indexOf(',') + 1);
+    if (payload.length === 1) literal.push(payload);
+  }
+  const rfc2396 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()";
+  const rfc3986 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  assert.equal(rfc2396.length, 71);
+  assert.equal(rfc3986.length, 66);
+  assert.deepEqual(literal.sort(), [...rfc2396].sort());
+  // The nine marks are exactly what separates the two sets.
+  assert.equal(literal.includes('!'), true);
+  assert.equal(rfc3986.includes('!'), false);
+  assert.ok(buildDataUri('text/plain', toUtf8Bytes("a!b'c"), { base64: false }).endsWith(",a!b'c"));
+  assert.ok(buildDataUri('text/plain', toUtf8Bytes('a$b'), { base64: false }).endsWith(',a%24b'));
+});
+
+test('the base64 flag counts only as the last segment of the mediatype', () => {
+  // RFC 2397: dataurl := "data:" [ mediatype ] [ ";base64" ] "," data. The
+  // flag closes the mediatype, so a `base64` in the middle is a parameter and
+  // the payload is percent-encoded — which is how a browser reads it too.
+  const middle = parseDataUri('data:text/plain;base64;charset=utf-8,SGVsbG8=');
+  assert.equal(middle.base64, false);
+  assert.deepEqual(middle.params, [
+    { key: 'base64', value: '' },
+    { key: 'charset', value: 'utf-8' },
+  ]);
+  assert.equal(fromUtf8Bytes(middle.data), 'SGVsbG8=');
+
+  const last = parseDataUri('data:text/plain;charset=utf-8;base64,SGVsbG8=');
+  assert.equal(last.base64, true);
+  assert.equal(fromUtf8Bytes(last.data), 'Hello');
+  assert.equal(parseDataUri('data:;base64,QQ==').base64, true);
+  assert.equal(parseDataUri('data:text/plain;BASE64,QQ==').base64, true);
+});
+
+test('padding with no data in front of it is refused, not read as zero bytes', () => {
+  assert.throws(() => decodeBase64('='), Base64Error);
+  assert.throws(() => decodeBase64('=='), Base64Error);
+  assert.throws(() => decodeBase64('  ==  '), Base64Error);
+  // An empty string really is zero bytes; padding on its own encodes nothing.
+  assert.deepEqual(decodeBase64(''), new Uint8Array());
+  assert.deepEqual(decodeBase64('   '), new Uint8Array());
+});
+
+test('lenient decode ignores how much padding there is; strict does not', () => {
+  // One `=` where two belong: the data characters are unambiguous, so reading
+  // them beats refusing. The arithmetic is checked in strict mode.
+  assert.deepEqual(decodeBase64('QQ='), new Uint8Array([0x41]));
+  assert.throws(() => decodeBase64('QQ=', { strict: true }), Base64Error);
+  assert.deepEqual(decodeBase64('QQ=='), new Uint8Array([0x41]));
+  assert.doesNotThrow(() => decodeBase64('QQ==', { strict: true }));
+});

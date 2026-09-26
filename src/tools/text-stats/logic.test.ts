@@ -169,3 +169,41 @@ test('oversized input is truncated and says so rather than being counted wrong',
   assert.equal(counts.utf16, MAX_INPUT);
   assert.equal(analyze('x').truncated, false);
 });
+
+test('the truncation point never lands inside a surrogate pair', () => {
+  // The emoji straddles the cut. Slicing at the limit would keep its leading
+  // half, and a lone surrogate then counts as three UTF-8 bytes and one cluster
+  // that nobody typed — every count off by a little, only at the boundary.
+  const counts = analyze('a'.repeat(MAX_INPUT - 1) + '\u{1F600}b');
+  assert.equal(counts.truncated, true);
+  assert.equal(counts.utf16, MAX_INPUT - 1);
+  assert.equal(counts.codePoints, MAX_INPUT - 1);
+  assert.equal(counts.graphemes, MAX_INPUT - 1);
+  assert.equal(counts.utf8Bytes, MAX_INPUT - 1);
+
+  // A pair that ends exactly on the limit is kept whole, not dropped.
+  const exact = analyze('a'.repeat(MAX_INPUT - 2) + '\u{1F600}b');
+  assert.equal(exact.utf16, MAX_INPUT);
+  assert.equal(exact.codePoints, MAX_INPUT - 1);
+  assert.equal(exact.utf8Bytes, MAX_INPUT - 2 + 4);
+});
+
+test('minLength filters Latin words without erasing the whole CJK table', () => {
+  // CJK is counted per character, so every CJK token is one cluster long. A
+  // minLength of 2 measured against those would empty the table rather than
+  // filter it, and the user would read "no frequent characters" as a fact about
+  // their text. The threshold is a word-length filter, so CJK is exempt.
+  const rows = frequency('中文中文 a the of', { minLength: 2, limit: 10 });
+  const tokens = rows.map((entry) => entry.token);
+  assert.ok(tokens.includes('中'), 'the CJK table disappeared');
+  assert.ok(tokens.includes('文'));
+  assert.ok(tokens.includes('the'));
+  assert.ok(tokens.includes('of'));
+  assert.ok(!tokens.includes('a'), 'the Latin filter stopped working');
+  // Shares are still a share of what is counted.
+  const total = rows.reduce((sum, entry) => sum + entry.n, 0);
+  assert.equal(total, 6);
+  assert.equal(rows[0].n / total, rows[0].share);
+  // includeCjk is still the switch that removes CJK entirely.
+  assert.deepEqual(frequency('中文 the', { minLength: 2, includeCjk: false }).map((e) => e.token), ['the']);
+});

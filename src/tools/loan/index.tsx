@@ -20,9 +20,9 @@ import { t } from '@/lib/tools/locale';
 import {
   LoanError,
   MAX_MONTHS,
+  annualisedRates,
   buildSchedule,
   byYear,
-  effectiveAnnualRate,
   money,
   prepaymentSaving,
   termText,
@@ -61,6 +61,9 @@ const INITIAL: Draft = {
   roundPayment: false,
   prepayments: [],
 };
+
+/** Stand-in while the terms are incomplete; both rates render as an em dash. */
+const NO_RATES = { monthly: Number.NaN, nominal: Number.NaN, effective: Number.NaN };
 
 const num = (text: string): number => {
   const cleaned = text.replace(/[,\s_]/g, '');
@@ -120,12 +123,12 @@ export default function Loan({ l }: ToolProps) {
       return null;
     }
   }, [schedule, input]);
-  const effective = useMemo(() => {
-    if (!schedule) return Number.NaN;
+  const rates = useMemo(() => {
+    if (!schedule) return NO_RATES;
     try {
-      return effectiveAnnualRate(input);
+      return annualisedRates(input);
     } catch {
-      return Number.NaN;
+      return NO_RATES;
     }
   }, [schedule, input]);
 
@@ -221,6 +224,11 @@ export default function Loan({ l }: ToolProps) {
                   label={t(l, '前段月數', 'First stage months')}
                   value={d.stageMonths}
                   onChange={(value) => set('stageMonths', value)}
+                  hint={t(
+                    l,
+                    '從放款當月起算,寬限期算在裡面。若合約的前段是從開始還本金起算,請填「寬限期月數 + 前段月數」。',
+                    'Counted from the disbursement month, grace period included. If your contract starts stage one at the first principal payment, enter grace + stage months.'
+                  )}
                 />
                 <Input
                   label={t(l, '後段年利率 %', 'Rate after %')}
@@ -319,8 +327,12 @@ export default function Loan({ l }: ToolProps) {
                   ],
                   [t(l, '實際期數', 'periods'), `${count(schedule.actualMonths)} · ${termText(schedule.actualMonths, l)}`],
                   [
-                    t(l, '有效年利率', 'effective annual rate'),
-                    Number.isFinite(effective) ? `${effective.toFixed(4)}%` : '—',
+                    t(l, '名目年利率(同牌告基準)', 'nominal annual rate (rate-card basis)'),
+                    Number.isFinite(rates.nominal) ? `${rates.nominal.toFixed(4)}%` : '—',
+                  ],
+                  [
+                    t(l, '有效年利率(月複利)', 'effective annual rate (compounded)'),
+                    Number.isFinite(rates.effective) ? `${rates.effective.toFixed(4)}%` : '—',
                   ],
                 ].map(([k, v]) => [
                   <span key="k" style={{ fontSize: '0.8125rem' }}>
@@ -368,8 +380,15 @@ export default function Loan({ l }: ToolProps) {
               <Note>
                 {t(
                   l,
-                  '很多銀行的提前還款在綁約期內要付違約金,這裡沒有算進去。有效年利率也沒有含開辦費與帳管費。',
-                  'Many banks charge a penalty for prepaying inside a lock-in period; that is not modelled here, and the effective rate excludes arrangement and account fees.'
+                  '兩個年利率都是同一條現金流算出來的月報酬率:名目年利率是月利率乘 12,跟銀行牌告同一個基準,單段利率時會等於你填的數字;有效年利率是同一個月利率複利十二個月,所以一定比較高——2.3% 名目等於 2.3245% 有效,那不是算錯。',
+                  'Both figures come from the same monthly IRR: the nominal rate is that rate times twelve, the basis a rate card uses, and it comes back equal to what you typed for a single-stage loan. The effective rate compounds the same monthly rate twelve times, so it is always higher — 2.3% nominal is 2.3245% effective, not a disagreement.'
+                )}
+              </Note>
+              <Note>
+                {t(
+                  l,
+                  '很多銀行的提前還款在綁約期內要付違約金,這裡沒有算進去。兩個年利率也都沒有含開辦費與帳管費。',
+                  'Many banks charge a penalty for prepaying inside a lock-in period; that is not modelled here, and neither rate includes arrangement or account fees.'
                 )}
               </Note>
             </div>
@@ -486,8 +505,12 @@ export default function Loan({ l }: ToolProps) {
           { k: t(l, '月付', 'instalment'), v: schedule ? money(schedule.maxPayment) : '—' },
           { k: t(l, '總利息', 'interest'), v: schedule ? money(schedule.totalInterest) : '—' },
           {
-            k: t(l, '有效年利率', 'effective APR'),
-            v: Number.isFinite(effective) ? `${effective.toFixed(3)}%` : '—',
+            k: t(l, '名目年利率', 'nominal rate'),
+            v: Number.isFinite(rates.nominal) ? `${rates.nominal.toFixed(3)}%` : '—',
+          },
+          {
+            k: t(l, '有效年利率', 'effective rate'),
+            v: Number.isFinite(rates.effective) ? `${rates.effective.toFixed(3)}%` : '—',
           },
           { k: t(l, '上限', 'max term'), v: `${MAX_MONTHS} ${t(l, '期', 'mo')}` },
         ]}

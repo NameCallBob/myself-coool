@@ -19,8 +19,12 @@ export const DEV_NOTES: Record<string, ToolNote> = {
     ],
     limits: [
       {
-        zh: '命中位置與長度是引擎給的 UTF-16 碼位偏移,不是字元數;emoji 與某些漢字各占兩個。要看某個字元到底是什麼碼位請用 B04。',
-        en: 'Offsets are UTF-16 code units as the engine reports them, not characters. To inspect a single character, use B04.',
+        zh: '命中位置與長度是引擎給的 UTF-16 碼位偏移,不是字元數;emoji 與某些漢字各占兩個。勾了 d 旗標時,群組後面會多出 @起–訖 兩個數字,那也是碼位偏移。要看某個字元到底是什麼碼位請用 B04。',
+        en: 'Offsets are UTF-16 code units as the engine reports them, not characters; with the d flag each group also shows its own @start–end in the same units. To inspect a single character, use B04.',
+      },
+      {
+        zh: '命中滿一千筆就停止掃描,主體後面那一段會標成淡色並註明「還沒看」。那一段不是沒有命中,是根本沒被比對——一千筆之後的列表讀不完,而每一筆都要付 DOM 的代價。要處理更長的檔案請分段貼,或把樣式寫得更精確。',
+        en: 'The scan stops at 1000 matches and the remaining tail is dimmed and labelled unscanned — not "no match", but "never examined", since a longer list is unreadable and every row costs DOM. Paste in sections or tighten the pattern for longer files.',
       },
       {
         zh: '取代用的是平台自己的 String.prototype.replace,$1、$&、$<name> 的語意是 V8 的而不是這裡定義的,旗標沒有 g 就只取代一次——跟你自己的程式碼行為一致。要對一大段文字做批次取代與預覽請用 A04。',
@@ -58,6 +62,10 @@ export const DEV_NOTES: Record<string, ToolNote> = {
         en: 'High-to-low ranges such as FRI-SUN are treated as wrapping and flagged, but Vixie cron — what most Linux boxes run — rejects them outright. Parsing here is not a promise it deploys.',
       },
       {
+        zh: '日光節約的兩天處理方式刻意不對稱。春天被跳掉的那個本地時刻根本不存在,組出來會被反算驗掉,那一天就少報一次;秋天重複的那一小時裡,01:30 其實發生兩次(相隔一小時的兩個時刻),這裡只報前面那一次。Vixie cron 對固定時刻的行為大致也是一次,而且從掛鐘欄位反推本來就只能得到第一次——但真實 cron 各家實作在這兩天的行為不一樣,以你那台機器的 crontab(5) 為準。',
+        en: 'The two daylight-saving days are treated asymmetrically on purpose. A spring-forward time that does not exist is round-tripped away, so that day fires once less; in the repeated autumn hour 01:30 happens twice and only the first instant is listed, which is roughly what Vixie cron does and the only occurrence wall-clock fields can reach. Real implementations differ on both days — check your own crontab(5).',
+      },
+      {
         zh: '時刻是照你瀏覽器的時區或 UTC 算的,不是照那台跑 cron 的機器。伺服器的 TZ、容器裡的 /etc/localtime、Kubernetes CronJob 的 timeZone 欄位任何一個不一樣,答案就會差幾個小時。要換算特定時區請用 F01。',
         en: 'Times are computed in your browser’s zone or UTC, not the machine that runs the job; a server TZ or a CronJob timeZone field will shift everything by hours. For a specific zone, use F01.',
       },
@@ -74,8 +82,8 @@ export const DEV_NOTES: Record<string, ToolNote> = {
         en: 'Three traps are named rather than glossed over: an alg-of-none token with an empty signature is valid JWS and worthless as authentication, so it reads as unverifiable and never as OK; five segments is JWE, whose payload is ciphertext and is not guessed at; and a NumericDate past 1e11 means the issuer wrote milliseconds, which is called out instead of rendered as a year-5138 date.',
       },
       {
-        zh: '驗章的細節大多是 RFC 7518 的規定照抄。HS 系列把祕密當 raw key 匯入 HMAC;RS、PS、ES 要一份 PEM 編碼的 SPKI 公鑰,PEM 標籤不管寫什麼,真正被讀的是裡面的 ASN.1。RSA-PSS 的 salt 長度固定等於雜湊長度,不是可調參數。ES512 用的曲線是 P-521 而不是 P-512,名字對不上而這件事會讓匯入直接失敗。JWS 的 ECDSA 簽名是裸的 r 接 s,剛好就是 WebCrypto 要的格式,所以不必像處理 OpenSSL 輸出那樣拆 DER。祕密長度也照 §3.2 對著雜湊量一次:HS256 要 32 位元組、HS384 要 48、HS512 要 64,短的會標為過弱——它照樣能驗過,但那個「驗過」的意義比你想的小。',
-        en: 'Verification follows RFC 7518 closely: HS imports the secret as a raw HMAC key, the asymmetric families take a PEM SPKI public key, PSS salt length is fixed at the hash length, ES512 means curve P-521, and JWS carries ECDSA as raw r‖s — exactly WebCrypto’s format, with no DER to unwrap. Secrets are sized against §3.2 (32/48/64 bytes) and flagged when short.',
+        zh: '驗章的細節大多是 RFC 7518 的規定照抄。HS 系列把祕密當 raw key 匯入 HMAC,而祕密是位元組不是文字,所以要選它怎麼讀:一句通關密語選「文字」,openssl rand -base64 32 產出來的那 44 個字元要選 base64(它代表的是 32 位元組,照文字量會變成 44),十六進位同理;RS、PS、ES 要一份 PEM 編碼的 SPKI 公鑰,PEM 標籤不管寫什麼,真正被讀的是裡面的 ASN.1。RSA-PSS 的 salt 長度固定等於雜湊長度,不是可調參數。ES512 用的曲線是 P-521 而不是 P-512,名字對不上而這件事會讓匯入直接失敗。JWS 的 ECDSA 簽名是裸的 r 接 s,剛好就是 WebCrypto 要的格式,所以不必像處理 OpenSSL 輸出那樣拆 DER。祕密長度也照 §3.2 對著雜湊量一次,量的是解碼後的位元組數:HS256 要 32 位元組、HS384 要 48、HS512 要 64,短的會標為過弱——它照樣能驗過,但那個「驗過」的意義比你想的小。',
+        en: 'Verification follows RFC 7518 closely: HS imports the secret as raw key bytes — so the secret box has an encoding switch (text, base64, hex), because 44 characters of base64 are 32 bytes of key and reading them as text gives both the wrong key and the wrong size — the asymmetric families take a PEM SPKI public key, PSS salt length is fixed at the hash length, ES512 means curve P-521, and JWS carries ECDSA as raw r‖s — exactly WebCrypto’s format, with no DER to unwrap. Secrets are sized against §3.2 (32/48/64 bytes) and flagged when short.',
       },
       {
         zh: 'iat 落在未來時有六十秒的寬容。兩台伺服器之間有幾秒時鐘偏差是正常的,一個為了三秒就大聲抗議的解碼器,人們會停止閱讀它的輸出。整頁不寫入任何儲存:token 與祕密只存在這個分頁的記憶體裡,關掉就沒了。',
@@ -88,8 +96,8 @@ export const DEV_NOTES: Record<string, ToolNote> = {
         en: 'A correct signature and an acceptable token are different questions. Only the first is answered here: audience, issuer, scope, jti replay, kid selection and revocation are all outside it.',
       },
       {
-        zh: '沒有網路出口,所以不會去抓 JWKS,也不會把 x5c 或 JWK 轉成 PEM。非對稱演算法要驗,得自己把 SPKI 公鑰貼進來。JWE 只能看出它是 JWE,不解密。',
-        en: 'With no network egress there is no JWKS fetch and no JWK-to-PEM conversion; an asymmetric check needs you to paste the SPKI key. JWE is identified, never decrypted.',
+        zh: '沒有網路出口,所以不會去抓 JWKS,也不會把 x5c 或 JWK 轉成 PEM。非對稱演算法要驗,得自己把 SPKI 公鑰貼進來。JWE 只能看出它是 JWE,payload 會標成「加密」而不是「壞掉的 JSON」,但不解密。',
+        en: 'With no network egress there is no JWKS fetch and no JWK-to-PEM conversion; an asymmetric check needs you to paste the SPKI key. A JWE is identified and its payload marked encrypted rather than malformed, never decrypted.',
       },
       {
         zh: '這裡不簽發 token,也不改 token。要算裸 HMAC 請用 E05,要看 X.509 憑證與它的鏈請用 E10。',
@@ -152,8 +160,12 @@ export const DEV_NOTES: Record<string, ToolNote> = {
     ],
     limits: [
       {
-        zh: 'JavaScript 的 Date 只涵蓋紀元前後各一億天,也就是 ±8.64e15 毫秒。超出這個範圍輸出是一個破折號,不是繞回去的錯值。微秒與奈秒的尾數只被保存與顯示,不參與任何日曆運算。',
-        en: 'A JavaScript Date spans ±8.64e15 ms — a hundred million days either side of the epoch — and anything beyond reads as a dash rather than a wrapped value. Sub-millisecond digits are carried and displayed, never used in calendar arithmetic.',
+        zh: 'JavaScript 的 Date 只涵蓋紀元前後各一億天,也就是 ±8.64e15 毫秒。超出這個範圍輸出是一個破折號,不是繞回去的錯值;而且不論你貼的是裸數字還是 ISO 字串,講法都一樣是「超出範圍」而不是「讀不出來」——太大是數值的問題,不是格式的問題。微秒與奈秒的尾數只被保存與顯示,不參與任何日曆運算。',
+        en: 'A JavaScript Date spans ±8.64e15 ms — a hundred million days either side of the epoch — and anything beyond reads as a dash rather than a wrapped value. A bare number and an ISO string both report it as out of range rather than unreadable: the magnitude is the problem, not the syntax. Sub-millisecond digits are carried and displayed, never used in calendar arithmetic.',
+      },
+      {
+        zh: '「距現在」的最小單位是毫秒,而且只在差距不到一分鐘時才顯示毫秒——再上去那截尾數是雜訊。它比的是兩個 Date 毫秒值,毫秒以下的位數在另一欄單獨顯示,不會被算進這個距離裡。',
+        en: 'The relative reading goes down to milliseconds, shown only when the gap is under a minute; above that the tail is noise. It compares two Date milliseconds, so sub-millisecond digits stay in their own field and never enter the distance.',
       },
       {
         zh: '「本地」是你這台瀏覽器的時區,不是某個指定的時區。IANA 資料庫裡的歷史規則(某地某年改過哪個偏移、哪一年開始實施日光節約)這裡不查。要在城市之間換算請用 F01。',

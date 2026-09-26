@@ -110,11 +110,29 @@ export type MetadataReport = {
 
 /* ── byte readers ─────────────────────────── */
 
-function u16be(data: Uint8Array, at: number): number {
+/**
+ * Big-endian reads with the bounds check inside them, not at the caller.
+ *
+ * Every call site below happens to check the length first, so these throws are
+ * unreachable today. They are here because an unchecked read of this shape does
+ * not fail loudly: a byte past the end is `undefined`, `undefined` ORs in as
+ * zero, so a u16 read one byte short returns the last real byte shifted up — a
+ * number indistinguishable from a legitimate segment length. Rearranging the
+ * checks in `scanJpegSegments` would then parse a file that is not there. With
+ * the check in here it stops instead.
+ */
+export function u16be(data: Uint8Array, at: number): number {
+  if (at < 0 || at + 2 > data.length) {
+    throw new Error(`2-byte read at ${at} is past the end of ${data.length} bytes`);
+  }
   return (data[at] << 8) | data[at + 1];
 }
 
-function u32be(data: Uint8Array, at: number): number {
+/** Unsigned, so a length with the high bit set is a length and not a negative. */
+export function u32be(data: Uint8Array, at: number): number {
+  if (at < 0 || at + 4 > data.length) {
+    throw new Error(`4-byte read at ${at} is past the end of ${data.length} bytes`);
+  }
   return ((data[at] << 24) | (data[at + 1] << 16) | (data[at + 2] << 8) | data[at + 3]) >>> 0;
 }
 
@@ -353,7 +371,13 @@ export function parseTiffBlock(block: Uint8Array): TiffBlock {
     }
     ifds.push({ name, entries });
     for (const [sub, target] of subs) readIfd(sub, target);
-    const nextAt = at + 2 + count * 12;
+    // The next-IFD pointer sits after the entries the IFD *declared*, not after
+    // the ones we agreed to read. Using `count` here would, on a file whose
+    // count was cut by `room` or the field budget, read four bytes out of the
+    // middle of the table and follow them: every read downstream is bounds
+    // checked, so nothing overruns, but IFD1 would be a table of fields that do
+    // not exist anywhere in the file.
+    const nextAt = at + 2 + declared * 12;
     return nextAt + 4 <= block.length ? u32(nextAt) : 0;
   };
 

@@ -260,9 +260,10 @@ function requireInteger(value: number, name: string): number {
   return value;
 }
 
-function gcd2(a: number, b: number): number {
-  let x = Math.abs(requireInteger(a, 'gcd'));
-  let y = Math.abs(requireInteger(b, 'gcd'));
+/** `name` is the function the person called: lcm() borrows this one. */
+function gcd2(a: number, b: number, name = 'gcd'): number {
+  let x = Math.abs(requireInteger(a, name));
+  let y = Math.abs(requireInteger(b, name));
   while (y !== 0) {
     const next = x % y;
     x = y;
@@ -271,6 +272,42 @@ function gcd2(a: number, b: number): number {
   return x;
 }
 
+/**
+ * Rounds to `places` decimals by shifting the exponent of the decimal string,
+ * not by multiplying by a power of ten.
+ *
+ * `Math.round(x * 10 ** places) / 10 ** places` is the version everybody
+ * writes, and it is wrong in a way the display then hides: 1.005 × 100 is
+ * 100.49999999999999, so it answers 1 while 1.01 prints identically to the
+ * 1.0100000000000002 a correct answer would give. Re-parsing `String(x)` with a
+ * shifted exponent keeps the decimal digits the person actually typed, because
+ * `String` gives the shortest decimal that round-trips to this double.
+ *
+ * Halves still go up rather than away from zero — round(-2.5) is -2, the same
+ * as `Math.round` — because only the scaling is being fixed here.
+ */
+export function roundTo(value: number, places: number): number {
+  if (!Number.isFinite(value)) return value;
+  const parts = /^(-?)(\d+(?:\.\d+)?)(?:e([+-]?\d+))?$/.exec(String(value));
+  if (!parts) return value;
+  const [, sign, digits, exponentText] = parts;
+  const exponent = (exponentText ? Number(exponentText) : 0) + places;
+  const shifted = Number(`${sign}${digits}e${exponent}`);
+  // A scale that leaves the double's range (round(1.5, 400)) cannot be undone,
+  // so the value is returned untouched instead of becoming Infinity or 0.
+  if (!Number.isFinite(shifted)) return value;
+  const back = Number(`${Math.round(shifted)}e${-places}`);
+  return Number.isFinite(back) ? back : value;
+}
+
+/**
+ * Exact up to here: 22! needs 51 bits of significand once its factors of two
+ * are taken out (22! / 2^19 = 2 143 861 251 406 875, below 2^53), while
+ * 23! / 2^19 = 49 308 808 782 358 125 needs 56 and no longer fits. From 23! up
+ * the loop below returns the nearest double, not the factorial.
+ */
+export const MAX_EXACT_FACTORIAL = 22;
+
 export function factorial(n: number): number {
   if (!Number.isInteger(n) || n < 0) {
     throw new CalcError('factorial is only defined on whole numbers from 0 up', -1);
@@ -278,6 +315,9 @@ export function factorial(n: number): number {
   if (n > MAX_FACTORIAL) {
     throw new CalcError(`${n}! is larger than a double can hold (limit ${MAX_FACTORIAL}!)`, -1);
   }
+  // Repeated multiplication is exact while the running product stays inside
+  // 2^53 worth of significand; past MAX_EXACT_FACTORIAL it is the nearest
+  // double instead, and anything derived from it inherits that.
   let out = 1;
   for (let i = 2; i <= n; i += 1) out *= i;
   return out;
@@ -296,8 +336,7 @@ export const FUNCTIONS: Record<string, FunctionDef> = {
     apply: (args) => {
       const [x, places = 0] = args;
       if (args.length > 2) throw new CalcError('round takes one or two arguments', -1);
-      const scale = 10 ** requireInteger(places, 'round');
-      return Math.round(x * scale) / scale;
+      return roundTo(x, requireInteger(places, 'round'));
     },
     zh: '四捨五入,第二個參數是小數位',
     en: 'round, optional decimal places',
@@ -362,7 +401,7 @@ export const FUNCTIONS: Record<string, FunctionDef> = {
     arity: -1,
     apply: (args) =>
       args.reduce((a, b) => {
-        const g = gcd2(a, b);
+        const g = gcd2(a, b, 'lcm');
         return g === 0 ? 0 : Math.abs(a / g * b);
       }),
     zh: '最小公倍數',
@@ -510,7 +549,13 @@ export function parse(source: string): Node {
       next();
       const right = parseExpression(rule.right ? rule.precedence : rule.precedence + 1);
       left = { type: 'binary', op: text as '+' | '-' | '*' | '/' | '%' | '^', left, right };
-      left = parsePostfix(left);
+      // No parsePostfix() here: a `!` can only follow a number, a name or a
+      // closing parenthesis, all of which are primaries, and parsePostfix is
+      // applied to every primary above — including the right operand's, inside
+      // its own parseExpression. So by the time a binary node exists, every `!`
+      // that belonged to it has already been consumed. Checked by exhaustively
+      // parsing all strings up to length 7 over `12^!+*()pe-%,` plus two
+      // million longer random ones: the re-check never once fired.
     }
 
     return left;
@@ -727,6 +772,23 @@ export function formatResult(value: number, group = true): string {
   const [whole, fraction] = body.split('.');
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return `${negative ? '-' : ''}${grouped}${fraction ? `.${fraction}` : ''}`;
+}
+
+/**
+ * Whether `formatResult` prints this value as a whole number that it is not.
+ *
+ * Fifteen significant digits is the right display for 0.1 + 0.2, but it has one
+ * bad case: a value a hair off an integer prints as that integer, with thousands
+ * separators, looking exactly like an exact count. `23! / (2! * 21!)` is
+ * 253.00000000000006 and prints "253"; the factorials above
+ * `MAX_EXACT_FACTORIAL` are where that most often comes from. The UI marks these
+ * with `≈` rather than printing more digits, because printing 253.000000000000
+ * would be true and unreadable.
+ */
+export function hidesFraction(value: number): boolean {
+  if (!Number.isFinite(value) || Number.isInteger(value)) return false;
+  const text = formatResult(value, false);
+  return !text.includes('.') && !text.includes('e');
 }
 
 /** Hex / binary views of an integer result, for the dev-shaped use of this. */

@@ -5,12 +5,42 @@
  * the engine shipped with instead of a list that rots in this repository.
  *
  * Two directions are needed and only one of them is easy. Instant → wall clock
- * is a format call. Wall clock → instant has no API, so it is solved by
- * iteration: guess with the offset at the naive instant, re-read the offset
- * there, and verify the result formats back to the requested wall clock. That
- * verification is what makes the two hours a year when a wall clock is either
- * missing or duplicated visible instead of silently wrong.
+ * is a format call. Wall clock → instant has no API, so it is solved with
+ * candidates rather than by iterating from one guess: read the offset a day
+ * either side of the naive instant, subtract each of those offsets from the
+ * naive instant, and keep whichever results format back to the wall clock that
+ * was asked for. Starting from the offset at the naive instant itself would
+ * find only one of the two occurrences of a repeated hour, which is the case
+ * most worth reporting. Zero survivors means the clock time was skipped, two
+ * means it happens twice — and that is what makes the two hours a year when a
+ * wall clock is missing or duplicated visible instead of silently wrong.
  */
+
+/**
+ * `Date` covers ±8.64e15 ms around the epoch and nothing beyond it. Past that
+ * edge `new Date(instant)` is invalid, and `formatToParts` either throws or
+ * returns no year — which used to reach the screen as NaN in every column.
+ * Every instant entering this file is checked against this wall.
+ */
+export const MAX_INSTANT = 8.64e15;
+
+/**
+ * The ceiling on a wall clock this file will work with, two days inside the
+ * hard edge. One day of that is `resolveZoned` probing either side of the naive
+ * instant; the other is `zoneOffset`, which re-encodes a zone's wall clock with
+ * `Date.UTC` and would overflow to NaN for an eastern zone read at the very
+ * last representable millisecond.
+ */
+export const MAX_WALL_INSTANT = MAX_INSTANT - 2 * 86_400_000;
+
+/**
+ * Years below 100 are refused rather than quietly relocated. `Date.UTC` maps
+ * 0–99 into 1900–1999, so year 1 becomes 1901 and the round-trip check below
+ * still passes — on the wrong instant. Below year 1 it gets worse: the
+ * formatter here carries no era field, so a BC year reads back positive
+ * (−500 formats as 501) and the computed offset is nonsense.
+ */
+export const MIN_CIVIL_YEAR = 100;
 
 export type CivilTime = {
   year: number;
@@ -77,6 +107,13 @@ export function weekdayOf(year: number, month: number, day: number): number {
 
 /** Wall clock in `timeZone` at a given instant. */
 export function zoneParts(instant: number, timeZone: string): ZoneParts {
+  // The one chokepoint every reading passes through, so the range check lives
+  // here: engines disagree about what `formatToParts` does with an invalid
+  // date (V8 throws, others drop fields and leave `Number(undefined)` to
+  // produce NaN), and a NaN that reaches the table is a silently wrong answer.
+  if (!Number.isFinite(instant) || Math.abs(instant) > MAX_INSTANT) {
+    throw new RangeError(`instant outside the range Date can represent: ${instant}`);
+  }
   const found: Record<string, string> = {};
   for (const part of formatter(timeZone).formatToParts(new Date(instant))) {
     if (part.type !== 'literal') found[part.type] = part.value;
@@ -105,6 +142,12 @@ export function zoneParts(instant: number, timeZone: string): ZoneParts {
 export function zoneOffset(instant: number, timeZone: string): number {
   const p = zoneParts(instant, timeZone);
   const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  // Re-encoding an eastern zone's wall clock can leave the range even when the
+  // instant itself was inside it; `Date.UTC` answers NaN there, and an offset of
+  // NaN compares unequal to everything, which reads as a transition that is not.
+  if (!Number.isFinite(asUtc)) {
+    throw new RangeError(`offset unreadable this close to the edge of Date: ${instant}`);
+  }
   const whole = Math.floor(instant / 1000) * 1000;
   return Math.round((asUtc - whole) / 60_000);
 }
@@ -140,6 +183,15 @@ export function zoneAbbrev(instant: number, timeZone: string): string {
  * the same year rather than by any flag, because no such flag is exposed. It
  * reads correctly in both hemispheres, and a zone that never shifts has
  * January equal to July, so nothing is ever flagged.
+ *
+ * Where it bends: a zone whose shift is not seasonal. Morocco keeps +01 all
+ * year and falls back to +00 for Ramadan, which drifts about eleven days
+ * earlier each year, so in a year whose 1 January lands inside Ramadan the
+ * January probe reads +00 and every non-Ramadan day of that year is flagged.
+ * That is left as it stands: IANA itself models those +01 months as daylight
+ * saving over a +00 standard offset, and the mirror case — Dublin, where IANA
+ * calls the *winter* the shifted offset — breaks under any rule that would
+ * unflag Morocco. The `limits` prose for this tool says so out loud.
  */
 export function isDaylight(instant: number, timeZone: string): boolean {
   const { year } = zoneParts(instant, timeZone);
@@ -153,8 +205,11 @@ export type Resolution = {
   instant: number;
   /** `exact` — one instant. `gap` — the wall clock does not exist (clocks
    *  jumped forward); the next real instant is returned. `ambiguous` — it
-   *  happens twice (clocks went back); the first is returned. */
-  kind: 'exact' | 'gap' | 'ambiguous';
+   *  happens twice (clocks went back); the first is returned. `inexact` — no
+   *  instant formats back to this wall clock and no transition is straddled
+   *  either, so it is not a gap; the nearest instant is returned. See
+   *  `resolveZoned` for when that happens. */
+  kind: 'exact' | 'gap' | 'ambiguous' | 'inexact';
   offset: number;
 };
 
@@ -194,8 +249,20 @@ export function resolveZoned(wall: CivilTime, timeZone: string): Resolution {
     const earliest = Math.min(...valid);
     return { instant: earliest, kind: 'ambiguous', offset: zoneOffset(earliest, timeZone) };
   }
-  // A gap: the requested clock time was skipped. The later candidate is the
-  // first instant after the jump, which is what a calendar does with it.
+  // Nothing verified. Calling that a gap assumes a transition was straddled,
+  // and the assumption is checkable rather than merely commentable: a gap
+  // needs the two probes to disagree. When they agree there is no jump that
+  // day and the round trip failed for another reason — a sub-minute historical
+  // offset (`zoneOffset` rounds to the minute, so Paris on local mean time,
+  // +00:09:21 until 1891, can never format back to an exact 12:00:00), or two
+  // transitions inside the same 48 hours, which `SCAN_STEP_MS` also assumes
+  // away. Either way the honest answer is "nearest instant", not "skipped".
+  if (before === after) {
+    const nearest = candidates[0];
+    return { instant: nearest, kind: 'inexact', offset: zoneOffset(nearest, timeZone) };
+  }
+  // A real gap: the requested clock time was skipped. The later candidate is
+  // the first instant after the jump, which is what a calendar does with it.
   const shifted = Math.max(...candidates);
   return { instant: shifted, kind: 'gap', offset: zoneOffset(shifted, timeZone) };
 }
@@ -223,6 +290,12 @@ export function parseLocalInput(value: string): CivilTime | null {
   const n = dayNumber(wall.year, wall.month, wall.day);
   const back = civilFromDayNumber(n);
   if (back.month !== wall.month || back.day !== wall.day) return null;
+  // The year pattern is deliberately wide — six digits, and a leading minus —
+  // but nothing downstream can work outside what `Date` represents, so the
+  // range is enforced here, at the only door civil input comes through.
+  if (wall.year < MIN_CIVIL_YEAR) return null;
+  const naive = Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute, wall.second);
+  if (!Number.isFinite(naive) || Math.abs(naive) > MAX_WALL_INSTANT) return null;
   return wall;
 }
 
@@ -291,8 +364,11 @@ export function readZones(instant: number, zones: readonly string[], reference: 
 }
 
 /** Coarse step for the transition scan. Small enough that no zone has ever
- *  changed offset twice inside one step, large enough that a whole year costs
- *  under sixty formatter reads. */
+ *  changed offset twice inside one step, large enough to keep the walk short:
+ *  the 400-day horizon below is 58 steps, so a zone that never shifts costs 59
+ *  formatter reads (one for the starting offset) and a zone that does shift
+ *  costs the steps up to it plus the 30 reads the bisection inside one week
+ *  takes — about ninety reads worst case, measured in `logic.test.ts`. */
 const SCAN_STEP_MS = 7 * 86_400_000;
 
 /**
@@ -310,7 +386,9 @@ const SCAN_STEP_MS = 7 * 86_400_000;
  */
 export function nextTransition(instant: number, timeZone: string): number | null {
   const start = zoneOffset(instant, timeZone);
-  const horizon = instant + 400 * 86_400_000;
+  // Clamped, or reading a wall clock near the end of `Date`'s range would walk
+  // the scan straight off it and every probe past the edge would throw.
+  const horizon = Math.min(instant + 400 * 86_400_000, MAX_WALL_INSTANT);
   let low = instant;
   let high = -1;
   for (let probe = instant; probe < horizon; ) {
@@ -329,6 +407,57 @@ export function nextTransition(instant: number, timeZone: string): number | null
     else high = mid;
   }
   return high;
+}
+
+export type OffsetChange = {
+  zone: string;
+  /** The first instant on the new offset. */
+  at: number;
+  from: number;
+  to: number;
+  /** The new offset's wall clock at `at` — 03:00 for a spring-forward. */
+  local: ZoneParts;
+};
+
+/**
+ * Quantum for the transition scan's starting point.
+ *
+ * The scan is the expensive half of this tool: `nextTransition` is up to ninety
+ * formatter reads per zone, so six zones are a few hundred. Offsets change
+ * twice a year, which makes a result keyed on a clock that ticks once a second
+ * pure waste — the caller anchors the scan with `scanAnchor` and memoises on
+ * that, so the work happens at most once an hour instead of once a second.
+ */
+export const SCAN_ANCHOR_MS = 3_600_000;
+
+/** The top of the hour containing `instant`. */
+export function scanAnchor(instant: number): number {
+  return Math.floor(instant / SCAN_ANCHOR_MS) * SCAN_ANCHOR_MS;
+}
+
+/**
+ * The next offset change in each of several zones, earliest first. Zones that
+ * do not shift within the horizon are absent rather than present and null.
+ *
+ * Pass `scanAnchor(instant)` rather than the instant itself: the result is then
+ * stable for the whole hour, and anything the scan reports that the clock has
+ * since passed is the caller's to drop — cheap, where rescanning is not.
+ */
+export function readTransitions(instant: number, zones: readonly string[]): OffsetChange[] {
+  const changes: OffsetChange[] = [];
+  for (const zone of zones) {
+    if (!isValidZone(zone)) continue;
+    const at = nextTransition(instant, zone);
+    if (at === null) continue;
+    changes.push({
+      zone,
+      at,
+      from: zoneOffset(at - 1000, zone),
+      to: zoneOffset(at, zone),
+      local: zoneParts(at, zone),
+    });
+  }
+  return changes.sort((a, b) => a.at - b.at || a.zone.localeCompare(b.zone));
 }
 
 /** Curated shortlist. `allZones()` has the rest; these are the ones people

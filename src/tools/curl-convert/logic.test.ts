@@ -15,7 +15,9 @@ import {
   pyString,
   shellWord,
   toJsLiteral,
+  parseProxy,
   toPythonLiteral,
+  tokenize,
   tokenizeShell,
 } from './logic.ts';
 
@@ -343,4 +345,91 @@ test('no emitter ever produces a request-sending side effect of its own', () => 
   const out = convert('curl https://x', 'fetch');
   assert.ok(out.ok);
   if (out.ok) assert.equal(typeof out.code, 'string');
+});
+
+/* ── Regressions found while writing the "how it works" note ─── */
+
+test('[22] an unquoted & cuts the command, and that is said out loud', () => {
+  const request = parseCurl('curl http://x/?a=1&b=2');
+  // The shell would have done this too — but silently producing code that
+  // requests half a query string is the failure worth naming.
+  assert.equal(request.url, 'http://x/?a=1');
+  assert.match(request.warnings.join('\n'), /&/);
+  assert.match(request.warnings.join('\n'), /quote/i);
+
+  const piped = parseCurl('curl http://x | jq .');
+  assert.equal(piped.url, 'http://x');
+  assert.match(piped.warnings.join('\n'), /\|/);
+
+  const chained = parseCurl('curl http://x ; echo done');
+  assert.match(chained.warnings.join('\n'), /;/);
+
+  // Quoted, there is nothing to warn about and nothing is lost.
+  const quoted = parseCurl(`curl 'http://x/?a=1&b=2'`);
+  assert.equal(quoted.url, 'http://x/?a=1&b=2');
+  assert.deepEqual(quoted.warnings, []);
+});
+
+test('[23] --proxy reaches the axios output instead of vanishing', () => {
+  const code = emitAxios(parseCurl('curl -x http://user:pw@proxy.example:8080 https://x'));
+  assert.match(code, /proxy: \{/);
+  assert.match(code, /protocol: 'http'/);
+  assert.match(code, /host: 'proxy\.example'/);
+  assert.match(code, /port: 8080/);
+  assert.match(code, /username: 'user', password: 'pw'/);
+  // axios only honours a proxy on Node, so the output has to say so.
+  assert.match(code, /Node/);
+
+  const bare = emitAxios(parseCurl('curl -x proxy.local https://x'));
+  assert.match(bare, /host: 'proxy\.local'/);
+  assert.match(bare, /1080/); // curl's default proxy port, named rather than guessed at
+  // A port that was given is not reported as the default, even with a trailing path.
+  const withPath = emitAxios(parseCurl('curl -x http://proxy.local:3128/ https://x'));
+  assert.match(withPath, /port: 3128/);
+  assert.equal(withPath.includes('default of 1080'), false);
+
+  // Something that is not a proxy URL at all still leaves a trace.
+  assert.match(emitAxios(parseCurl('curl -x "http://[bad" https://x')), /--proxy/);
+});
+
+test('[24] a header value shaped like the Basic sentinel is still data', () => {
+  const plain = emitFetch(parseCurl(`curl -H 'X-Foo: __BASIC__a:b' https://x`));
+  assert.match(plain, /'X-Foo': '__BASIC__a:b'/);
+  assert.equal(plain.includes('btoa'), false);
+
+  const authed = emitFetch(parseCurl(`curl -u 'u:p' -H 'X-Foo: __BASIC__a:b' https://x`));
+  assert.match(authed, /'Authorization': 'Basic ' \+ btoa\('u:p'\)/);
+  assert.match(authed, /'X-Foo': '__BASIC__a:b'/);
+});
+
+test('[22] tokenize() reports where it stopped, and on what', () => {
+  assert.deepEqual(tokenize('curl http://x'), { tokens: ['curl', 'http://x'], stop: null });
+  const cut = tokenize('curl http://x/?a=1&b=2');
+  assert.deepEqual(cut.tokens, ['curl', 'http://x/?a=1']);
+  assert.deepEqual(cut.stop, { at: '&', inWord: true, rest: '&b=2' });
+  // At a word boundary it is an ordinary pipeline, not a mangled word.
+  assert.deepEqual(tokenize('curl http://x | jq .').stop, { at: '|', inWord: false, rest: '| jq .' });
+});
+
+test('[23] parseProxy fills in the parts curl leaves implicit', () => {
+  assert.deepEqual(parseProxy('http://user:pw@proxy.example:8080'), {
+    protocol: 'http',
+    host: 'proxy.example',
+    port: 8080,
+    portGiven: true,
+    user: 'user',
+    password: 'pw',
+  });
+  // No scheme means http, no port means curl's documented default of 1080.
+  assert.deepEqual(parseProxy('proxy.local'), {
+    protocol: 'http',
+    host: 'proxy.local',
+    port: 1080,
+    portGiven: false,
+    user: '',
+    password: '',
+  });
+  assert.equal(parseProxy('socks5://127.0.0.1:1080')?.protocol, 'socks5');
+  assert.equal(parseProxy(''), null);
+  assert.equal(parseProxy('http://[bad'), null);
 });

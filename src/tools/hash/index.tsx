@@ -176,8 +176,8 @@ export default function Hash({ l }: ToolProps) {
                 label={t(l, '比對(貼上對方公布的值)', 'Compare against a published value')}
                 hint={t(
                   l,
-                  '貼上什麼格式都行:大寫、sha256: 前綴、中間有空格或冒號都會自動處理。比對永遠用 hex。',
-                  'Any shape works — upper case, a sha256: prefix, spaces or colons. Comparison is always on hex.'
+                  '貼上什麼格式都行:大寫、sha256: 前綴、中間的空格或冒號,以及 sha256sum / shasum 整行(含後面的檔名)都會自動處理。比對永遠用 hex。',
+                  'Any shape works — upper case, a sha256: prefix, spaces or colons, and a whole sha256sum or shasum line with the filename on it. Comparison is always on hex.'
                 )}
                 value={expected}
                 onChange={setExpected}

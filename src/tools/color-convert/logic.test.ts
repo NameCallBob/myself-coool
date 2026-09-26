@@ -30,6 +30,7 @@ import {
   srgbToLinear,
   toGamut,
   toHex,
+  toP3Gamut,
   xyzToP3,
   xyzToRgb,
   type Rgb,
@@ -395,4 +396,72 @@ test('describe reports every notation and both gamut verdicts', () => {
   const beyond = describeColor(parseColor('oklch(0.7 0.4 150)')!);
   assert.equal(beyond.outOfSrgb, true);
   assert.equal(beyond.outOfP3, true);
+});
+
+/* ── Regressions found while reading this file for the notes ── */
+
+test('the Display-P3 row is mapped into P3, not printed as channels no screen has', () => {
+  // oklch(0.7 0.4 150) is outside P3 as well as sRGB. Printing the raw
+  // transform gave color(display-p3 -0.419 0.8201 -0.2103): three numbers that
+  // are not a colour, in the one row that is supposed to be a screen space.
+  const beyond = parseColor('oklch(0.7 0.4 150)')!;
+  const printed = formatColor(beyond, 'p3');
+  const match = /^color\(display-p3 (\S+) (\S+) (\S+)\)$/.exec(printed);
+  assert.ok(match, printed);
+  for (const raw of match.slice(1)) {
+    const v = Number(raw);
+    assert.ok(v >= 0 && v <= 1, `${printed} has a channel outside 0..1`);
+  }
+  // Mapped the way the other screen rows are mapped: chroma comes down, hue
+  // and lightness stay. Clipping the channels would move the hue instead.
+  const p3 = { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]) };
+  const got = rgbToOklch(xyzToRgb(p3ToXyz(p3)));
+  near(got.h, 150, 5, 'hue held through the P3 mapping');
+  near(got.l, 0.7, 0.02, 'lightness held through the P3 mapping');
+});
+
+test('a colour that fits P3 is printed exactly, mapping or not', () => {
+  // P3 green is outside sRGB but is a colour a P3 screen shows; it must survive
+  // untouched, which is why this cannot be the sRGB gamut mapping.
+  assert.equal(formatColor(parseColor('color(display-p3 0 1 0)')!, 'p3'), 'color(display-p3 0 1 0)');
+  assert.equal(formatColor(parseColor('color(display-p3 1 0 0)')!, 'p3'), 'color(display-p3 1 0 0)');
+  assert.equal(formatColor(parseColor('#ffffff')!, 'p3'), 'color(display-p3 1 1 1)');
+  const red = formatColor(parseColor('#ff0000')!, 'p3');
+  assert.equal(red, 'color(display-p3 0.9175 0.2003 0.1386)');
+});
+
+test('toP3Gamut only moves a colour that does not fit P3', () => {
+  const inside = toP3Gamut(rgb('#3366cc'));
+  assert.ok(inGamut(inside));
+  near(toHexDistance(inside, xyzToP3(rgbToXyz(rgb('#3366cc')))), 0, 1e-9, 'untouched inside P3');
+  const outside = toP3Gamut(oklchToRgb({ l: 0.7, c: 0.4, h: 150 }));
+  assert.ok(inGamut(outside), 'a colour beyond P3 comes back displayable');
+  assert.ok(!inGamut(xyzToP3(rgbToXyz(oklchToRgb({ l: 0.7, c: 0.4, h: 150 })))), 'and it did need mapping');
+});
+
+test('a gamut-mapped colour is not labelled with the name it happened to land on', () => {
+  // oklch(0.8 0.4 72) is far outside sRGB and maps onto exactly #ffa500, so the
+  // report used to call it "orange" — a colour the user never typed.
+  const wide = describeColor(parseColor('oklch(0.8 0.4 72)')!);
+  assert.equal(wide.outOfSrgb, true);
+  assert.equal(wide.notations.find((n) => n.space === 'hex')!.value, '#ffa500');
+  assert.equal(wide.name, null, 'no name for a colour that had to be mapped');
+  // The colour actually named orange still gets its name.
+  assert.equal(describeColor(parseColor('#ffa500')!).name, 'orange');
+  assert.equal(describeColor(parseColor('rebeccapurple')!).name, 'rebeccapurple');
+});
+
+test('nameOf answers from a reverse table and agrees with a scan of every name', () => {
+  const entries = Object.entries(NAMED_COLORS);
+  // 148 names, 139 hexes: nine hexes have two spellings.
+  assert.equal(new Set(entries.map(([, hex]) => hex)).size, 139);
+  for (const [name, hex] of entries) {
+    // Several names share a hex (aqua/cyan, gray/grey); the first spelling in
+    // the table is the answer, as it was when this was a linear scan.
+    const first = entries.find(([, v]) => v === hex)![0];
+    assert.equal(nameOf(parseColor(`#${hex}`)!.rgb), first, name);
+  }
+  assert.equal(nameOf(rgb('#00ffff')), 'aqua');
+  assert.equal(nameOf(rgb('#808080')), 'gray');
+  assert.equal(nameOf({ r: 0.1, g: 0.2, b: 0.3 }), null);
 });

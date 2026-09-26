@@ -17,8 +17,8 @@ export const CALC_NOTES: Record<string, ToolNote> = {
         en: 'Converting a unit to itself short-circuits, because 1.5 × 0.0254 ÷ 0.0254 is 1.4999999999999998 — it prints as 1.5 but fails an equality check. Output is twelve significant digits for the same reason: 1 ÷ 0.0254 is 39.370078740157481 in double precision, and printing the tail advertises precision the conversion does not have. Magnitudes above 1e15 or below 1e-6 switch to exponential.',
       },
       {
-        zh: '輸入欄位收到的東西比「一個數字」複雜:從中文網頁貼過來的全形數字、千分位逗號、頓號、被輸入法打成全形的句號、開頭的加號、科學記號。這些會先正規化成 ASCII,然後用一條 regex 驗證整個字串,不合格就回 NaN,不會猜。表裡有幾個單位標了「近似」:馬赫標的是海平面 15°C 乾空氣,它本質上是比值不是單位;量杯 250 mL、大匙 15 mL、小匙 5 mL 是廚房慣例,不是法定定義;英寸水柱隨水溫變。標記的用途只有一個——不要把這幾個數字當量測值引用。',
-        en: 'Input is normalised before parsing: full-width digits pasted from Chinese pages, thousands separators, a full-width period used as a decimal point, a leading plus, scientific notation. A single regex then validates the whole string and anything else returns NaN rather than a guess. A few units are marked approximate — Mach at sea level in 15 °C dry air is a ratio, not a unit; the 250 mL cup and 15 mL tablespoon are kitchen convention; inches of water depend on water temperature.',
+        zh: '輸入欄位收到的東西比「一個數字」複雜:從中文網頁貼過來的全形數字、千分位逗號、頓號、被輸入法打成全形的句號、開頭的加號、科學記號。這些會先正規化成 ASCII,然後用一條 regex 驗證整個字串,不合格就回 NaN,不會猜。分隔符號只在該出現的位置才算分隔符號:逗號、空白、底線、頓號要把整數部分切成三位一組才成立,所以「1 234」是 1234,而手滑打成的「1 2」會被拒絕。早一版的寫法是先把所有空白刪掉再解析,那樣「1 2」會變成 12——一個沒人輸入過的數字,底下的換算卻看起來完全正常。表裡有幾個單位標了「近似」:馬赫標的是海平面 15°C 乾空氣,它本質上是比值不是單位;量杯 250 mL、大匙 15 mL、小匙 5 mL 是廚房慣例,不是法定定義;英寸水柱隨水溫變。標記的用途只有一個——不要把這幾個數字當量測值引用。',
+        en: 'Input is normalised before parsing: full-width digits pasted from Chinese pages, thousands separators, a full-width period used as a decimal point, a leading plus, scientific notation. A single regex then validates the whole string and anything else returns NaN rather than a guess. Separators only count as separators where grouping belongs — in threes, in the integer part — so \'1 234\' is 1234 while a mistyped \'1 2\' is refused; stripping all whitespace first read that as 12 and the conversion under it looked perfectly healthy. A few units are marked approximate — Mach at sea level in 15 °C dry air is a ratio, not a unit; the 250 mL cup and 15 mL tablespoon are kitchen convention; inches of water depend on water temperature.',
       },
     ],
     limits: [
@@ -52,14 +52,14 @@ export const CALC_NOTES: Record<string, ToolNote> = {
         en: 'Implicit multiplication is accepted only where it cannot be a missing operator: after a number or a closing paren, before a group or a name. 2pi, 3(4+5) and (1+2)(3+4) work; 2 3 stays an error. The side effect worth knowing is that x y reads as a product, so a typo between two variable names multiplies instead of failing. The 128-level depth cap is counted in the expression parser, not at parentheses, because ----1 recurses just as deep and 4000 leading minus signs would exhaust the stack — a dead tab rather than an exception.',
       },
       {
-        zh: '幾個地方寧可拒絕也不給錯的答案。0b102 在 tokeniser 裡是錯誤,不是 2——parseInt 遇到不認得的位數會停下來把讀到的部分回傳,所以字面值先用正規式驗過才交給它。171! 超過雙精度能表示的範圍(170! 是 7.26e306),所以上限就是 170,回傳 Infinity 不算答案。結果只印十五位有效數字,因為第十六、十七位就是雙精度不可信的地方:印出來會讓 0.1 + 0.2 顯示成 0.30000000000000004,那個值是對的,但畫面看起來是壞的。2^53 以下的整數照完整位數印,並附十六進位、二進位與八進位視圖。多行模式裡 ans 是上一行的結果,某一行錯了就在那一行標出來,底下的行照樣算完——一個錯字就清空整張紙,是讓人不再用多行計算機的原因。',
-        en: 'Several places refuse rather than answer wrongly. 0b102 is an error, not 2: parseInt stops at the first digit it does not know and returns what it read, so literals are regex-validated first. 171! exceeds a double (170! is 7.26e306), so 170 is the ceiling instead of returning Infinity. Results print fifteen significant digits, because the sixteenth turns 0.1 + 0.2 into 0.30000000000000004 — correct, but it looks broken. In multi-line mode ans is the previous line and a failed line is flagged in place while the rest still run.',
+        zh: '幾個地方寧可拒絕也不給錯的答案。0b102 在 tokeniser 裡是錯誤,不是 2——parseInt 遇到不認得的位數會停下來把讀到的部分回傳,所以字面值先用正規式驗過才交給它。171! 超過雙精度能表示的範圍(170! 是 7.26e306),所以上限就是 170,回傳 Infinity 不算答案。結果只印十五位有效數字,因為第十六、十七位就是雙精度不可信的地方:印出來會讓 0.1 + 0.2 顯示成 0.30000000000000004,那個值是對的,但畫面看起來是壞的。2^53 以下的整數照完整位數印,並附十六進位、二進位與八進位視圖。這個顯示規則有一個代價,所以工具會標記它:一個只差 10^-15 的值會被印成整數,看起來跟精確的計數一模一樣。階乘是最常見的來源——22! 以內是精確值,23! 起只是最接近的雙精度數(23! 抽掉 2 的因數之後還要 56 個位元,2^53 放不下),所以 23!/(2!·21!) 算出來是 253.00000000000006 而印成「253」。那種結果前面會加一個 ≈,而不是改印 253.000000000000。四捨五入也是同一類問題:round(1.005, 2) 若用 x 乘 100 再除回來會得到 1,因為 1.005 × 100 是 100.49999999999999;這裡改成把 String(x) 的指數搬移之後重新解析,算的是你打進去的那個十進位小數。負數的一半仍然朝 +∞ 進,跟 Math.round 一樣,所以 round(-2.5) 是 -2。多行模式裡 ans 是上一行的結果,某一行錯了就在那一行標出來,底下的行照樣算完——一個錯字就清空整張紙,是讓人不再用多行計算機的原因。',
+        en: 'Several places refuse rather than answer wrongly. 0b102 is an error, not 2: parseInt stops at the first digit it does not know and returns what it read, so literals are regex-validated first. 171! exceeds a double (170! is 7.26e306), so 170 is the ceiling instead of returning Infinity. Results print fifteen significant digits, because the sixteenth turns 0.1 + 0.2 into 0.30000000000000004 — correct, but it looks broken. That display has one cost, so it is marked: a value a part in 10^15 off an integer prints as that integer. Factorials are the usual source — exact through 22!, the nearest double from 23! up — so 23!/(2!·21!) is 253.00000000000006 and prints \'253\', with a ≈ in front of it. round() has the same shape of bug and is fixed rather than marked: x × 10^places rounds 1.005 to 1, so the exponent of String(x) is shifted instead and the decimal you typed is what gets rounded. In multi-line mode ans is the previous line and a failed line is flagged in place while the rest still run.',
       },
     ],
     limits: [
       {
-        zh: '算的是 IEEE 754 雙精度,不是任意精度。超過 2^53 的整數會開始掉個位數,金額算到分請用 G06 或 G03,它們的捨入規則是講清楚的。',
-        en: 'Arithmetic is IEEE 754 double precision, not arbitrary precision: past 2^53 integers lose their last digits. For money to the cent use G06 or G03, where the rounding rules are stated.',
+        zh: '算的是 IEEE 754 雙精度,不是任意精度。超過 2^53 的整數會開始掉個位數,階乘從 23! 起就只是近似值(工具會在那種結果前面標 ≈),要精確的大整數這裡給不了。金額算到分請用 G06 或 G03,它們的捨入規則是講清楚的。',
+        en: 'Arithmetic is IEEE 754 double precision, not arbitrary precision: past 2^53 integers lose their last digits and factorials from 23! up are approximations, marked with ≈ where they show. No exact big integers here. For money to the cent use G06 or G03, where the rounding rules are stated.',
       },
       {
         zh: '只算數值,不做符號運算:不解方程、不化簡、不微分。變數是儲存格,不是未知數。',
@@ -87,8 +87,8 @@ export const CALC_NOTES: Record<string, ToolNote> = {
         en: 'A prepayment either shortens the term or shrinks the instalment, and the contract decides which. Shortening needs no code — the loop ends when the balance reaches zero — while the other case re-solves over the remaining balance and months. An amount larger than the outstanding balance is clipped to it. There is also a defensive check: a negative principal component would mean a growing balance, and that throws rather than printing a plausible-looking table.',
       },
       {
-        zh: '有效年利率是用二分法在實際現金流上找 IRR 算出來的:把每期實付金額(含提前還款)折現,找出讓現值等於本金的月利率,再年化成 (1 + 月利率)^12 − 1。區間取每月 0 到 100%,二分 200 次——遠超過雙精度用得上的次數,而且保證會停。這個數字存在的理由是它是唯一能誠實比較兩份報價的量:一份「前兩年 1.5%、之後 2.3%」的貸款,既不是 1.5% 的貸款,也不是 2.3% 的貸款,而兩家銀行的兩段式切在不同月份時,只看牌告利率是比不出來的。',
-        en: 'The effective annual rate is an IRR found by bisection over the actual cash flows: discount every payment including prepayments, find the monthly rate where present value equals the principal, then annualise as (1 + r)^12 − 1. The bracket is 0 to 100% a month and 200 bisections always terminate. It exists because a loan at "1.5% for two years then 2.3%" is neither a 1.5% loan nor a 2.3% loan, and headline rates cannot be compared when the step falls in different months.',
+        zh: '年利率是用二分法在實際現金流上找 IRR 算出來的:把每期實付金額(含提前還款)折現,找出讓現值等於本金的月利率。區間取每月 0 到 100%,二分 200 次——遠超過雙精度用得上的次數,而且保證會停。同一個月利率會年化成兩個數字,因為它們回答不同的問題,而只顯示其中一個會被當成算錯:名目年利率是月利率乘 12,跟銀行牌告同一個基準,單段 2.3% 的貸款算回來就是 2.3%,這也讓這段程式自己可以對答案;有效年利率是同一個月利率複利十二個月,2.3% 名目等於 2.3245% 有效。後者存在的理由是它是唯一能誠實比較兩份報價的量:一份「前兩年 1.5%、之後 2.3%」的貸款,既不是 1.5% 的貸款,也不是 2.3% 的貸款,而兩家銀行的兩段式切在不同月份時,只看牌告利率是比不出來的。',
+        en: 'Both annual rates come from one IRR found by bisection over the actual cash flows: discount every payment including prepayments and find the monthly rate where present value equals the principal. The bracket is 0 to 100% a month and 200 bisections always terminate. That monthly rate is then annualised twice, because showing only one of the two reads as an error: nominal is r × 12, the basis a rate card uses, and it returns 2.3% for a single-stage 2.3% loan, which makes the code self-checking; effective is (1 + r)^12 − 1, so the same loan is 2.3245%. The effective one exists because a loan at "1.5% for two years then 2.3%" is neither a 1.5% loan nor a 2.3% loan, and headline rates cannot be compared when the step falls in different months.',
       },
     ],
     limits: [
@@ -99,6 +99,10 @@ export const CALC_NOTES: Record<string, ToolNote> = {
       {
         zh: '有效年利率只看本息現金流,沒有把開辦費、帳管費、信保費或強制投保算進去,所以它不等於金融機構公告的總費用年百分率。',
         en: 'The effective rate covers principal and interest only — no origination fees, insurance or guarantee premiums — so it is not the lender-published APR.',
+      },
+      {
+        zh: '兩段式利率的「前段月數」從放款當月起算,寬限期算在裡面——這是牌告的讀法(「前兩年 1.5%」指的是貸款的前兩個年度)。如果你的合約是從開始攤本金才起算前段,請自己把寬限期月數加進去;工具沒有分開這兩種讀法的開關。',
+        en: 'The first stage is counted from the disbursement month with the grace period inside it, the way a rate card reads. A contract whose stage one starts at the first principal payment has to be entered as grace + stage months; there is no switch for the two readings.',
       },
       {
         zh: '利率最多兩段,繳款週期固定是月。機動利率每季隨指標調整、雙週繳、按日計息的循環信用都不在模型裡;投資端的複利與定期定額請用 G07。',

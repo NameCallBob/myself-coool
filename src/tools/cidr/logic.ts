@@ -240,7 +240,11 @@ export function parseCidr(text: string): ParseResult {
     return { ok: true, cidr: { family: 4, addr: parsed.addr, prefix } };
   }
 
+  // Same strictness as the octets above: `024` is refused rather than read as
+  // 24, because a parser that rejects `010.0.0.1` and then quietly accepts
+  // `/024` is only strict where someone remembered to be.
   if (!/^\d{1,3}$/.test(prefixPart)) return { ok: false, code: 'bad-prefix' };
+  if (prefixPart.length > 1 && prefixPart.startsWith('0')) return { ok: false, code: 'bad-prefix' };
   const prefix = Number(prefixPart);
   if (prefix > bits) return { ok: false, code: 'prefix-range' };
   return { ok: true, cidr: { family: parsed.family, addr: parsed.addr, prefix } };
@@ -339,10 +343,15 @@ export function contains(cidr: Cidr, addr: bigint): boolean {
 /* ── Special-purpose blocks ───────────────── */
 
 /**
- * The IANA special-purpose registries, as of 2024. These are stable — entries
- * are added over decades, not months — but the list is not magic: an address
- * outside every entry is reported as global unicast, which means "not reserved
- * for anything in particular", not "reachable".
+ * The IANA special-purpose registries, as of 2024, in address order. These are
+ * stable — entries are added over decades, not months — but the list is not
+ * magic in two ways. An address outside every entry is reported as global
+ * unicast, which means "not reserved for anything in particular" rather than
+ * "reachable"; and the registry's single-address entries inside
+ * 192.0.0.0/24 (the dummy address, the PCP and TURN anycast addresses, the
+ * NAT64 discovery pair) are deliberately left out, because a /32 row per
+ * protocol assignment buys nothing here and `protocol` already says what the
+ * enclosing block is for.
  */
 const V4_BLOCKS: { block: string; id: string }[] = [
   { block: '0.0.0.0/8', id: 'this-network' },
@@ -352,9 +361,14 @@ const V4_BLOCKS: { block: string; id: string }[] = [
   { block: '169.254.0.0/16', id: 'link-local' },
   { block: '172.16.0.0/12', id: 'private' },
   { block: '192.0.0.0/24', id: 'protocol' },
+  // Inside the protocol-assignments /24, and longer, so it wins the match.
+  { block: '192.0.0.0/29', id: 'ds-lite' },
   { block: '192.0.2.0/24', id: 'documentation' },
+  { block: '192.31.196.0/24', id: 'as112' },
+  { block: '192.52.193.0/24', id: 'amt' },
   { block: '192.88.99.0/24', id: '6to4-relay' },
   { block: '192.168.0.0/16', id: 'private' },
+  { block: '192.175.48.0/24', id: 'as112' },
   { block: '198.18.0.0/15', id: 'benchmark' },
   { block: '198.51.100.0/24', id: 'documentation' },
   { block: '203.0.113.0/24', id: 'documentation' },
@@ -378,21 +392,44 @@ const V6_BLOCKS: { block: string; id: string }[] = [
   { block: '2000::/3', id: 'global-unicast' },
 ];
 
+export type SpecialBlock = { id: string; block: string; cidr: Cidr };
+
+/**
+ * The tables above are module constants, so their text is parsed once here at
+ * load rather than on every lookup — `classify` used to re-parse the whole
+ * table on every call, twenty rows for IPv4 and twelve for IPv6, which is a lot
+ * of string work to repeat for an answer that cannot change. A row that fails
+ * to parse is dropped rather than throwing at import time; the test asserts the
+ * counts, so a typo shows up there instead of silently shrinking the table in
+ * the browser.
+ */
+function parseTable(entries: { block: string; id: string }[]): SpecialBlock[] {
+  const out: SpecialBlock[] = [];
+  for (const entry of entries) {
+    const parsed = parseCidr(entry.block);
+    if (parsed.ok) out.push({ id: entry.id, block: entry.block, cidr: parsed.cidr });
+  }
+  return out;
+}
+
+const V4_PARSED = parseTable(V4_BLOCKS);
+const V6_PARSED = parseTable(V6_BLOCKS);
+
+/** The parsed special-purpose table for a family. The same array every call. */
+export function specialBlocks(family: Family): readonly SpecialBlock[] {
+  return family === 4 ? V4_PARSED : V6_PARSED;
+}
+
 /**
  * Longest-prefix match against the special-purpose list, the same way a routing
  * table would resolve it: `2001:db8::1` is documentation, not Teredo, even
  * though `2001::/32` also covers it.
  */
 export function classify(family: Family, addr: bigint): { id: string; block: string } {
-  const table = family === 4 ? V4_BLOCKS : V6_BLOCKS;
-  let best: { id: string; block: string; prefix: number } | null = null;
-  for (const entry of table) {
-    const parsed = parseCidr(entry.block);
-    if (!parsed.ok) continue;
-    if (!contains(parsed.cidr, addr)) continue;
-    if (!best || parsed.cidr.prefix > best.prefix) {
-      best = { id: entry.id, block: entry.block, prefix: parsed.cidr.prefix };
-    }
+  let best: SpecialBlock | null = null;
+  for (const entry of specialBlocks(family)) {
+    if (!contains(entry.cidr, addr)) continue;
+    if (!best || entry.cidr.prefix > best.cidr.prefix) best = entry;
   }
   if (best) return { id: best.id, block: best.block };
   return family === 4
@@ -411,9 +448,11 @@ export function subnetCount(prefix: number, newPrefix: number): bigint {
 export type SplitResult = { subnets: Cidr[]; total: bigint; truncated: boolean };
 
 /**
- * Splits a block into equal children. A /8 cut into /32s is four billion rows,
- * so the list is capped and the caller is told it was — building them all would
- * exhaust memory long before anyone could read them.
+ * Splits a block into equal children. The row count is 2^(new − old): a /8 cut
+ * into /32s is 24 bits of difference, so 16,777,216 rows — four billion would be
+ * /0 into /32s. Either way the list is capped and the caller is told it was,
+ * because building them all would exhaust memory long before anyone could read
+ * them.
  */
 export function split(cidr: Cidr, newPrefix: number, limit = 256): SplitResult {
   const bits = BIT_WIDTH[cidr.family];
@@ -495,12 +534,29 @@ export function reverseZone(cidr: Cidr): string | null {
 
 /* ── Readout formatting ───────────────────── */
 
-/** Grouped digits while that is readable, scientific notation past 10^15. */
+const TEN = BigInt(10);
+
+/**
+ * Grouped digits up to fifteen of them, then four significant figures in
+ * scientific notation. The mantissa is *rounded*, in bigint arithmetic so that
+ * the value never passes through a float: slicing the first four characters off
+ * the decimal string would print 2^64 as 1.844e19 and silently drop the 6 that
+ * carries. A carry out of the leading digit (9.9996e15 → 10.000e15) is folded
+ * back into the exponent, so the mantissa is always in [1, 10).
+ */
 export function formatBigCount(n: bigint): string {
   if (n < ZERO) return '—';
   const s = n.toString();
   if (s.length <= 15) return n.toLocaleString('en-US');
-  return `${s[0]}.${s.slice(1, 4)}e${s.length - 1}`;
+  let exponent = s.length - 1;
+  const scale = TEN ** BigInt(s.length - 4);
+  let mantissa = (n + scale / BigInt(2)) / scale;
+  if (mantissa >= BigInt(10000)) {
+    mantissa /= TEN;
+    exponent += 1;
+  }
+  const digits = mantissa.toString();
+  return `${digits[0]}.${digits.slice(1)}e${exponent}`;
 }
 
 /** `2^96` — a power of two is easier to hold than 79 octillion. */

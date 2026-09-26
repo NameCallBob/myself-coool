@@ -393,6 +393,14 @@ function partsOf(ms: number, zone: Zone): Parts & { dow: number } {
  * On a spring-forward day 02:30 local is not a real instant; the Date
  * constructor silently returns 03:30 instead. Round-tripping catches that, so
  * the tool reports one fewer run rather than a time that never happens.
+ *
+ * The autumn case is deliberately *not* symmetric. Where the clock falls back,
+ * 01:30 local happens twice — two distinct instants an hour apart — and this
+ * returns only the first, so the schedule lists one firing rather than two.
+ * That is what Vixie cron does with a fixed time inside the repeated hour, and
+ * it is also the only answer a round-trip through `Date` can give: the second
+ * occurrence is unreachable from wall-clock fields alone. The UI says so under
+ * the run list, and the notes say so in prose — it is a limit, not an oversight.
  */
 function instantOf(parts: Parts, zone: Zone): number | null {
   if (zone === 'utc') {
@@ -410,6 +418,33 @@ function instantOf(parts: Parts, zone: Zone): number | null {
     return null;
   }
   return date.getTime();
+}
+
+/**
+ * The first wall-clock second-of-day on this date that can still land after
+ * `fromMs`. Everything below it is provably in the past.
+ *
+ * An instant is `utcMidnight + secondOfDay - offset`, so the *largest* instant a
+ * given wall time can have is the one computed with the *smallest* offset the
+ * zone uses that day. A local offset changes at most once in a day, so the
+ * offsets at 00:00 and at 23:59:59 bracket every offset in play — taking the
+ * smaller of the two makes the bound conservative: on a DST day the cutoff can
+ * be an hour early, which costs a little wasted work and can never skip a real
+ * firing time. `at > fromMs` in the caller stays the authority either way.
+ */
+function firstSecondOfDay(
+  date: { year: number; month: number; day: number },
+  fromMs: number,
+  zone: Zone
+): number {
+  const base = Date.UTC(date.year, date.month - 1, date.day);
+  let offsetMs = 0;
+  if (zone === 'local') {
+    const opening = -new Date(date.year, date.month - 1, date.day, 0, 0, 0).getTimezoneOffset();
+    const closing = -new Date(date.year, date.month - 1, date.day, 23, 59, 59).getTimezoneOffset();
+    offsetMs = Math.min(opening, closing) * 60_000;
+  }
+  return Math.floor((fromMs - base + offsetMs) / 1000) + 1;
 }
 
 function domHit(spec: FieldSpec, year: number, month: number, day: number): boolean {
@@ -483,12 +518,22 @@ export function nextRuns(cron: Cron, fromMs: number, n: number, zone: Zone): num
     const dow = new Date(Date.UTC(cursor.year, cursor.month - 1, cursor.day)).getUTCDay();
     if (!dayMatches(cron, cursor.year, cursor.month, cursor.day, dow)) continue;
 
+    // Only the first candidate day can hold times at or before `fromMs`, and on
+    // that day the whole run before it is dead weight: `* * * * *` would build
+    // and discard up to 1439 instants, and a Quartz per-second expression up to
+    // 86 399, on every keystroke. The cutoff below is the same filter, applied
+    // before the arithmetic instead of after it.
+    const floor = dayIndex === 0 ? firstSecondOfDay(cursor, fromMs, zone) : 0;
+
     for (const h of hour.values) {
       if (out.length >= n) break;
+      if (h * 3600 + 3599 < floor) continue;
       for (const mi of minute.values) {
         if (out.length >= n) break;
+        if (h * 3600 + mi * 60 + 59 < floor) continue;
         for (const s of second.values) {
           if (out.length >= n) break;
+          if (h * 3600 + mi * 60 + s < floor) continue;
           const at = instantOf({ ...cursor, hour: h, minute: mi, second: s }, zone);
           if (at === null) continue; // local time skipped by a DST jump
           if (at > fromMs) out.push(at);

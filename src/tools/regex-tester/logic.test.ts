@@ -158,6 +158,59 @@ test('a repeated group counts as a repetition for the group around it', () => {
   assert.deepEqual(riskNotes('((a)+)+'), ['nested-quantifier']);
 });
 
+test('the d flag reports where each group matched, not just what it matched', () => {
+  // hasIndices exists to answer "where is group 2", so the outcome has to carry
+  // the spans; passing d to the engine and ignoring found.indices is a no-op.
+  const outcome = collectMatches('(?<year>\\d{4})-(\\d{2})', 'gd', 'due 2024-05 now', MATCH_LIMIT);
+  assert.deepEqual(outcome.hits[0].spans, [
+    [4, 8],
+    [9, 11],
+  ]);
+  assert.deepEqual(outcome.hits[0].named, [{ name: 'year', value: '2024', span: [4, 8] }]);
+});
+
+test('a group that did not participate has a null span under d', () => {
+  const outcome = collectMatches('(a)|(b)', 'gd', 'b', MATCH_LIMIT);
+  assert.deepEqual(outcome.hits[0].spans, [null, [0, 1]]);
+  assert.deepEqual(outcome.hits[0].named, []);
+});
+
+test('without d there are no spans, and the hit shape is otherwise unchanged', () => {
+  const outcome = collectMatches('(\\d+)', 'g', 'a12', MATCH_LIMIT);
+  assert.equal(outcome.hits[0].spans, undefined);
+  assert.deepEqual(outcome.hits[0].groups, ['12']);
+  assert.deepEqual(outcome.hits[0].named, []);
+});
+
+test('the unscanned tail after a truncated scan is marked, not shown as no-match', () => {
+  // Past the match limit the scan simply stopped. Painting that tail as plain
+  // text tells the reader "nothing matched here", which is not what happened.
+  const input = 'a'.repeat(20);
+  const outcome = collectMatches('a', 'g', input, 5);
+  assert.equal(outcome.truncated, true);
+  const segments = toSegments(input, outcome.hits, outcome.truncated);
+  assert.equal(segments.map((segment) => segment.text).join(''), input);
+  const tail = segments[segments.length - 1];
+  assert.equal(tail.text, 'a'.repeat(15));
+  assert.equal(tail.hit, null);
+  assert.equal(tail.unscanned, true);
+  assert.equal(segments.filter((segment) => segment.unscanned === true).length, 1);
+});
+
+test('a complete scan marks no tail as unscanned', () => {
+  const input = 'a1 bb 234';
+  const outcome = collectMatches('\\d+', 'g', input, MATCH_LIMIT);
+  const segments = toSegments(input, outcome.hits, outcome.truncated);
+  assert.ok(segments.every((segment) => segment.unscanned === undefined));
+});
+
+test('a truncated scan whose last hit ends at the input end has no tail to mark', () => {
+  const outcome = collectMatches('a', 'g', 'aaa', 3);
+  const segments = toSegments('aaa', outcome.hits, true);
+  assert.equal(segments.length, 3);
+  assert.ok(segments.every((segment) => segment.unscanned === undefined));
+});
+
 test('segments reconstruct the subject exactly', () => {
   const input = 'a1 bb 234';
   const outcome = collectMatches('\\d+', 'g', input, MATCH_LIMIT);

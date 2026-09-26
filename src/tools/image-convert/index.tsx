@@ -576,8 +576,8 @@ export default function ImageConvert({ l }: ToolProps) {
                   invalid={!budgetValid}
                   hint={t(
                     l,
-                    '用二分法試品質,最多 7 次編碼。回報的大小是實際編出來的位元組,不是估的。',
-                    'Bisects on quality, at most 7 encodes. The size reported is a measured blob, not an estimate.'
+                    '用二分法試品質,最多 7 次編碼。回報的大小是實際編出來的位元組,不是估的;回報的品質是「塞得進上限的最高品質,誤差一個百分點內」——區間收到 2 個百分點就停,省下一次編碼。',
+                    'Bisects on quality, at most 7 encodes. The size reported is a measured blob, not an estimate; the quality is the highest that fits to within one percent — the bracket stops at two percent wide, which saves an encode.'
                   )}
                 />
               ) : null}

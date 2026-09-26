@@ -202,7 +202,8 @@ test('APCA and WCAG disagree where they are known to disagree', () => {
 test('the APCA bands are ordered and cover the whole range', () => {
   assert.equal(apcaBand(0), 'invisible');
   assert.equal(apcaBand(14.9), 'invisible');
-  assert.equal(apcaBand(15), 'non-text');
+  assert.equal(apcaBand(15), 'discernible');
+  assert.equal(apcaBand(30), 'non-text');
   assert.equal(apcaBand(-45), 'large-only');
   assert.equal(apcaBand(60), 'sub-body');
   assert.equal(apcaBand(75), 'body-min');
@@ -300,4 +301,93 @@ test('a colour that already passes gets no suggestions', () => {
   assert.deepEqual(nearestPassing(rgb('#767676'), WHITE, 4.5, true), []);
   // One step below the boundary there is work to do again.
   assert.ok(nearestPassing(rgb('#777777'), WHITE, 4.5, true).length > 0);
+});
+
+/* ── Regressions found while reading this file for the notes ── */
+
+test('an out-of-gamut oklab() is chroma-reduced, like oklch(), not clipped', () => {
+  // oklab(0.7 -0.3464 0.2) is oklch(0.7 0.4 150) written rectangularly, so the
+  // two branches have to agree. Clipping the channels instead landed on
+  // #00d600: lightness 0.759 and hue 142.5, a different colour whose ratio
+  // against white (1.98) is not the ratio of the colour that was typed (2.47).
+  const viaLab = parseColor('oklab(0.7 -0.3464 0.2)')!.rgb;
+  const viaLch = parseColor('oklch(0.7 0.4 150)')!.rgb;
+  assert.equal(toHex(viaLab), toHex(viaLch), 'the same colour either way round');
+
+  const got = rgbToOklch(viaLab);
+  near(got.l, 0.7, 0.01, 'lightness held');
+  near(got.h, 150, 1, 'hue held');
+
+  const clipped = clip(oklabToRgb({ l: 0.7, a: -0.3464, b: 0.2 }));
+  assert.ok(
+    Math.abs(rgbToOklch(clipped).h - 150) > 5,
+    'the clipping this replaces really did move the hue'
+  );
+  assert.ok(
+    Math.abs(contrastRatio(clipped, WHITE) - contrastRatio(viaLab, WHITE)) > 0.3,
+    'and it really did change the measurement'
+  );
+});
+
+test('an in-gamut oklab() is left exactly where it is', () => {
+  for (const lab of [
+    { l: 1, a: 0, b: 0 },
+    { l: 0, a: 0, b: 0 },
+    { l: 0.5, a: 0.05, b: -0.05 },
+    { l: 0.7, a: -0.1, b: 0.08 },
+  ]) {
+    const direct = oklabToRgb(lab);
+    assert.ok(inGamut(direct), `oklab(${lab.l} ${lab.a} ${lab.b}) should be inside sRGB`);
+    const parsed = parseColor(`oklab(${lab.l} ${lab.a} ${lab.b})`)!;
+    near(parsed.rgb.r, direct.r, 1e-9, 'r');
+    near(parsed.rgb.g, direct.g, 1e-9, 'g');
+    near(parsed.rgb.b, direct.b, 1e-9, 'b');
+  }
+  // Red written out to five decimals lands 5e-6 outside the gamut, so it does
+  // take the mapping path — and must still come back as red, not as a visibly
+  // desaturated red. This is the everyday case for a pasted oklab() value.
+  assert.ok(!inGamut(oklabToRgb({ l: 0.62796, a: 0.22486, b: 0.12585 })));
+  assert.equal(toHex(parseColor('oklab(0.62796 0.22486 0.12585)')!.rgb), '#ff0000');
+});
+
+test('the page colour is not a choice between two extremes', () => {
+  // Real page grounds are #f5f5f5 and #111, and when both layers are
+  // translucent the answer moves with the ground rather than being bracketed
+  // usefully by white and black.
+  const at = (text: string, bg: string, page: string) =>
+    measure(parseColor(text)!, parseColor(bg)!, parseColor(page)!.rgb);
+
+  // Light theme: four percent off white is enough to change the APCA band.
+  const light = (page: string) => at('#00000080', '#e0e0e080', page);
+  assert.equal(light('#ffffff').band, 'sub-body');
+  assert.equal(light('#f5f5f5').band, 'large-only');
+
+  // Dark theme: pure black says this pair passes AA, a realistic #111 says it
+  // does not. Neither extreme can stand in for the ground you actually ship.
+  const dark = (page: string) => at('#ffffffb3', '#ffffff4d', page);
+  assert.equal(dark('#000000').wcag.normal, 'AA');
+  assert.equal(dark('#111111').wcag.normal, 'fail');
+  assert.ok(dark('#000000').ratio - dark('#111111').ratio > 0.5, 'and by a wide margin');
+
+  // An opaque pair ignores the page colour entirely, which is why this only
+  // matters when something is translucent.
+  for (const page of ['#ffffff', '#f5f5f5', '#111111', '#000000']) {
+    near(at('#767676', '#ffffff', page).ratio, 4.5422, 1e-3, page);
+  }
+});
+
+test('Lc under 30 is not reported as good enough for a non-text element', () => {
+  // APCA's own levels: Lc 30 is the absolute minimum for any text and the
+  // minimum for solid, semantic non-text; Lc 15 is only the floor for
+  // "discernible and differentiable" non-text no smaller than 5px, and below
+  // that a designer should treat the element as invisible. Calling everything
+  // from Lc 15 up "non-text" was one whole band more permissive than the
+  // document it cites.
+  assert.equal(apcaBand(29.9), 'discernible');
+  assert.equal(apcaBand(-20), 'discernible');
+  assert.equal(apcaBand(15), 'discernible');
+  assert.equal(apcaBand(14.9), 'invisible');
+  assert.equal(apcaBand(30), 'non-text');
+  assert.equal(apcaBand(44.9), 'non-text');
+  assert.equal(apcaBand(45), 'large-only');
 });

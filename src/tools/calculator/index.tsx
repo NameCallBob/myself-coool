@@ -20,8 +20,10 @@ import {
   CONSTANTS,
   CalcError,
   FUNCTIONS,
+  MAX_EXACT_FACTORIAL,
   MAX_EXPRESSION,
   formatResult,
+  hidesFraction,
   integerViews,
   run,
   type AngleMode,
@@ -35,9 +37,17 @@ const SAMPLE = [
   'ans * 2',
   '1920 * 9 / 16',
   '49! / (6! * 43!)    # 49 取 6',
+  'round(1.005, 2)     # 四捨五入到分',
 ].join('\n');
 
 const EMPTY: RunResult = { lines: [], env: {}, value: Number.NaN };
+
+/**
+ * `≈` in front of a result that is not the whole number it prints as. Fifteen
+ * significant digits round 253.00000000000006 to "253", and a combination built
+ * out of factorials above 22! lands on values exactly like that one.
+ */
+const shown = (value: number) => `${hidesFraction(value) ? '≈ ' : ''}${formatResult(value)}`;
 
 export default function Calculator({ l }: ToolProps) {
   const [source, setSource] = useState(SAMPLE);
@@ -60,8 +70,10 @@ export default function Calculator({ l }: ToolProps) {
   const views = lastGood ? integerViews(lastGood.value) : null;
   const failures = lines.filter((line) => line.error).length;
 
+  const approximate = lines.some((line) => !line.error && hidesFraction(line.value));
+
   const transcript = lines
-    .map((line) => `${line.source} = ${line.error ? line.error.message : formatResult(line.value)}`)
+    .map((line) => `${line.source} = ${line.error ? line.error.message : shown(line.value)}`)
     .join('\n');
 
   return (
@@ -148,13 +160,23 @@ export default function Calculator({ l }: ToolProps) {
                     ) : (
                       <span key="v" className="inst-no" style={{ color: 'var(--fg)', fontSize: '0.9375rem' }}>
                         {line.assigned ? `${line.assigned} = ` : ''}
-                        {formatResult(line.value)}
+                        {shown(line.value)}
                       </span>
                     ),
                   ])}
                 />
               </div>
             )}
+
+            {approximate ? (
+              <Note>
+                {t(
+                  l,
+                  `標 ≈ 的結果不是它印出來的那個整數,只是在十五位有效數字下看起來像。最常見的來源是階乘:${MAX_EXACT_FACTORIAL}! 以內是精確值,再往上就只是最接近的雙精度數,拿去相除得到的組合數會差在小數第十幾位。`,
+                  `A result marked ≈ is not the whole number it prints as; fifteen significant digits just make it look like one. Factorials are exact up to ${MAX_EXACT_FACTORIAL}! and are the nearest double above that, so combinations divided out of them land a few parts in 10^15 off.`
+                )}
+              </Note>
+            ) : null}
 
             {views ? (
               <Note>
@@ -177,7 +199,7 @@ export default function Calculator({ l }: ToolProps) {
                       {name}
                     </span>,
                     <span key="v" className="inst-no">
-                      {formatResult(value)}
+                      {shown(value)}
                     </span>,
                   ])}
                 />
@@ -202,7 +224,7 @@ export default function Calculator({ l }: ToolProps) {
               ['+ - * / %', t(l, '加減乘除與餘數。% 的正負號跟被除數一樣,要跟除數同號請用 mod()。', 'Arithmetic and remainder. `%` keeps the dividend’s sign; use mod() for the divisor’s.')],
               ['^ 或 **', t(l, '次方,右結合。2^3^2 是 512。', 'Power, right-associative. 2^3^2 is 512.')],
               ['-2^2', t(l, '等於 -4:次方比負號先算。要 4 請寫 (-2)^2。', 'Is −4: the power binds tighter than the sign. Write (−2)^2 for 4.')],
-              ['5!', t(l, '階乘,上限 170!。', 'Factorial, up to 170!.')],
+              ['5!', t(l, `階乘,上限 170!;${MAX_EXACT_FACTORIAL}! 以內是精確值,更大的只是最接近的雙精度數。`, `Factorial, up to 170!. Exact through ${MAX_EXACT_FACTORIAL}!, the nearest double above that.`)],
               ['2pi、3(4+5)', t(l, '省略的乘號會補上,但只在數字後面接名稱或括號時。', 'Implicit multiplication, only after a value and before a name or a bracket.')],
               ['x = 3', t(l, '存成變數,下面幾行都能用。', 'Stores a variable for the lines below.')],
               ['ans', t(l, '上一行的結果。', 'The previous line’s result.')],

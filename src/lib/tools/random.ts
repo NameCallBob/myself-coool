@@ -5,10 +5,20 @@
  * it is a fast PRNG seeded per context, it is not a secret source, and a
  * password generator built on it looks identical to one that is safe.
  *
- * `below` uses rejection sampling rather than `% n`. Taking a modulus of a
- * uniform byte range skews the low end whenever n does not divide 256 — with
- * a 62-character alphabet the first 8 characters come up ~1.6% more often
- * than the rest, which quietly costs entropy the UI would still be claiming.
+ * `below` uses rejection sampling rather than `% n`. How much `% n` costs
+ * depends on how wide the source is, and it is worth having the real numbers
+ * here because the wrong ones were written down first:
+ *
+ *  - From a byte, the skew is large. 256 = 4 x 62 + 8, so over a 62-character
+ *    alphabet eight characters land 5 times per 256 draws and the other 54
+ *    land 4 times — the favoured eight appear 25% more often than the rest.
+ *  - From the 32-bit source below, the same modulus leaves four values
+ *    over-represented by one part in 69,273,666, which is nothing.
+ *
+ * So the rejection loop is not load-bearing at this width. It stays because
+ * it costs one comparison, it removes the question rather than answering it
+ * with an estimate, and the next person to reach for a narrower source does
+ * not have to notice that the argument depended on the width.
  */
 
 function fill(n: number): Uint32Array {

@@ -4,12 +4,14 @@ import {
   JwtError,
   algFamily,
   decodeJwt,
+  decodeSecret,
   fromBase64Url,
   inspectClaims,
   normalizeToken,
   pemToDer,
   secretStrength,
   toBase64Url,
+  type SecretEncoding,
   verify,
 } from './logic.ts';
 
@@ -99,6 +101,16 @@ test('five segments are read as JWE, with no pretence of a payload', () => {
   assert.equal(jwe.segmentCount, 5);
   assert.equal(jwe.payload.value, null);
   assert.equal(jwe.header.value?.enc, 'A256GCM');
+});
+
+test('a JWE payload is flagged as encrypted, not as broken JSON', () => {
+  // The ciphertext is not malformed JSON — nobody tried to parse it. Calling it
+  // bad-json tells the reader the token is broken when it is merely encrypted.
+  const header = toBase64Url(new TextEncoder().encode('{"alg":"RSA-OAEP","enc":"A256GCM"}'));
+  const jwe = decodeJwt(`${header}.aaaa.bbbb.cccc.dddd`);
+  assert.equal(jwe.payload.problem, 'encrypted');
+  assert.equal(jwe.payload.value, null);
+  assert.equal(jwe.payload.raw, 'cccc');
 });
 
 test('an unsecured token is decodable and marked as such', () => {
@@ -229,11 +241,117 @@ test('algorithm families are recognised, including none and nonsense', () => {
 });
 
 test('secret strength is measured against the hash size', () => {
-  assert.deepEqual(secretStrength('short', 'HS256'), { bytes: 5, required: 32, weak: true });
-  assert.deepEqual(secretStrength('x'.repeat(32), 'HS256'), { bytes: 32, required: 32, weak: false });
-  assert.deepEqual(secretStrength('x'.repeat(32), 'HS512'), { bytes: 32, required: 64, weak: true });
+  assert.deepEqual(secretStrength('short', 'HS256'), {
+    bytes: 5,
+    required: 32,
+    weak: true,
+    problem: null,
+  });
+  assert.deepEqual(secretStrength('x'.repeat(32), 'HS256'), {
+    bytes: 32,
+    required: 32,
+    weak: false,
+    problem: null,
+  });
+  assert.deepEqual(secretStrength('x'.repeat(32), 'HS512'), {
+    bytes: 32,
+    required: 64,
+    weak: true,
+    problem: null,
+  });
   // Byte length, not character count: CJK is three bytes each in UTF-8.
   assert.equal(secretStrength('中'.repeat(11), 'HS256').bytes, 33);
+});
+
+/** A 32-byte key and the two textual spellings of it people actually paste. */
+const RAW_KEY = new Uint8Array(32).map((_unused, index) => (index * 7 + 11) & 0xff);
+const KEY_BASE64 = Buffer.from(RAW_KEY).toString('base64');
+const KEY_HEX = Buffer.from(RAW_KEY).toString('hex');
+
+/** An HS token signed over key *bytes*, which is what a real issuer does. */
+async function signHs(secret: Uint8Array, payload: string): Promise<string> {
+  const header = toBase64Url(new TextEncoder().encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })));
+  const body = toBase64Url(new TextEncoder().encode(payload));
+  const copy = new ArrayBuffer(secret.length);
+  new Uint8Array(copy).set(secret);
+  const material = await subtle.importKey('raw', copy, { name: 'HMAC', hash: 'SHA-256' }, false, [
+    'sign',
+  ]);
+  const signature = new Uint8Array(
+    await subtle.sign('HMAC', material, new TextEncoder().encode(`${header}.${body}`))
+  );
+  return `${header}.${body}.${toBase64Url(signature)}`;
+}
+
+test('a secret can be given as text, base64 or hex', () => {
+  const utf8 = decodeSecret('abc', 'utf8');
+  assert.ok(utf8.ok && utf8.bytes.length === 3);
+  const base64 = decodeSecret(KEY_BASE64, 'base64');
+  assert.ok(base64.ok);
+  assert.deepEqual(base64.ok && base64.bytes, RAW_KEY);
+  const hex = decodeSecret(KEY_HEX, 'hex');
+  assert.deepEqual(hex.ok && hex.bytes, RAW_KEY);
+  // A key pasted out of a config file wraps, and base64url is just as common.
+  assert.deepEqual(
+    decodeSecret(`${KEY_BASE64.slice(0, 20)}\n ${KEY_BASE64.slice(20)}`, 'base64').ok &&
+      decodeSecret(`${KEY_BASE64.slice(0, 20)}\n ${KEY_BASE64.slice(20)}`, 'base64'),
+    { ok: true, bytes: RAW_KEY }
+  );
+  assert.deepEqual(
+    decodeSecret(toBase64Url(RAW_KEY), 'base64'),
+    { ok: true, bytes: RAW_KEY }
+  );
+  assert.deepEqual(decodeSecret(`0x${KEY_HEX.toUpperCase()}`, 'hex'), { ok: true, bytes: RAW_KEY });
+});
+
+test('a secret that is not the encoding it claims is named, not silently hashed', () => {
+  assert.deepEqual(decodeSecret('not base64!!', 'base64'), { ok: false, problem: 'bad-base64' });
+  assert.deepEqual(decodeSecret('abc', 'hex'), { ok: false, problem: 'bad-hex' });
+  assert.deepEqual(decodeSecret('zz', 'hex'), { ok: false, problem: 'bad-hex' });
+  assert.equal(secretStrength('not base64!!', 'HS256', 'base64').problem, 'bad-base64');
+  assert.equal(secretStrength('not base64!!', 'HS256', 'base64').bytes, 0);
+});
+
+test('a base64 secret is sized by its bytes, not by the length of its text', () => {
+  // The whole point: 44 characters of base64 are 32 bytes of key. Measuring the
+  // text would call a 24-byte key "long enough" for HS256.
+  assert.equal(KEY_BASE64.length, 44);
+  assert.deepEqual(secretStrength(KEY_BASE64, 'HS256', 'base64'), {
+    bytes: 32,
+    required: 32,
+    weak: false,
+    problem: null,
+  });
+  assert.equal(secretStrength(KEY_BASE64, 'HS256', 'utf8').bytes, 44);
+  const short = Buffer.from(new Uint8Array(24)).toString('base64');
+  assert.equal(secretStrength(short, 'HS256', 'base64').weak, true);
+  assert.equal(secretStrength(short, 'HS256', 'utf8').weak, false);
+  assert.equal(secretStrength(KEY_HEX, 'HS256', 'hex').bytes, 32);
+  assert.equal(secretStrength(KEY_HEX, 'HS256', 'utf8').bytes, 64);
+});
+
+test('a token signed with binary key bytes verifies once the encoding is stated', async () => {
+  const token = await signHs(RAW_KEY, '{"sub":"binary"}');
+  const jwt = decodeJwt(token);
+  for (const [encoding, text] of [
+    ['base64', KEY_BASE64],
+    ['hex', KEY_HEX],
+  ] as [SecretEncoding, string][]) {
+    assert.deepEqual(await verify(jwt, 'HS256', text, subtle, encoding), { status: 'valid' });
+  }
+  // Read as text, the same key is 44 (or 64) different bytes and cannot match.
+  assert.deepEqual(await verify(jwt, 'HS256', KEY_BASE64, subtle, 'utf8'), { status: 'invalid' });
+  // And a text secret still defaults to text, so nothing already working moves.
+  assert.deepEqual(await verify(decodeJwt(RFC_TOKEN), 'HS256', RFC_SECRET, subtle), {
+    status: 'valid',
+  });
+});
+
+test('an undecodable secret is a key error rather than a wrong verdict', async () => {
+  const jwt = decodeJwt(RFC_TOKEN);
+  const outcome = await verify(jwt, 'HS256', 'not base64!!', subtle, 'base64');
+  assert.equal(outcome.status, 'key-error');
+  assert.ok(outcome.status === 'key-error' && /base64/.test(outcome.reason));
 });
 
 /* ── Verification ─────────────────────────── */

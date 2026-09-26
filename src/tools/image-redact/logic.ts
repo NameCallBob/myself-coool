@@ -11,7 +11,8 @@
  *
  *  - `solid` writes one colour over every pixel in the rectangle. The original
  *    values are gone; nothing about them survives except the rectangle's shape.
- *  - `mosaic` replaces each block with the mean of that block. That is a real
+ *  - `mosaic` replaces each block with the alpha-weighted mean of that block,
+ *    written opaque for the same reason as above. That is a real
  *    loss of information — a mean is not invertible — but it is a *reduction*,
  *    not an erasure: the block means are still there, and for short, known-font
  *    text with a small block size an attacker can render candidate strings,
@@ -144,6 +145,19 @@ export function applySolid(
  * that overlap produce one continuous mosaic rather than a visible seam. Cells
  * are clipped to the rectangle, so the mean never draws on colours from outside
  * the area the user selected.
+ *
+ * Alpha is written 255, exactly as `applySolid` does, and for the same two
+ * reasons. A half-transparent block changes brightness against whatever it is
+ * composited on, and — worse for a redaction tool — an averaged alpha channel
+ * still carries the transparent/opaque boundary that was inside the mark, so the
+ * shape survives the mean that was supposed to destroy it.
+ *
+ * The colour mean is therefore weighted by alpha: a fully transparent pixel
+ * carries RGB that was never visible (canvas hands back zeroes), and letting it
+ * into an unweighted mean would drag the block toward black for no reason. A
+ * block where nothing was visible at all has no weights to use, so it falls back
+ * to the plain mean — still opaque, because a transparent hole left in the
+ * middle of a mosaic is the shape clue again.
  */
 export function applyMosaic(
   pixels: Uint8ClampedArray | Uint8Array,
@@ -164,32 +178,39 @@ export function applyMosaic(
       const x2 = Math.min(cellX + size, area.x + area.w);
       const y2 = Math.min(cellY + size, area.y + area.h);
       if (x2 <= x1 || y2 <= y1) continue;
+      // Weighted sums for the alpha-aware mean, plain sums for the fallback.
+      let wr = 0;
+      let wg = 0;
+      let wb = 0;
+      let sa = 0;
       let sr = 0;
       let sg = 0;
       let sb = 0;
-      let sa = 0;
       for (let y = y1; y < y2; y += 1) {
         let at = (y * width + x1) * 4;
         for (let x = x1; x < x2; x += 1) {
+          const alpha = pixels[at + 3];
+          wr += pixels[at] * alpha;
+          wg += pixels[at + 1] * alpha;
+          wb += pixels[at + 2] * alpha;
+          sa += alpha;
           sr += pixels[at];
           sg += pixels[at + 1];
           sb += pixels[at + 2];
-          sa += pixels[at + 3];
           at += 4;
         }
       }
       const n = (x2 - x1) * (y2 - y1);
-      const r = Math.round(sr / n);
-      const g = Math.round(sg / n);
-      const b = Math.round(sb / n);
-      const a = Math.round(sa / n);
+      const r = sa === 0 ? Math.round(sr / n) : Math.round(wr / sa);
+      const g = sa === 0 ? Math.round(sg / n) : Math.round(wg / sa);
+      const b = sa === 0 ? Math.round(sb / n) : Math.round(wb / sa);
       for (let y = y1; y < y2; y += 1) {
         let at = (y * width + x1) * 4;
         for (let x = x1; x < x2; x += 1) {
           pixels[at] = r;
           pixels[at + 1] = g;
           pixels[at + 2] = b;
-          pixels[at + 3] = a;
+          pixels[at + 3] = 255;
           at += 4;
         }
       }

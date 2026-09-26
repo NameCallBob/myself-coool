@@ -7,6 +7,7 @@ import { t } from '@/lib/tools/locale';
 import { below } from '@/lib/tools/random';
 import {
   CHARSETS,
+  GPU_SHA256_PER_SECOND,
   ImpossibleOptions,
   MAX_LENGTH,
   MIN_LENGTH,
@@ -58,8 +59,8 @@ export default function PasswordGenerator({ l }: ToolProps) {
         problem instanceof ImpossibleOptions
           ? t(
               l,
-              '這組設定做不出密碼:長度不足以容納所有字元類型,或字元集被排除到空了。',
-              'These options cannot produce a password: the length cannot hold every character type, or the alphabet is empty.'
+              '這組設定做不出密碼:沒有選字元類型,長度不足以容納所有類型,或字元集被排除到空了。',
+              'These options cannot produce a password: no character types are selected, the length cannot hold every type, or the alphabet is empty.'
             )
           : String(problem)
       );
@@ -74,8 +75,11 @@ export default function PasswordGenerator({ l }: ToolProps) {
       const next = previous.sets.includes(id)
         ? previous.sets.filter((entry) => entry !== id)
         : [...previous.sets, id];
-      // Leaving nothing selected is not a state worth representing.
-      return { ...previous, sets: next.length === 0 ? previous.sets : next };
+      // Unselecting the last type is allowed to stick: the button then shows
+      // what was actually clicked, and the panel says a password cannot be made
+      // from it. Quietly putting a type back — or generating lowercase anyway —
+      // hands back something other than what the screen claims is selected.
+      return { ...previous, sets: next };
     });
 
   // Not memoised: it is a four-way lookup, and wrapping it defeats the React
@@ -142,6 +146,15 @@ export default function PasswordGenerator({ l }: ToolProps) {
                 </button>
               ))}
             </div>
+            {options.sets.length === 0 ? (
+              <Note error>
+                {t(
+                  l,
+                  '沒有選任何字元類型,就沒有可以抽的字元。至少選一類。',
+                  'No character types selected, so there is nothing to draw from. Pick at least one.'
+                )}
+              </Note>
+            ) : null}
           </div>
 
           <Row>
@@ -158,7 +171,7 @@ export default function PasswordGenerator({ l }: ToolProps) {
           </Row>
 
           <Row>
-            <Btn onClick={roll} primary>
+            <Btn onClick={roll} primary disabled={options.sets.length === 0}>
               {t(l, '產生', 'generate')}
             </Btn>
             <Check2
@@ -215,7 +228,11 @@ export default function PasswordGenerator({ l }: ToolProps) {
           rows={[
             [t(l, '線上服務(有節流)', 'online service, throttled'), '1e3', crackTime(bits, 1e3)],
             [t(l, '外洩的慢雜湊(bcrypt)', 'leaked slow hash (bcrypt)'), '1e5', crackTime(bits, 1e5)],
-            [t(l, '外洩的快雜湊(SHA-256)', 'leaked fast hash (SHA-256)'), '1e11', crackTime(bits, 1e11)],
+            [
+              t(l, '外洩的快雜湊(SHA-256,四張 GPU)', 'leaked fast hash (SHA-256), four GPUs'),
+              '1e11',
+              crackTime(bits, GPU_SHA256_PER_SECOND),
+            ],
           ]}
         />
       </Panel>

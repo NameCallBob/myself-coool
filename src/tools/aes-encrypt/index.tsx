@@ -300,8 +300,8 @@ export default function AesEncrypt({ l }: ToolProps) {
                   <Note error>
                     {t(
                       l,
-                      `低於預設值。以這個迭代數,單張 GPU 大約每秒可以試 ${Math.round(rate).toLocaleString('en-US')} 個密語。`,
-                      `Below the default. At this count one GPU tries roughly ${Math.round(rate).toLocaleString('en-US')} passphrases per second.`
+                      `低於預設值。以這個迭代數,一台四張 GPU 的機器(每秒約 1e11 次 SHA-256 壓縮,與 E01 的破解時間同一個攻擊者)大約每秒可以試 ${Math.round(rate).toLocaleString('en-US')} 個密語。`,
+                      `Below the default. At this count a four-GPU box — about 1e11 SHA-256 compressions a second, the same attacker E01 reports crack times for — tries roughly ${Math.round(rate).toLocaleString('en-US')} passphrases per second.`
                     )}
                   </Note>
                 ) : null}

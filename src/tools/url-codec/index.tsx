@@ -25,6 +25,7 @@ import {
   buildQuery,
   duplicateKeys,
   encodingRounds,
+  isValidPort,
   joinUrl,
   parseQuery,
   percentDecode,
@@ -69,7 +70,10 @@ export default function UrlCodec({ l }: ToolProps) {
   const rebuiltUrl = pairs ? joinUrl({ ...parts, query: rebuiltQuery }) : '';
 
   const loadQuery = () => {
-    const source = parts.query !== '' ? parts.query : text;
+    // `hasQuery`, not a non-empty query: `https://example.com/?` has a query
+    // and it is empty, which means no parameters — not "treat the whole URL as
+    // a query string", which is what the fallback is for.
+    const source = parts.hasQuery ? parts.query : text;
     setPairs(parseQuery(source, { plusAsSpace }));
   };
 
@@ -203,10 +207,29 @@ export default function UrlCodec({ l }: ToolProps) {
                 ['host', parts.host || '—', t(l, '非 ASCII 網域要用 Punycode,不是 percent', 'non-ASCII hosts need Punycode, not percent')],
                 ['port', parts.port || '—', t(l, '只能是數字', 'digits only')],
                 ['path', parts.path || '—', t(l, '每段分別編碼,斜線保留', 'encode each segment; keep the slashes')],
-                ['query', parts.query || '—', t(l, '表單規則或嚴格 RFC 3986', 'form rule or strict RFC 3986')],
-                ['fragment', parts.fragment || '—', t(l, '不會送到伺服器', 'never sent to the server')],
+                // "written but empty" is not the same as "absent", and the
+                // rebuilt URL keeps the delimiter, so the table has to say so.
+                [
+                  'query',
+                  parts.query || (parts.hasQuery ? t(l, '(空的,但 ? 有寫)', '(empty, but the ? is there)') : '—'),
+                  t(l, '表單規則或嚴格 RFC 3986', 'form rule or strict RFC 3986'),
+                ],
+                [
+                  'fragment',
+                  parts.fragment || (parts.hasFragment ? t(l, '(空的,但 # 有寫)', '(empty, but the # is there)') : '—'),
+                  t(l, '不會送到伺服器', 'never sent to the server'),
+                ],
               ]}
             />
+            {isValidPort(parts.port) ? null : (
+              <Note error>
+                {t(
+                  l,
+                  `port「${parts.port}」不是合法的連接埠:只能是十進位數字,而且不超過 65535。authority 是從第一個冒號切開的(host 裡不可能有冒號),所以多出來的冒號會落在 port 這一側——這串的 authority 本身可能就壞了。`,
+                  `Port "${parts.port}" is not a port: decimal digits only, 65535 at most. The authority is cut at its first colon, since a host cannot contain one, so anything extra lands on the port side — that authority is probably broken.`
+                )}
+              </Note>
+            )}
           </Panel>
         </div>
       ) : null}
@@ -222,7 +245,9 @@ export default function UrlCodec({ l }: ToolProps) {
             </Btn>
             {pairs ? (
               <>
-                <Btn onClick={() => setPairs([...pairs, { key: '', value: '', hasEquals: true, error: null }])}>
+                {/* hasEquals starts false so an untouched blank row stays out of
+                    the rebuilt query; typing a value turns it on. */}
+                <Btn onClick={() => setPairs([...pairs, { key: '', value: '', hasEquals: false, error: null }])}>
                   {t(l, '加一列', 'add row')}
                 </Btn>
                 <Btn onClick={() => setPairs(null)}>{t(l, '收起表格', 'close table')}</Btn>

@@ -56,6 +56,15 @@ export type JwtErrorCode =
   | 'bad-json'
   | 'not-object';
 
+/**
+ * Why a segment has no readable value.
+ *
+ * `encrypted` is not one of the error codes because nothing went wrong: a JWE
+ * payload is ciphertext, and reporting it as malformed JSON would tell the
+ * reader the token is broken when it is merely not addressed to them.
+ */
+export type SegmentProblem = JwtErrorCode | 'encrypted';
+
 export class JwtError extends Error {
   readonly code: JwtErrorCode;
   readonly detail: string;
@@ -75,8 +84,8 @@ export type Segment = {
   /** Pretty-printed JSON, or the raw text when it did not parse. */
   text: string;
   value: Record<string, unknown> | null;
-  /** Failure code when this segment could not be read as JSON. */
-  problem: JwtErrorCode | null;
+  /** Why this segment has no value; null when it read cleanly. */
+  problem: SegmentProblem | null;
   bytes: number;
 };
 
@@ -156,7 +165,7 @@ export function decodeJwt(input: string): Jwt {
   // there is no readable payload without the decryption key. Showing the
   // base64 as if it were the claims would be worse than saying so.
   const payload = encrypted
-    ? { raw: parts[3], text: '', value: null, problem: 'bad-json' as JwtErrorCode, bytes: 0 }
+    ? { raw: parts[3], text: '', value: null, problem: 'encrypted' as SegmentProblem, bytes: 0 }
     : readSegment(parts[1]);
 
   const signatureRaw = encrypted ? parts[4] : parts[2];
@@ -301,6 +310,63 @@ export function pemToDer(pem: string): Uint8Array {
 
 const utf8 = (text: string) => new TextEncoder().encode(text);
 
+/* ── Shared secrets ───────────────────────── */
+
+/**
+ * How the text in the secret box should be read into bytes.
+ *
+ * It has to be a choice. An HMAC key is bytes, and the two ways people actually
+ * store 32 random bytes — `openssl rand -base64 32` and `-hex 32` — are text
+ * that *spells* a key rather than text that *is* one. Reading either as UTF-8
+ * produces the wrong key (verification fails for no visible reason) and the
+ * wrong size (44 characters of base64 look like a comfortable 44 bytes while
+ * standing for exactly 32), and a truly binary key cannot be typed at all.
+ */
+export type SecretEncoding = 'utf8' | 'base64' | 'hex';
+
+export type SecretBytes =
+  | { ok: true; bytes: Uint8Array }
+  | { ok: false; problem: 'bad-base64' | 'bad-hex' };
+
+/**
+ * Secret text → key bytes.
+ *
+ * Whitespace is dropped in both encoded forms: a key pasted out of a config
+ * file or an env var arrives wrapped. base64 accepts the URL-safe alphabet and
+ * makes padding optional, since JWT-adjacent tooling emits both.
+ */
+export function decodeSecret(text: string, encoding: SecretEncoding): SecretBytes {
+  if (encoding === 'utf8') return { ok: true, bytes: utf8(text) };
+
+  if (encoding === 'hex') {
+    const clean = text.trim().replace(/^0[xX]/, '').replace(/[\s:-]/g, '');
+    if (clean.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(clean)) {
+      return { ok: false, problem: 'bad-hex' };
+    }
+    const out = new Uint8Array(clean.length / 2);
+    for (let i = 0; i < out.length; i += 1) {
+      out[i] = Number.parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    }
+    return { ok: true, bytes: out };
+  }
+
+  const clean = text.replace(/\s/g, '').replace(/=+$/, '');
+  // Either alphabet, then one canonical form for atob.
+  if (!/^[A-Za-z0-9+/_-]*$/.test(clean) || clean.length % 4 === 1) {
+    return { ok: false, problem: 'bad-base64' };
+  }
+  const b64 = clean.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+  try {
+    const raw = atob(padded);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
+    return { ok: true, bytes: out };
+  } catch {
+    return { ok: false, problem: 'bad-base64' };
+  }
+}
+
 /**
  * A plain `ArrayBuffer` copy. WebCrypto's `BufferSource` will not accept a view
  * whose backing buffer TypeScript cannot prove is an ArrayBuffer (it could be a
@@ -319,12 +385,17 @@ function asBuffer(data: Uint8Array): ArrayBuffer {
  * asymmetric families. `alg` is taken from the argument, not from the header:
  * trusting the header's `alg` to choose the algorithm is the classic JWT
  * confusion attack, and this function refuses to make that choice implicitly.
+ *
+ * `secretEncoding` says how to read an HS secret into bytes; it is ignored by
+ * the asymmetric families, whose key is PEM either way. It defaults to text,
+ * which is what a passphrase is.
  */
 export async function verify(
   token: Jwt,
   alg: string,
   key: string,
-  subtle: SubtleCrypto
+  subtle: SubtleCrypto,
+  secretEncoding: SecretEncoding = 'utf8'
 ): Promise<VerifyOutcome> {
   const family = algFamily(alg);
   const size = alg.slice(2);
@@ -354,9 +425,19 @@ export async function verify(
 
   try {
     if (family === 'HS') {
+      const secret = decodeSecret(key, secretEncoding);
+      if (!secret.ok) {
+        return {
+          status: 'key-error',
+          reason:
+            secret.problem === 'bad-hex'
+              ? 'the secret is not valid hex'
+              : 'the secret is not valid base64',
+        };
+      }
       const material = await subtle.importKey(
         'raw',
-        asBuffer(utf8(key)),
+        asBuffer(secret.bytes),
         { name: 'HMAC', hash: { name: hash } },
         false,
         ['verify']
@@ -404,12 +485,26 @@ export async function verify(
   }
 }
 
-/** Sizes a shared secret against the hash, per RFC 7518 §3.2. */
+/**
+ * Sizes a shared secret against the hash, per RFC 7518 §3.2.
+ *
+ * The count is of key *bytes*, which is why the encoding has to be given: the
+ * 44 characters of `openssl rand -base64 32` are 32 bytes of key, and calling
+ * them 44 would pass a 24-byte key as long enough for HS256. An undecodable
+ * secret has no size, so it is reported rather than measured.
+ */
 export function secretStrength(
   secret: string,
-  alg: string
-): { bytes: number; required: number; weak: boolean } {
-  const bytes = utf8(secret).length;
+  alg: string,
+  encoding: SecretEncoding = 'utf8'
+): {
+  bytes: number;
+  required: number;
+  weak: boolean;
+  problem: 'bad-base64' | 'bad-hex' | null;
+} {
   const required = { '256': 32, '384': 48, '512': 64 }[alg.slice(2)] ?? 32;
-  return { bytes, required, weak: bytes < required };
+  const decoded = decodeSecret(secret, encoding);
+  if (!decoded.ok) return { bytes: 0, required, weak: true, problem: decoded.problem };
+  return { bytes: decoded.bytes.length, required, weak: decoded.bytes.length < required, problem: null };
 }
