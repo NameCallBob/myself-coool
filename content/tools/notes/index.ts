@@ -11,21 +11,18 @@ import { MEDIA_NOTES } from './media';
 import { NET_NOTES } from './net';
 
 /**
- * The "how it works" prose under a tool.
+ * What a tool will not do.
  *
- * Only tools marked `indexable` need an entry: this is the substance that
- * makes a tool page worth putting in front of a search engine, and a page
- * without it stays out of the index (plan §3). Split one file per drawer so
- * ten batches of work never touch the same file.
+ * These were essays about how each tool worked. They are not any more: a tool
+ * page is a tool, and the only thing worth putting under it is the boundary —
+ * what it refuses, what it approximates, and which tool to use instead. One
+ * sentence each.
  *
- * Paragraphs are written in Chinese; `en` carries a shorter summary because
- * the long-form voice on this site is zh-TW (plan §3).
+ * Split one file per drawer so ten batches of work never touch the same file.
  */
 export type ToolNote = {
-  /** Body paragraphs. Plain text — rendered as <p>, never as markup. */
-  body: Localized[];
-  /** Limits, caveats, and what this tool will not do. */
-  limits?: Localized[];
+  /** One sentence each. Plain text — rendered as <li>, never as markup. */
+  limits: Localized[];
 };
 
 export const TOOL_NOTES: Record<string, ToolNote> = {

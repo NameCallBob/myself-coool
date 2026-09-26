@@ -1,5 +1,5 @@
 import { PROJECTS } from './projects.ts';
-import { buildTimeline, concurrentAt, peakConcurrency, timeExtent } from './timeline.ts';
+import { buildTimeline, concurrentAt, ongoingAt, peakConcurrency, timeExtent } from './timeline.ts';
 import { DAY } from './units.ts';
 
 /**
@@ -19,7 +19,7 @@ export type Figure = {
 export function figuresFor(now: number): Figure[] {
   const spans = buildTimeline(now);
   const peak = peakConcurrency(spans);
-  const running = concurrentAt(spans, now);
+  const running = ongoingAt(spans, now);
   const extent = timeExtent(spans);
 
   const shortest = spans
@@ -28,6 +28,7 @@ export function figuresFor(now: number): Figure[] {
   const shortestDays = shortest ? Math.round((shortest.end - shortest.start) / DAY) : 0;
 
   const live = PROJECTS.filter((project) => /營運中|production|部署/.test(project.scope.zh + project.scope.en));
+  void concurrentAt;
   const years = Math.max(1, Math.round((extent.to - extent.from) / (DAY * 365.25)));
 
   return [
@@ -41,8 +42,11 @@ export function figuresFor(now: number): Figure[] {
     },
     {
       value: String(running.length),
-      label: { zh: '此刻仍在進行', en: 'still running now' },
-      note: { zh: '含學業與工作', en: 'including the degree and the job' },
+      label: { zh: '此刻仍在維護', en: 'still maintained' },
+      note: {
+        zh: '含學業與工作;其餘系統在營運中但已無人經手',
+        en: 'including the degree and the job; the rest run untouched',
+      },
     },
     {
       value: String(PROJECTS.length),

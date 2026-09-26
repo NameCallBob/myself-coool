@@ -33,31 +33,34 @@ export default async function ToolsPage({ params }: Props) {
         {zh ? '一百件在瀏覽器裡跑完的工具' : 'A hundred tools that run in your browser'}
       </h1>
 
-      {/* The promise, stated where it can be checked rather than as a badge. */}
+      {/* The reason these exist, in plain terms. It is a practical worry, not
+          a manifesto — most of these tools exist elsewhere, and the difference
+          is only where the data goes. */}
       <div className="mt-6 max-w-[44rem] space-y-4 text-[0.9375rem] leading-relaxed text-muted">
         {zh ? (
           <>
             <p>
-              這一區不上傳、不連線、不記錄。每個工具的運算都發生在你這個分頁裡,
-              頁面載入完成之後不會再發出任何網路請求——這件事寫成了測試,
-              沒過就不會部署。
+              工作上常要臨時轉個格式、算個雜湊、看一下 JWT 裡面寫什麼。網路上這類工具很多,
+              但你貼進去的東西會不會被留下來,沒有人說得準——而那些東西常常是公司的資料。
             </p>
             <p>
-              你可以自己驗:開 DevTools 的 Network 分頁、清空紀錄、操作任何一個工具,
-              筆數應該是零。若你用的是公司電腦,這頁也可以裝成離線應用,
-              在完全斷網的狀態下使用。
+              所以這些我自己做了一套。全部在你這個分頁裡算完,不上傳、不連線、不記錄;
+              頁面載入完成之後不會再發出任何網路請求,這件事寫成測試,沒過就不會部署。
+              開 DevTools 的 Network 分頁自己看,筆數應該是零。也可以裝起來離線用。
             </p>
           </>
         ) : (
           <>
             <p>
-              Nothing here is uploaded, and nothing is logged. Every tool computes in this tab, and
-              after the page has loaded it makes no further network requests — which is asserted by a
-              test that blocks the deploy if it fails.
+              Work throws up small jobs: convert a format, hash a file, look inside a JWT. There
+              are plenty of sites for that, but nobody can tell you whether what you paste is kept
+              — and it is often your company&rsquo;s data.
             </p>
             <p>
-              Check it yourself: open the Network panel, clear it, use any tool, and the count should
-              stay at zero. The section also installs as an offline app.
+              So these are mine. Everything computes in this tab: no upload, no connection, no
+              logging. After the page loads it makes no further network requests, which is asserted
+              by a test that blocks the deploy if it fails. Open the Network panel and check. It
+              also installs for offline use.
             </p>
           </>
         )}

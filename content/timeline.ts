@@ -28,8 +28,17 @@ export type TraceSpan = {
   start: number;
   end: number;
   precision: Precision;
-  /** Still running — the bar has no right-hand edge. */
+  /**
+   * Still being worked on. Not the same as the system still being up: several
+   * of these run in production with nobody touching them.
+   */
   ongoing: boolean;
+  /** Still being worked on today, even if the build finished long ago. */
+  maintained?: boolean;
+  /** The system is live, whether or not it is being worked on. */
+  live?: boolean;
+  /** Work has stopped, but no end date is written down anywhere. */
+  unrecorded?: boolean;
   /**
    * The start is not stated anywhere, so the bar has no left-hand edge either.
    * Used by the enrolment span: "在學" has no recorded start date in the
@@ -106,6 +115,7 @@ export function buildTimeline(now: number): TraceSpan[] {
     const period = table[slug];
     const project = PROJECTS.find((entry) => entry.slug === slug);
     if (!period || !project) return;
+    const unrecorded = period.end === 'unrecorded';
     spans.push({
       id: `${kind}:${slug}`,
       kind,
@@ -114,9 +124,15 @@ export function buildTimeline(now: number): TraceSpan[] {
         : project.title,
       detail: project.scope,
       start: startOf(period.start),
-      end: period.end === 'present' ? now : endOf(period.end),
+      // An unrecorded end still needs somewhere to stop being drawn; the bar
+      // is marked so the renderer can show the uncertainty rather than imply
+      // the work is still going.
+      end: period.end === 'present' || unrecorded ? now : endOf(period.end),
       precision: period.precision,
       ongoing: period.end === 'present',
+      maintained: period.maintained ?? period.end === 'present',
+      live: period.live,
+      unrecorded,
       href: `/work/${slug}`,
       source: period.source,
     });
@@ -131,13 +147,38 @@ export function buildTimeline(now: number): TraceSpan[] {
 }
 
 /**
+ * What is being worked on right now.
+ *
+ * Only spans that are actually ongoing. A span whose end is unrecorded is not
+ * counted: the work stopped, the date just is not written down, and counting
+ * it here would restate the mistake this function was added to fix.
+ */
+export function ongoingAt(spans: readonly TraceSpan[], at: number): TraceSpan[] {
+  // `maintained` rather than `ongoing`: a build that finished in six days can
+  // still be the thing you get paged about.
+  return spans.filter((span) => (span.maintained || span.ongoing) && at >= span.start);
+}
+
+/**
  * How many spans were running at a given instant, and which.
  *
  * This is the readout the page exists for: drag the playhead to April 2026 and
  * the answer is a number, not an impression.
  */
 export function concurrentAt(spans: readonly TraceSpan[], at: number): TraceSpan[] {
-  return spans.filter((span) => at >= span.start && at <= span.end);
+  // A span whose end is unrecorded covers nothing after its start: we do not
+  // know when it stopped, and counting it would be a guess wearing a number.
+  return spans.filter((span) => !span.unrecorded && at >= span.start && at <= span.end);
+}
+
+/**
+ * Spans that had started by `at` but whose end is not written down.
+ *
+ * Reported beside the count rather than folded into it, so the uncertainty is
+ * visible instead of being resolved in whichever direction flatters.
+ */
+export function uncertainAt(spans: readonly TraceSpan[], at: number): TraceSpan[] {
+  return spans.filter((span) => span.unrecorded && at >= span.start);
 }
 
 /** The drawable time range, ignoring the open-left bar's infinity. */

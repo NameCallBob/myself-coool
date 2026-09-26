@@ -22,7 +22,7 @@
   "home": {
     "traceTitle": "What was running at the same time",
     "traceLede": "One time axis; each bar is a system, a job or a programme. Where they overlap is where they were running together — the part a list cannot show and this cannot hide. Drag to pan, scroll to zoom; wherever the pointer sits, the readout says how many were running that day.",
-    "traceSource": "Every bar's dates are quoted from the case study it links to — the sources are recorded in content/periods.ts, each naming the sentence it was read from, and a project with no stated dates gets no bar at all. Bars that fade at the edges are known only to the year or the month. The four figures below are computed from the same spans, not typed.",
+    "traceSource": "Every bar's dates are quoted from the case study it links to — sources are recorded in content/periods.ts, each naming the sentence it was read from, and a project with no stated dates gets no bar. A bar is the build, not the relationship: one still maintained afterwards carries a hairline to today, and one whose end is not recorded fades out and is left out of the running-at-once count, because counting it would be a guess wearing a number. Most of these systems are still in production with nobody touching them, which is not the same as being maintained. Bars known only to the year or month fade at both ends. The four figures below are computed from the same spans, not typed.",
     "workTitle": "Systems",
     "workLede": "Each row carries its own slice of the axis above it. The short red line under a name is the time that system took.",
     "workAll": "All projects",
@@ -50,7 +50,7 @@
     "work": "Project experience: public campus systems and internal commercial work, each broken down by problem, architecture and trade-offs.",
     "ai": "From vibe coding to agentic engineering: spec-first, controlled context, verification loops and human review — evidenced by this site and two campus systems in production.",
     "about": "A student independently shipping production systems — experience, timeline and stack.",
-    "tools": "A hundred tools that run entirely in your browser — encoding, hashing, time zones, images and maths. No upload, no network, works offline."
+    "tools": "The small tools work throws up — convert a format, hash a file, read a JWT — built to run entirely in the browser. No upload, no connection, no logging. Works offline."
   },
   "case": {
     "internal": "Internal project (private)",

@@ -8,6 +8,7 @@ import {
   concurrentAt,
   packRows,
   timeExtent,
+  uncertainAt,
   type TraceSpan,
 } from '../../../content/timeline';
 import {
@@ -131,6 +132,7 @@ export function TraceWaterfall({ locale }: { locale: string }) {
 
   const at = playhead ?? now;
   const running = useMemo(() => concurrentAt(spans, at), [spans, at]);
+  const uncertain = useMemo(() => uncertainAt(spans, at), [spans, at]);
 
   /* ── Drawing ────────────────────────────── */
 
@@ -190,10 +192,21 @@ export function TraceWaterfall({ locale }: { locale: string }) {
         context.globalAlpha = isHovered ? 1 : 0.88;
         context.fillStyle = colour;
 
-        // Precision is drawn, not written: a bar whose dates are known only to
-        // the year fades at the edges, so the chart never implies a day it
-        // does not have.
-        if (span.precision === 'year' || openLeft || span.ongoing) {
+        // Precision and certainty are drawn, not written.
+        //
+        //  - known only to the year  → both ends fade
+        //  - no recorded start       → the left end fades off the canvas
+        //  - no recorded end         → the bar trails off: the work stopped,
+        //                              we just do not know when, and a bar
+        //                              reaching today would say otherwise
+        if (span.unrecorded) {
+          const fade = context.createLinearGradient(x, 0, x + w, 0);
+          fade.addColorStop(0, colour);
+          fade.addColorStop(0.1, colour);
+          fade.addColorStop(0.55, `${colour}33`);
+          fade.addColorStop(1, `${colour}00`);
+          context.fillStyle = fade;
+        } else if (span.precision === 'year' || openLeft || span.ongoing) {
           const fade = context.createLinearGradient(x, 0, x + w, 0);
           const soft = span.precision === 'year' || openLeft;
           fade.addColorStop(0, soft ? `${colour}55` : colour);
@@ -203,6 +216,20 @@ export function TraceWaterfall({ locale }: { locale: string }) {
           context.fillStyle = fade;
         }
         context.fillRect(x, top, w, h);
+
+        // Still maintained after the build finished: a hairline to today. The
+        // six-day build stays six days wide, and the fact that it is still
+        // someone's problem is drawn separately from how long it took.
+        if (span.maintained && !span.ongoing && !span.unrecorded) {
+          const nowX = toX(now, v, width);
+          if (nowX > x + w) {
+            context.save();
+            context.globalAlpha = 0.55;
+            context.fillStyle = colour;
+            context.fillRect(x + w, top + h / 2 - 0.5, (nowX - (x + w)) * progress, 1);
+            context.restore();
+          }
+        }
 
         if (isHovered) {
           context.strokeStyle = palette.ink;
@@ -429,6 +456,13 @@ export function TraceWaterfall({ locale }: { locale: string }) {
         <span>
           <b>{busiest}</b> {l === 'zh' ? '件同時在跑' : 'running at once'}
         </span>
+        {uncertain.length > 0 ? (
+          <span>
+            {l === 'zh'
+              ? `另有 ${uncertain.length} 件結束時間未記載`
+              : `${uncertain.length} more with no recorded end`}
+          </span>
+        ) : null}
         <span className="trace-readout-names">
           {running
             .slice(0, 4)
@@ -473,7 +507,16 @@ export function TraceWaterfall({ locale }: { locale: string }) {
                   ? l === 'zh'
                     ? '至今'
                     : 'now'
-                  : new Date(span.end).toISOString().slice(0, 7)}
+                  : span.unrecorded
+                    ? l === 'zh'
+                      ? '之後未記載'
+                      : 'end not recorded'
+                    : new Date(span.end).toISOString().slice(0, 7)}
+                {span.maintained && !span.ongoing
+                  ? l === 'zh'
+                    ? ' · 仍在維護'
+                    : ' · still maintained'
+                  : ''}
               </time>
               {span.href ? (
                 <Link href={span.href}>{span.label[l]}</Link>

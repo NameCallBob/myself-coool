@@ -50,31 +50,22 @@ export default async function ToolPage({ params }: Props) {
         <ToolMount tool={tool} locale={locale} />
       </div>
 
-      {note ? (
+      {note?.limits.length ? (
         <section className="mt-16 max-w-[44rem] border-t border-line-2 pt-8">
-          <h2 className="inst-no">{l === 'en' ? 'HOW IT WORKS' : '原理'}</h2>
-          <div className="mt-4 space-y-4 text-[0.9375rem] leading-relaxed">
-            {note.body.map((paragraph) => (
-              <p key={paragraph.en}>{paragraph[l]}</p>
+          <h2 className="inst-no">{l === 'en' ? 'WHAT IT WILL NOT DO' : '這個工具不做什麼'}</h2>
+          <ul className="mt-4 space-y-2 text-[0.875rem] leading-relaxed text-muted">
+            {note.limits.map((limit) => (
+              <li key={limit.en} className="flex gap-2">
+                <span aria-hidden="true" style={{ color: 'var(--accent)' }}>
+                  —
+                </span>
+                <span>{limit[l]}</span>
+              </li>
             ))}
-          </div>
-          {note.limits?.length ? (
-            <>
-              <h3 className="inst-no mt-8">{l === 'en' ? 'LIMITS' : '界線'}</h3>
-              <ul className="mt-3 space-y-2 text-[0.875rem] leading-relaxed text-muted">
-                {note.limits.map((limit) => (
-                  <li key={limit.en} className="flex gap-2">
-                    <span aria-hidden="true" style={{ color: 'var(--accent)' }}>
-                      —
-                    </span>
-                    <span>{limit[l]}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          </ul>
         </section>
       ) : null}
+
     </div>
   );
 }

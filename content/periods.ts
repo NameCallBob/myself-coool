@@ -16,8 +16,28 @@ export type Precision = 'day' | 'month' | 'year';
 export type Period = {
   /** 'YYYY-MM-DD', 'YYYY-MM' or 'YYYY' — as precise as the sentence was. */
   start: string;
-  end: string | 'present';
+  /**
+   * When the work stopped.
+   *
+   * This is the *build* period, not the relationship with the system. Three
+   * facts were tangled together in the first version of this file and they
+   * have to stay apart:
+   *
+   *  - `end` — when the work was done. A six-day build is a six-day bar, and
+   *    marking it 'present' because it is still maintained erased exactly the
+   *    fact the bar existed to show.
+   *  - `maintained` — still being worked on today.
+   *  - `live` — the system is in production, which several of these are with
+   *    nobody touching them.
+   *
+   * `'unrecorded'` means the work stopped but no end date is written down.
+   */
+  end: string | 'present' | 'unrecorded';
   precision: Precision;
+  /** Still being worked on today. */
+  maintained?: boolean;
+  /** The system is in production, whether or not anyone is working on it. */
+  live?: boolean;
   /** The sentence in projects.ts / experience.ts this was read from. */
   source: string;
 };
@@ -25,37 +45,44 @@ export type Period = {
 export const PROJECT_PERIODS: Record<string, Period> = {
   'ai-nail-platform': {
     start: '2025-09',
-    end: 'present',
+    end: 'unrecorded',
+    live: true,
     precision: 'month',
     source: '營運後台前端:2025 年 9 月起接手為唯一貢獻者',
   },
   'naily-app': {
     start: '2025-11',
     end: 'present',
+    maintained: true,
+    live: true,
     precision: 'month',
     source: '2025 年 11 月起由我接手 App 前端的開發與維護',
   },
   'microservices-platform': {
     start: '2025-01',
-    end: 'present',
+    end: 'unrecorded',
+    live: true,
     precision: 'month',
     source: '2025 年 1 月專案創始即參與,2025 年 9 月起為唯一主力',
   },
   'nkust-alumni': {
     start: '2024',
-    end: 'present',
+    end: 'unrecorded',
+    live: true,
     precision: 'year',
     source: '2024 年起開發,現於校方網域營運中',
   },
   'nkust-borrow': {
     start: '2025',
-    end: 'present',
+    end: 'unrecorded',
+    live: true,
     precision: 'year',
     source: '2025 年起獨立開發並部署',
   },
   'naily-storefront': {
     start: '2026-01',
-    end: 'present',
+    end: 'unrecorded',
+    live: true,
     precision: 'month',
     source: '2026 年初的重構把 5 步驟的客製化流程重做為 3 步',
   },
@@ -83,18 +110,24 @@ export const PROJECT_PERIODS: Record<string, Period> = {
   'field-sales-pwa': {
     start: '2026-07-10',
     end: '2026-07-15',
+    maintained: true,
+    live: true,
     precision: 'day',
     source: '獨立開發:從空 repo 到部署共 6 天(2026/07/10–07/15),全部 commit 出自我一人',
   },
   'agm-evoting-system': {
     start: '2026-04-04',
     end: '2026-04-12',
+    maintained: true,
+    live: true,
     precision: 'day',
     source: '獨立開發:11 個 commit 全數出自我(2026/04/04–04/12)',
   },
   'retail-pos': {
     start: '2026-04',
     end: '2026-07',
+    maintained: true,
+    live: true,
     precision: 'month',
     source: '前後端獨立開發(2026/04–07,前端 93、後端 20 個 commit 皆出自我一人)',
   },
@@ -121,8 +154,9 @@ export const PROJECT_PERIODS: Record<string, Period> = {
 export const REWORK_PERIODS: Record<string, Period> = {
   'helmet-detect': {
     start: '2026',
-    end: '2026',
+    end: 'unrecorded',
     precision: 'year',
+    live: false,
     source: '2026 年的工作是把它重整成 backend/ 與 frontend/ 的完整專案',
   },
   'food-selector': {
@@ -133,8 +167,9 @@ export const REWORK_PERIODS: Record<string, Period> = {
   },
   'four-times-for-cook': {
     start: '2026',
-    end: '2026',
+    end: 'unrecorded',
     precision: 'year',
+    live: false,
     source: '近期重構(案例文中所述的公開作品集整理)',
   },
 };
