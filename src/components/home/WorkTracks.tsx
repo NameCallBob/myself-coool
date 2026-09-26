@@ -22,7 +22,7 @@ export function WorkTracks({ children }: { children: React.ReactNode }) {
     gsap.registerPlugin(ScrollTrigger);
     const context = gsap.context(() => {
       gsap.fromTo(
-        '.home-track',
+        '.span-track',
         { '--draw': 0 },
         {
           '--draw': 1,

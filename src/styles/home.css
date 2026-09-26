@@ -140,47 +140,8 @@
   color: var(--fg-faint);
 }
 
-/* The slice of the shared axis this project occupied. `--from` and `--to` are
-   percentages of the whole span, set per row from the same data the chart
-   draws, so the rows and the chart can never drift apart. */
-.home-track {
-  position: relative;
-  height: 10px;
-  margin-top: 0.35rem;
-  background-image: linear-gradient(var(--border-1), var(--border-1));
-  background-size: 100% 1px;
-  background-position: 0 50%;
-  background-repeat: no-repeat;
-}
-.home-track::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  height: 4px;
-  left: var(--from);
-  width: max(3px, calc(var(--to) - var(--from)));
-  background: var(--accent);
-  transform-origin: left;
-  transform: scaleX(var(--draw, 1));
-}
-.home-track[data-ongoing='true']::after {
-  background: linear-gradient(
-    90deg,
-    var(--accent),
-    color-mix(in oklab, var(--accent) 25%, transparent)
-  );
-}
-.home-track[data-undated='true']::after {
-  left: 0;
-  width: 100%;
-  height: 1px;
-  top: 4px;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--border-3) 0 3px,
-    transparent 3px 7px
-  );
-}
+/* The per-row axis slice lives in styles/track.css — /work draws the same
+   device from the same data, and two copies is how they come to disagree. */
 
 /* ── Principles ───────────────────────────── */
 .home-principles {

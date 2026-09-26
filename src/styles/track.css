@@ -1,0 +1,87 @@
+/*
+ * `--draw` is registered so it can be animated at all: an unregistered custom
+ * property has no type, so a browser cannot interpolate it and the transition
+ * snaps from 0 to 1. Registering it as a number is what makes the draw-in a
+ * motion rather than a jump.
+ */
+@property --draw {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
+/* ─────────────────────────────────────────────
+   The shared axis.
+
+   One device, used on the home page and on /work: a hairline standing for the
+   whole recorded span, with the slice a project occupied drawn on it. Both
+   pages position it from the same data, so a row can never disagree with the
+   chart above it.
+   ───────────────────────────────────────────── */
+
+.span-track {
+  /* Block, not inline: the slice is positioned in percentages of this box, and
+     an inline span is zero pixels wide — the bars all collapsed to a dot at
+     the left edge before this line existed. */
+  display: block;
+  width: 100%;
+  position: relative;
+  height: 10px;
+  background-image: linear-gradient(var(--border-1), var(--border-1));
+  background-size: 100% 1px;
+  background-position: 0 50%;
+  background-repeat: no-repeat;
+}
+
+.span-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  height: 4px;
+  left: var(--from);
+  width: max(3px, calc(var(--to) - var(--from)));
+  background: var(--accent);
+  transform-origin: left;
+  transform: scaleX(var(--draw, 1));
+}
+
+/* Still running: the bar has no right-hand edge, so it fades instead of stopping. */
+.span-track[data-ongoing='true']::after {
+  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 25%, transparent));
+}
+
+/* No recorded dates: a dashed rule across the whole axis rather than a bar
+   somewhere, because "we do not know" is not a position on a timeline. */
+.span-track[data-undated='true']::after {
+  left: 0;
+  width: 100%;
+  height: 1px;
+  top: 4px;
+  background: repeating-linear-gradient(90deg, var(--border-3) 0 3px, transparent 3px 7px);
+}
+
+/* Known only to the year or month: soft ends, the same rule the chart uses. */
+.span-track[data-soft='true']::after {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent) 35%, transparent),
+    var(--accent) 18%,
+    var(--accent) 82%,
+    color-mix(in oklab, var(--accent) 35%, transparent)
+  );
+}
+
+.span-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .span-track::after {
+    transform: none;
+  }
+}

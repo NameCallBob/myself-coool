@@ -9,8 +9,14 @@ import { alternatesFor, ogFor, robotsFor } from '@/lib/seo';
 import { PROJECTS } from '../../../../content/projects';
 import type { Project } from '../../../../content/projects';
 import { displaySerif } from '@/lib/fonts';
+import { SpanTrack, SpanTrackLabel } from '@/components/trace/SpanTrack';
+import { buildTimeline, timeExtent } from '../../../../content/timeline';
+import '@/styles/track.css';
 
 type Props = { params: Promise<{ locale: string }> };
+
+/** A static export has no request: "now" is the moment the site was built. */
+const BUILT_AT = Date.now();
 
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
@@ -25,7 +31,17 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-function ProjectRows({ projects, loc }: { projects: Project[]; loc: 'zh' | 'en' }) {
+function ProjectRows({
+  projects,
+  loc,
+  extent,
+  now,
+}: {
+  projects: Project[];
+  loc: 'zh' | 'en';
+  extent: { from: number; to: number };
+  now: number;
+}) {
   return (
     <div>
       <div className="hidden grid-cols-[64px_1fr_240px_40px] gap-6 border-b border-line-2 pb-3 font-mono text-[11px] tracking-[0.12em] text-faint md:grid">
@@ -49,6 +65,14 @@ function ProjectRows({ projects, loc }: { projects: Project[]; loc: 'zh' | 'en' 
                 <DomainBadge domain={p.domain} />
               </h3>
               <p className="mt-1 max-w-[56ch] text-sm text-muted">{p.oneLiner[loc]}</p>
+              {/* The same axis the home page draws, at row scale — so this
+                  index reads as a zoom of that chart rather than a new list. */}
+              <span className="mt-3 flex max-w-[56ch] items-center gap-3">
+                <span className="flex-1">
+                  <SpanTrack slug={p.slug} extent={extent} now={now} l={loc} />
+                </span>
+                <SpanTrackLabel slug={p.slug} l={loc} />
+              </span>
             </div>
             <span className="font-mono text-xs tracking-[0.06em] text-muted">{p.scope[loc]}</span>
             <ArrowUpRight
@@ -71,6 +95,7 @@ export default async function WorkPage({ params }: Props) {
 
   const publicProjects = PROJECTS.filter((p) => p.visibility === 'public');
   const internalProjects = PROJECTS.filter((p) => p.visibility === 'internal');
+  const extent = timeExtent(buildTimeline(BUILT_AT));
 
   return (
     <div className={`relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32 ${displaySerif.variable}`}>
@@ -87,7 +112,7 @@ export default async function WorkPage({ params }: Props) {
           <p className="mt-3 max-w-[52ch] text-sm text-muted">{t('publicNote')}</p>
         </Reveal>
         <div className="mt-10">
-          <ProjectRows projects={publicProjects} loc={loc} />
+          <ProjectRows projects={publicProjects} loc={loc} extent={extent} now={BUILT_AT} />
         </div>
       </section>
 
@@ -107,7 +132,7 @@ export default async function WorkPage({ params }: Props) {
           <p className="mt-3 max-w-[52ch] text-sm text-muted">{t('internalNote')}</p>
         </Reveal>
         <div className="mt-10">
-          <ProjectRows projects={internalProjects} loc={loc} />
+          <ProjectRows projects={internalProjects} loc={loc} extent={extent} now={BUILT_AT} />
         </div>
       </section>
     </div>

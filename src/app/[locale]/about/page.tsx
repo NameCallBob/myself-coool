@@ -9,8 +9,14 @@ import { PLATES } from '../../../../content/plates';
 import { Avatar } from '@/components/ui/Avatar';
 import { PlateWall } from '@/components/ui/PlateWall';
 import { displaySerif } from '@/lib/fonts';
+import { AxisTrack } from '@/components/trace/SpanTrack';
+import { buildTimeline, timeExtent } from '../../../../content/timeline';
+import '@/styles/track.css';
 
 type Props = { params: Promise<{ locale: string }> };
+
+/** A static export has no request: "now" is the moment the site was built. */
+const BUILT_AT = Date.now();
 
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
@@ -31,6 +37,9 @@ export default async function AboutPage({ params }: Props) {
   const t = await getTranslations({ locale, namespace: 'about' });
   const ts = await getTranslations({ locale, namespace: 'sections' });
   const loc = locale === 'zh-TW' ? 'zh' : 'en';
+  // The same axis the home chart draws, so a period here lines up with a bar there.
+  const spans = buildTimeline(BUILT_AT);
+  const extent = timeExtent(spans);
 
   return (
     <div className={`relative z-10 mx-auto max-w-[1200px] px-5 pt-32 pb-24 md:px-6 md:pb-32 ${displaySerif.variable}`}>
@@ -63,7 +72,25 @@ export default async function AboutPage({ params }: Props) {
           {EXPERIENCE.map((e) => (
             <Reveal key={e.period + e.role.en}>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-[200px_1fr] md:gap-10">
-                <p className="font-mono text-xs tracking-[0.1em] text-faint">{e.period}</p>
+                <div>
+                  <p className="font-mono text-xs tracking-[0.1em] text-faint">{e.period}</p>
+                  {(() => {
+                    const span = spans.find((entry) => entry.id === `exp:${e.org.en}`);
+                    if (!span) return null;
+                    return (
+                      <span className="mt-3 block">
+                        <AxisTrack
+                          from={span.start}
+                          to={span.end}
+                          extent={extent}
+                          ongoing={span.ongoing}
+                          soft={span.precision !== 'day'}
+                          openStart={span.openStart}
+                        />
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div>
                   <h3 className="font-serif text-lg font-semibold md:text-xl">
                     {e.role[loc]}

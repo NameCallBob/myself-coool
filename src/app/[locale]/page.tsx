@@ -10,6 +10,7 @@ import { PROJECT_PERIODS } from '../../../content/periods';
 import { buildTimeline, endOf, startOf, timeExtent } from '../../../content/timeline';
 import { figuresFor } from '../../../content/figures';
 import '@/styles/trace.css';
+import '@/styles/track.css';
 import '@/styles/home.css';
 
 type Props = { params: Promise<{ locale: string }> };
@@ -107,7 +108,7 @@ export default async function HomePage({ params }: Props) {
                 <span>
                   <span className="home-work-title">{project.title[l]}</span>
                   <span
-                    className="home-track"
+                    className="span-track"
                     aria-hidden="true"
                     data-ongoing={slice?.ongoing ? 'true' : undefined}
                     data-undated={slice ? undefined : 'true'}
