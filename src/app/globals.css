@@ -261,3 +261,64 @@ body::after {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Print ────────────────────────────────── */
+/*
+ * Scroll-revealed content has to be visible on paper.
+ *
+ * `.reveal` starts at `opacity: 0` and is turned on by an IntersectionObserver
+ * as the reader scrolls. Printing never scrolls, so without this a printed
+ * copy of /ai loses 23 of its 26 blocks and a case study prints as a headline
+ * over blank pages — and saving a portfolio page to PDF is a thing people
+ * actually do. Everything that animates in is forced to its finished state.
+ */
+@media print {
+  .js .reveal,
+  .js .stagger-ch {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Chrome, guide lines and the noise overlay: none of it belongs on paper. */
+  .site-header,
+  .guide-line,
+  .trace-frame,
+  .trace-controls,
+  .inst-palette,
+  .inst-banner {
+    display: none !important;
+  }
+  body::after {
+    content: none !important;
+  }
+
+  /* The chart is interactive; its DOM list is the printable form of it. */
+  .trace-list-wrap {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    white-space: normal !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  main {
+    padding-top: 0 !important;
+  }
+
+  /* Never break a project or a rule across two sheets. */
+  section,
+  .home-work-row,
+  .home-principle,
+  .trace-list li {
+    break-inside: avoid;
+  }
+}
