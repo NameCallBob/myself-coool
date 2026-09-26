@@ -25,7 +25,8 @@ function slugsWithNotes() {
   for (const category of ['text', 'encode', 'data', 'dev', 'crypto', 'time', 'calc', 'design', 'media', 'net']) {
     const file = join('content/tools/notes', `${category}.ts`);
     if (!existsSync(file)) continue;
-    for (const match of readFileSync(file, 'utf8').matchAll(/^\s{2}'([a-z0-9-]+)':\s*\{/gm)) {
+    // Keys may be quoted or bare — `base64: {` is as valid as `'pii-mask': {`.
+    for (const match of readFileSync(file, 'utf8').matchAll(/^\s+'?([a-z0-9-]+)'?:\s*\{$/gm)) {
       found.add(match[1]);
     }
   }

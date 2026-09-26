@@ -5,34 +5,34 @@ export const NET_NOTES: Record<string, ToolNote> = {
   cidr: {
     body: [
       {
-        zh: '子網路計算只有一個動作:用前綴長度造出遮罩,再跟位址做位元運算。/24 的遮罩就是前 24 個位元是 1、後 8 個是 0,把位址跟它做 AND 得到網段位址,跟它的反向遮罩做 OR 得到區塊的最後一個位址。IPv4 與 IPv6 的差別只在位址寬度是 32 還是 128 位元,規則完全一樣。',
-        en: 'Subnetting is one operation: build a mask from the prefix length, then do bitwise arithmetic with the address. A /24 mask is twenty-four ones followed by eight zeros; AND it with the address for the network address, OR it with its complement for the last address in the block. IPv4 and IPv6 differ only in whether the address is 32 or 128 bits wide.',
+        zh: '子網路計算本身只有一個動作:用前綴長度造出遮罩,位址跟遮罩做 AND 得到網段位址,跟反向遮罩做 OR 得到區塊的最後一個位址。IPv4 與 IPv6 的差別只在位址寬度是 32 還是 128 位元,規則一模一樣。所以這裡兩個家族都存成一個 bigint 加一個前綴長度——不是因為 IPv6 塞不進 Number,而是因為 IPv4 塞得進去反而會出事:JavaScript 的 AND、OR、NOT 會先把運算元轉成有號 32 位元整數,0.0.0.0/1 的反向遮罩於是算出一個負數,後面每一次大小比較都跟著錯。一種數字型別處理兩個家族,這一整類 bug 就不存在了。',
+        en: 'One operation: build a mask from the prefix, AND it with the address for the network, OR the complement for the last address. Both families are held as one bigint, not because IPv6 needs it but because IPv4 in JavaScript does — the bitwise operators coerce to signed 32-bit, so the complement of a /1 mask comes back negative and every comparison after that is wrong.',
       },
       {
-        zh: '這裡兩個家族都存成 bigint,不是因為 IPv6 需要,而是因為 IPv4 用 JavaScript 的位元運算會出錯:`&`、`|`、`~` 會先把運算元轉成有號 32 位元整數,所以 0.0.0.0/1 的反向遮罩算出來是負數,之後每一個比較都跟著錯。一種數字型別處理兩個家族,直接消掉這一整類 bug。',
-        en: 'Both families are held as bigint here, not because IPv6 demands it but because IPv4 in JavaScript does: `&`, `|` and `~` coerce to *signed* 32-bit integers, so the complement of a /1 mask comes back negative and every comparison after that is wrong. One numeric type for both families removes the whole class of bug.',
+        zh: '可用主機數是各家子網計算器最常給出不同答案的地方,所以 IPv4 的三種情形是分開寫的。/30 以下扣掉網段位址與廣播位址,是 2^n − 2;/31 沒有廣播位址,RFC 3021 把它僅有的兩個位址都給點對點鏈路的兩端,可用數就是 2;/32 是一台主機,網段與廣播都不存在。IPv6 那一邊沒有廣播這回事,它的位置由多播接手,所以整個區塊都可以配置;全零的主機部分被保留為子網路路由器 anycast(RFC 4291 §2.6.1),但那是給路由器的保留,不是數量上的一個洞,這裡不扣。',
+        en: 'Host counts are where calculators disagree, so the three IPv4 cases are written out: 2^n − 2 at /30 and shorter, exactly 2 at /31 because RFC 3021 gives both addresses to the two ends of a link, and one host at /32. IPv6 has no broadcast address, so the whole block is addressable; the subnet-router anycast reservation of RFC 4291 §2.6.1 is a reservation for routers, not a hole in the count.',
       },
       {
-        zh: '可用主機數是各家計算器最常給出不同答案的地方,所以三種情況分開寫。/30 以下扣掉網段位址與廣播位址,是 2^n − 2。/31 沒有廣播位址:RFC 3021 把兩個位址都給點對點鏈路的兩端,可用數是 2。/32 是一台主機,沒有網段的概念。IPv6 根本沒有廣播——它的位置由多播取代——所以整個區塊都可以配置;全零主機部分被保留為子網路路由器 anycast(RFC 4291 §2.6.1),但那是給路由器的保留,不從數量裡扣。',
-        en: 'Usable host counts are where calculators disagree, so the three cases are written out. At /30 and shorter you lose the network and broadcast addresses: 2^n − 2. A /31 has no broadcast address at all — RFC 3021 gives both of its addresses to the two ends of a point-to-point link — so the count is 2. A /32 is one host and no network. IPv6 has no broadcast address; its role is taken by multicast, so the whole block is addressable. The all-zeros host part is reserved as the subnet-router anycast address (RFC 4291 §2.6.1), but that is a reservation for routers rather than a hole in the count.',
+        zh: '輸出格式有兩個決定值得講。IPv6 一律印成 RFC 5952 的標準形式:小寫、每組不補前導零、最長的一段連續零組縮成兩個冒號,至少要兩組才縮,平手取最左邊那段。兩件工具在這一點上不一致時,同一個位址會被寫成兩種字串,而白名單比對就是在這種字串不相等上面失敗的。另一個決定是輸入的位址原樣留著,不先幫你把主機位元清掉:打 192.168.1.77/24 進去,它會算出網段是 192.168.1.0/24,同時明講你給的是區塊裡的一台主機。這件事默默替你修好,等於把一個有用的訊息丟掉。反向解析區域同理,前綴沒有落在標籤邊界上時它回報「不在標籤邊界上」,而不是硬湊一個名字出來——IPv4 每八個位元一個標籤,IPv6 每四個位元一個,/26 本來就沒有單一的反解區域,假裝有就是委派寫錯的開始。',
+        en: 'IPv6 is always printed in RFC 5952 canonical form — lowercase, no padded hextets, the longest run of two or more zero groups collapsed, leftmost on a tie. Two tools that disagree here write one address two ways, which is how an allow-list comparison fails on a string mismatch. The address is also kept exactly as typed rather than silently masked, and a reverse zone whose prefix misses a label boundary is reported as having none instead of being invented.',
       },
       {
-        zh: '「位址性質」那一欄是照 IANA 特殊用途登錄表做最長前綴比對,跟路由表解析的方式一樣,所以 2001:db8::1 會判成文件用位址而不是 Teredo,即使 2001::/32 也涵蓋它。範圍轉 CIDR 用的是對齊法:每一步取「能從目前位置開始、又不超出結尾」的最大區塊,`cursor & -cursor` 取出最低位的 1,那就是目前位置的對齊度,也就是能合法起始的最大區塊大小。',
-        en: 'The scope column is a longest-prefix match against the IANA special-purpose registries, resolved the way a routing table would: 2001:db8::1 is documentation, not Teredo, even though 2001::/32 also covers it. Range-to-CIDR works by alignment — at each step it takes the largest block that both starts at the current position and does not run past the end, and `cursor & -cursor` isolates the lowest set bit, which is exactly that position’s alignment.',
+        zh: '位址性質那一欄是照 IANA 特殊用途登錄表做最長前綴比對,跟路由表解析的方式相同,所以 2001:db8::1 判成文件用位址而不是 Teredo,即使 2001::/32 也蓋得到它。範圍轉 CIDR 靠的是對齊:每一步取「能從目前位置起始、又不超出結尾」的最大區塊,取法是把目前位置最低位的那個 1 單獨拿出來,那就是這個位置的對齊度,也就是合法的最大起始區塊,再往下折半到塞得進剩餘範圍為止;位置 0 沒有最低位的 1,它的對齊度就是整個位址空間。數字大到一定程度會換一種寫法,超過十五位數就改印 2 的次方或科學記號,因為 2^96 比一串二十九位數好讀,而那串數字你本來也不會去數。',
+        en: 'The scope column is a longest-prefix match against the IANA special-purpose registries, resolved the way a routing table would: 2001:db8::1 is documentation, not Teredo. Range-to-CIDR works by alignment — the lowest set bit of the cursor is the largest block that may legally start there, halved until it fits what is left — and counts past fifteen digits are printed as a power of two or in scientific notation.',
       },
     ],
     limits: [
       {
-        zh: 'IPv4 的前導零一律拒絕。010.0.0.1 在這個剖析器裡是十,在 inet_aton 裡是八,而哪一家函式庫用哪一種解讀就是一長串 SSRF 繞過的來源——拒絕這種寫法是唯一不會默默算錯的選擇。',
-        en: 'Leading zeros in IPv4 are refused outright. 010.0.0.1 is ten to this parser and eight to inet_aton, and which reading a given library takes is the root of a long line of SSRF bypasses. Refusing the form is the only answer that cannot be quietly wrong.',
+        zh: 'IPv4 的前導零一律拒絕。010.0.0.1 在 inet_aton 眼裡是八進位,解出來是 8.0.0.1,在別的函式庫眼裡是 10.0.0.1;哪一家採哪一種解讀,就是一長串 SSRF 繞過的來源。這個剖析器兩種都不猜,直接不接受這種寫法,那是唯一不會默默算錯的答案。',
+        en: 'Leading zeros in IPv4 are refused outright. 010.0.0.1 is 8.0.0.1 to inet_aton and 10.0.0.1 to other libraries, and which reading a library takes is the root of a long line of SSRF bypasses; refusing the form is the only answer that cannot be quietly wrong.',
       },
       {
-        zh: '切分子網段與範圍轉 CIDR 都有列表上限。把 /8 切成 /32 是四十億列,那不是使用者要看的東西,超過上限時會說明只列出前面幾筆,而不是把分頁凍住。',
-        en: 'Subnet splitting and range decomposition are both capped. A /8 cut into /32s is four billion rows; past the cap the tool says how many it is showing instead of freezing the tab.',
+        zh: '切分與範圍彙總都有列表上限,切分最多列 128 個子網段,範圍最多 64 個區塊。總數照算並顯示,列表截斷時會說明。上限存在的理由很實際:把 /8 切成 /32 是一千六百多萬列,沒有人要看,而在瀏覽器裡跑一個停不下來的迴圈,跟分頁當掉沒有區別。',
+        en: 'Splitting lists at most 128 subnets and range decomposition at most 64 blocks; the true total is still computed and the truncation is stated. A /8 cut into /32s is over sixteen million rows, and a runaway loop in a browser is indistinguishable from a crash.',
       },
       {
-        zh: '這裡只做算術。不查 whois、不問 DNS、不測連通性,「全球單播」只代表「沒有被保留給特別用途」,不代表那個位址通。要換算 IPv4 與整數、或做位元檢視,請用 B 抽屜的進位轉換與位元運算工具。',
-        en: 'This is arithmetic only: no whois, no DNS, no reachability. "Global unicast" means "not reserved for anything in particular", not "reachable". For address-to-integer conversion or bit-level inspection, use the radix and bitwise tools in drawer B.',
+        zh: '這裡只做算術,不查 whois、不問 DNS、不測連通性。「全球單播」只代表「沒有被保留給特別用途」,不代表那個位址通得到;那份特殊用途清單也是 2024 年的快照,IANA 之後新增的保留區段不會自己長出來。要把位址當成整數在進位之間搬,請用 G02;要逐位元看遮罩與位移,請用 D06。',
+        en: 'Arithmetic only: no whois, no DNS, no reachability test. "Global unicast" means "not reserved for anything in particular", and the special-purpose list is a 2024 snapshot that will not grow on its own. For base conversion use G02, and for bit-level masking and shifts use D06.',
       },
     ],
   },
